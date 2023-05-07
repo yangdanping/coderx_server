@@ -26,7 +26,6 @@ const verifyUserRegister = async (ctx, next) => {
 
 // ★2.用户密码加密中间件---------------------------------------------------
 const encryptUserPwd = async (ctx, next) => {
-  console.log('验证密码加密');
   let { password } = ctx.request.body;
   ctx.request.body.password = encryptPwd(password);
   await next();
@@ -40,10 +39,10 @@ const verifyUserLogin = async (ctx, next) => {
   // console.log(name, password);
   // 2.判断用户名/密码是否为空,一旦为空,后面的校验也就不用再进行,直接退出函数
   if (!name || !password) {
-    console.log(`verifyUserLogin<用户名与密码>校验---用户名${name ? name : '为空'},用户密码${password ? password : '为空'}`);
+    console.log(`verifyUserLogin<用户名/密码>校验---用户名${name ? name : '为空'},用户密码${password ? password : '为空'}`);
     return emitErrMsg(ctx, errorTypes.NAME_OR_PWD_IS_INCORRECT);
   } else {
-    console.log('verifyUserLogin<用户名与密码>校验---用户名/密码不为空,可进行用户<存在>校验');
+    console.log('verifyUserLogin<用户名/密码>校验---用户名/密码不为空,可进行用户<存在>校验');
   }
   // 3.判断用户是否存在,用户不存在,后面的校验也就不用再进行,直接退出函数(此处逻辑与user中间件相反)
   const user = await userService.getUserByName(name); //拿到result是个数组,加[]取第一个元素,即该用户在数据库中的完整数据(包含所有字段)

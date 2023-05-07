@@ -35,9 +35,9 @@ const pictureResize = async (ctx, next) => {
       img.resize(640, Jimp.AUTO).write(`${destPath}-middle`);
       img.resize(320, Jimp.AUTO).write(`${destPath}-small`);
     });
-    /* 到时不加后缀就是原图 http://localhost:8000/moment/images/1635697916652.jpg
+    /* 到时不加后缀就是原图 http://localhost:9000/moment/images/1635697916652.jpg
 然后前端那边在图像路径后面拼接一个参数如type=small,到时候展示的就是宽为320的小图
-http://localhost:8000/moment/images/1635697916652.jpg?type=small
+http://localhost:9000/moment/images/1635697916652.jpg?type=small
 不同的后缀,获得不同大小的图片,得以在不同的地方展示
 在提供服务的地方做修改 */
   }

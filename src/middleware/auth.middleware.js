@@ -11,7 +11,7 @@ const verifyAuth = async (ctx, next) => {
   const authorization = ctx.headers.authorization;
   if (!authorization) return emitErrMsg(ctx, errorTypes.UNAUTH); //若header中没有携带token信息,则报错无效的token
   const token = authorization.replace('Bearer ', '');
-  console.log('拿到了token', token);
+  // console.log('拿到了token', token);
   // 2.验证token(记得导入之前设置好的公钥,拿到的结果是之前颁发token时携带的数据(id/name/颁发时间/过期时间))
   // jwt验证失败后会直接抛出异常,所以要try/catch捕获该异常,否则就会直接报错
   try {
