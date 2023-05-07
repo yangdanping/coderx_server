@@ -25,7 +25,7 @@ class collectController {
       ctx.body = Result.success(result); //增加一条收藏记录
     } else {
       const result = await collectService.changeCollect(articleId, collectId, isCollect);
-      ctx.body = Result.success(result, '1'); //减少一条收藏记录
+      ctx.body = Result.success(result, 1); //减少一条收藏记录
     }
   }
 }

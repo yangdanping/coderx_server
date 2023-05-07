@@ -15,11 +15,15 @@ class UserContoller {
     // // 2.生成密钥和公钥,生成token,并传入携带的用户数据,授权中间件verifyAuth通过ctx.user = verifyResult获得这边传来的id,name
     const token = jwt.sign({ id, name }, PRIVATE_KEY, {
       expiresIn: 60 * 60 * 24, //设置24小时后过期
-      // expiresIn: 10,
-      algorithm: 'RS256' //设置RS256加密算法
+      // expiresIn: 5,
+      algorithm: 'RS256', //设置RS256加密算法
+      allowInsecureKeySizes: true //9版本要加上
     });
     // 3.向客户端返回id,name,token
-    ctx.body = token ? Result.success({ id, name }, 0, token) : Result.fail('生成token失败');
+    // ctx.body = token ? Result.success({ id, name }, 0, token) : Result.fail('生成token失败');
+    const data = { id, name, token };
+    console.log('userLogin data', data);
+    ctx.body = token ? Result.success(data) : Result.fail('生成token失败'); // 将token放入data中
   }
   async addUser(ctx, next) {
     // 1.获取用户请求传递的参数
@@ -66,7 +70,7 @@ class UserContoller {
       当然直接返回,那边请求后浏览器是直接下载了,但我们不想下载,
       则必须先设置该图片的类型,请求后即可将图片直接展示 */
     if (avatarInfo) {
-      console.log('获取用户头像信息成功');
+      // console.log('获取用户头像信息成功');
       // ctx.body = avatarInfo; // 注意,此时返回的只是个json数据格式
       ctx.response.set('content-type', avatarInfo.mimetype);
       ctx.body = fs.createReadStream(`${AVATAR_PATH}/${avatarInfo.filename}`); //拼接上我们对应图片的路径
@@ -102,7 +106,6 @@ class UserContoller {
   async getArticle(ctx, next) {
     const { userId } = ctx.params;
     const { offset, limit } = ctx.query;
-    console.log(offset, limit);
     const userArticle = await userService.getArticleById(userId, offset, limit);
     if (userArticle) {
       userArticle.forEach((article) => (article.content = removeHTMLTag(article.content)));

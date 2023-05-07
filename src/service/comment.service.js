@@ -42,7 +42,7 @@ class CommentService {
       // 注意!获取了comment_id才能知道你当前这个评论是否是回复了别人的评论,知道这个东西前端在那边展示的时候就知道这条评论展示在什么位置了
       // const statement = `SELECT * FROM comment WHERE article_id = ?;`;
       const statement = `
-      SELECT c.id, c.content,c.status,  c.comment_id commentId, c.create_at createAt,
+      SELECT c.id, c.content,c.status,c.comment_id commentId, c.create_at createAt,
       JSON_OBJECT('id', u.id, 'name', u.name,'avatarUrl',p.avatar_url) user,
       COUNT(cl.user_id) likes,
       (SELECT JSON_ARRAYAGG(JSON_OBJECT(
