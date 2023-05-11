@@ -128,7 +128,7 @@ class ArticleController {
     ['large', 'middle', 'small'].some((item) => item === type) && (filename += '-' + type); //调用数组的some函数,可判断数组中某个东西是等于某个值,返回布尔值
     // 2.根据获取到的id去数据库直接查询
     if (fileInfo) {
-      console.log('获取文章图像信息成功', fileInfo);
+      // console.log('获取文章图像信息成功', fileInfo);
       // 3.把查询到的图片做和用户获取头像一样也做特殊处理,就能返回
       ctx.response.set('content-type', fileInfo.mimetype);
       ctx.body = fs.createReadStream(`${PICTURE_PATH}/${filename}`); //拼接上我们对应图片的路径
