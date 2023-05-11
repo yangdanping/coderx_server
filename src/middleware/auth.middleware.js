@@ -54,7 +54,7 @@ const verifyPermission = async (ctx, next) => {
 const verifyStatus = async (ctx, next) => {
   const { id } = ctx.user;
   const result = await authService.checkStatus(id);
-  console.log('verifyStatus!!!!!', result);
+  // console.log('verifyStatus!!!!!', result);
   result === '0' ? await next() : (ctx.body = Result.fail('您已被封禁'));
 };
 module.exports = {

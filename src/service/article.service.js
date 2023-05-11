@@ -28,8 +28,7 @@ class ArticleService {
       (SELECT COUNT(al.user_id) FROM article
       LEFT JOIN article_like al ON article.id = al.article_id
       WHERE article.id = a.id) likes,
-      (SELECT COUNT(*)+(SELECT COUNT(*) FROM reply r WHERE r.article_id = a.id)
-      FROM comment c WHERE c.article_id = a.id) commentCount,
+      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
       IF(COUNT(tag.id),(
       SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
       LEFT JOIN article_tag ag ON article.id = ag.article_id
@@ -59,8 +58,7 @@ class ArticleService {
       (SELECT COUNT(al.user_id) FROM article
       LEFT JOIN article_like al ON article.id = al.article_id
       WHERE article.id = a.id) likes,
-      (SELECT COUNT(*)+(SELECT COUNT(*) FROM reply r WHERE r.article_id = a.id)
-      FROM comment c WHERE c.article_id = a.id) commentCount,
+      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
       IF(COUNT(tag.id),(
       SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
       LEFT JOIN article_tag ag ON article.id = ag.article_id

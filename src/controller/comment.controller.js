@@ -28,15 +28,29 @@ class CommentController {
     }
   }
   async reply(ctx, next) {
-    // 1.获取数据(在上面基础上多个commentId,也就是说我需要知道我是对那条评论进行回复了)
     const userId = ctx.user.id;
     const { commentId } = ctx.params;
-    const { articleId, content } = ctx.request.body;
-    // 2.将获取到的数据插入到数据库中(注意!replyUserId也用于判断是否是对文章中某条评论的回复的回复)
-    const result = await commentService.reply(userId, articleId, commentId, content);
-    // 3.将插入数据的结果处理,给用户(前端/客户端)返回真正的数据
+    const { articleId, content, replyId } = ctx.request.body;
+    // 1.没有replyId,对第一层评论的回复
+    let result = null;
+    if (!replyId) {
+      result = await commentService.reply(userId, articleId, commentId, content);
+      // 2.有replyId,对回复的回复
+    } else {
+      result = await commentService.replyToComment(userId, articleId, commentId, replyId, content);
+    }
     ctx.body = result ? Result.success(result) : Result.fail('回复评论失败!');
   }
+  // async reply(ctx, next) {
+  //   // 1.获取数据(在上面基础上多个commentId,也就是说我需要知道我是对那条评论进行回复了)
+  //   const userId = ctx.user.id;
+  //   const { commentId } = ctx.params;
+  //   const { articleId, content } = ctx.request.body;
+  //   // 2.将获取到的数据插入到数据库中(注意!replyUserId也用于判断是否是对文章中某条评论的回复的回复)
+  //   const result = await commentService.reply(userId, articleId, commentId, content);
+  //   // 3.将插入数据的结果处理,给用户(前端/客户端)返回真正的数据
+  //   ctx.body = result ? Result.success(result) : Result.fail('回复评论失败!');
+  // }
   async update(ctx, next) {
     // // 1.获取数据(在上面基础上多个commentId,也就是说我需要知道我是对那条评论进行修改)
     const { commentId } = ctx.params;
@@ -59,7 +73,7 @@ class CommentController {
     const { articleId } = ctx.query;
     // 2.根据获取到的数据去查询出列表
     const result = await commentService.getCommentList(articleId);
-    console.log(result);
+    // console.log(result);
     result.forEach((comment) => {
       if (comment.status === '1') {
         comment.content = '该评论已被封禁';
