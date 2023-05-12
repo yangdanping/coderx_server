@@ -154,6 +154,17 @@ class ArticleService {
       console.log(error);
     }
   }
+  async getArticleLikedById(articleId) {
+    try {
+      const statement = `SELECT COUNT(al.user_id) likes FROM article a
+      LEFT JOIN article_like al ON a.id = al.article_id
+      WHERE a.id = ?;`;
+      const [result] = await connection.execute(statement, [articleId]);
+      return result[0];
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }
 
 module.exports = new ArticleService();

@@ -78,6 +78,17 @@ class CommentService {
       console.log(error);
     }
   }
+  async getCommentLikedById(commentId) {
+    try {
+      const statement = `SELECT COUNT(cl.user_id) likes FROM comment c
+      LEFT JOIN comment_like cl ON c.id = cl.comment_id
+      WHERE c.id = ?;`;
+      const [result] = await connection.execute(statement, [commentId]);
+      return result[0];
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }
 
 module.exports = new CommentService();
