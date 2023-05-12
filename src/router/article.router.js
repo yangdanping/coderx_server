@@ -13,6 +13,9 @@ articleRouter.get('/:articleId', articleController.getDetail);
 /* ★获取文章列表接口---------------------------------- */
 articleRouter.get('/', articleController.getList);
 
+/* ★获取文章点赞接口(用于点赞后)---------------------------------- */
+articleRouter.get('/:articleId/like', articleController.getArticleLikedById);
+
 /* ★发布文章接口----------------------------------------------
 用户发布文章必须先验证其是否登陆(授权) */
 articleRouter.post('/', verifyAuth, verifyStatus, articleController.addArticle);

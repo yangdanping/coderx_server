@@ -38,6 +38,12 @@ class ArticleController {
       ctx.body = Result.success(result, '1'); //删除一条点赞记录
     }
   }
+
+  async getArticleLikedById(ctx, next) {
+    const { articleId } = ctx.params;
+    const result = await articleService.getArticleLikedById(articleId);
+    ctx.body = result ? Result.success(result) : Result.fail('增加文章浏览量失败!');
+  }
   async getDetail(ctx, next) {
     // 1.获取文章id
     const { articleId } = ctx.params;
