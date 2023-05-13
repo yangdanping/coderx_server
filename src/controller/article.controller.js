@@ -129,7 +129,7 @@ class ArticleController {
     // 注意!要对前端传来的图片的尺寸参数判断,没有则请求的是原图,有则拼接上对应尺寸
     let { filename } = ctx.params; //改成let以便在下面进行type的拼接
     const { type } = ctx.query;
-    // http://localhost:9000/article/images/1645078817803.jpg?type=small
+    // http://localhost:8000/article/images/1645078817803.jpg?type=small
     const fileInfo = await fileService.getFileByFilename(filename);
     ['large', 'middle', 'small'].some((item) => item === type) && (filename += '-' + type); //调用数组的some函数,可判断数组中某个东西是等于某个值,返回布尔值
     // 2.根据获取到的id去数据库直接查询
