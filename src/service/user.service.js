@@ -160,20 +160,20 @@ class UserService {
       console.log(error);
     }
   }
-  async getArticleById(userId, offset, limit) {
-    try {
-      const statement = `
-      SELECT a.id id,a.title title,a.content content,a.create_at createAt
-      FROM article a
-      WHERE a.user_id = ?
-      LIMIT ?,?;
-      `;
-      const [result] = await connection.execute(statement, [userId, offset, limit]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
-  }
+  // async getArticleById(userId, offset, limit) {
+  //   try {
+  //     const statement = `
+  //     SELECT a.id id,a.title title,a.content content,a.create_at createAt
+  //     FROM article a
+  //     WHERE a.user_id = ?
+  //     LIMIT ?,?;
+  //     `;
+  //     const [result] = await connection.execute(statement, [userId, offset, limit]);
+  //     return result;
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // }
   async getArticleByCollectId(userId, collectId, offset, limit) {
     try {
       const statement = `
