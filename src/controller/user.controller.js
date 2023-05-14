@@ -2,6 +2,7 @@
 const fs = require('fs'); //fs模块用于读取文件信息,如获取到用户头像信息后找到图像资源返回给前端
 const jwt = require('jsonwebtoken');
 const userService = require('../service/user.service');
+const articleService = require('../service/article.service');
 const fileService = require('../service/file.service');
 const { removeHTMLTag } = require('../utils');
 const { PRIVATE_KEY } = require('../app/config');
@@ -103,18 +104,18 @@ class UserContoller {
     const result = await userService.getFollowInfo(userId);
     ctx.body = result ? Result.success(result) : Result.fail('获取用户关注信息失败');
   }
-  async getArticle(ctx, next) {
-    const { userId } = ctx.params;
-    const { offset, limit } = ctx.query;
-    const userArticle = await userService.getArticleById(userId, offset, limit);
-    if (userArticle) {
-      userArticle.forEach((article) => (article.content = removeHTMLTag(article.content)));
-      console.log('获取用户发表过的文章成功');
-      ctx.body = Result.success(userArticle);
-    } else {
-      ctx.body = Result.fail('获取用户发表过的文章失败');
-    }
-  }
+  // async getArticle(ctx, next) {
+  //   const { userId } = ctx.params;
+  //   const { offset, limit } = ctx.query;
+  //   const userArticle = await articleService.getArticleList(offset, limit, '', userId);
+  //   if (userArticle) {
+  //     userArticle.forEach((article) => (article.content = removeHTMLTag(article.content)));
+  //     console.log('获取用户发表过的文章成功');
+  //     ctx.body = Result.success(userArticle);
+  //   } else {
+  //     ctx.body = Result.fail('获取用户发表过的文章失败');
+  //   }
+  // }
   async getComment(ctx, next) {
     const { userId } = ctx.params;
     const { offset, limit } = ctx.query;

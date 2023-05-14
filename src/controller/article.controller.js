@@ -58,9 +58,10 @@ class ArticleController {
   }
   async getList(ctx, next) {
     // 1.获取文章列表的偏离量和数据长度
-    const { offset, limit, tagId } = ctx.query;
+    const { offset, limit, tagId, userId, idList } = ctx.query;
+    console.log('offset, limit, tagId, userId idList', offset, limit, tagId, userId, JSON.parse(idList));
     // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
-    const result = await articleService.getArticleList(offset, limit, tagId);
+    const result = await articleService.getArticleList(offset, limit, tagId, userId, JSON.parse(idList));
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     if (result) {
       result.forEach((article) => {

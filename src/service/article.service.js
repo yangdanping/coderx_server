@@ -50,7 +50,8 @@ class ArticleService {
       console.log(error);
     }
   }
-  async getArticleList(offset, limit, tagId) {
+  async getArticleList(offset, limit, tagId = '', userId = '', idList = []) {
+    let queryCollectedArticle = idList.length ? `AND a.id IN (${idList.join(',')})` : '';
     try {
       const statement = `
       SELECT a.id id,a.title title,a.content content,a.views views,a.status status,a.create_at createAt,a.update_at updateAt,
@@ -72,7 +73,8 @@ class ArticleService {
       LEFT JOIN profile p ON u.id = p.user_id
       LEFT JOIN article_tag ag ON a.id = ag.article_id
       LEFT JOIN tag ON tag.id = ag.tag_id
-      ${tagId ? `WHERE ag.tag_id = ${tagId}` : ''}
+      WHERE IFNULL(tag.id,'') LIKE '%${tagId}%' AND a.user_id LIKE '%${userId}%'
+      ${queryCollectedArticle}
       GROUP BY a.id
       LIMIT ?,?;`;
       const [result] = await connection.execute(statement, [offset, limit]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组

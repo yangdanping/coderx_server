@@ -20,7 +20,7 @@ userRouter.post('/login', verifyUserLogin, userController.userLogin);
 userRouter.get('/feedback/:userId', verifyAuth, userController.getReplyByUserId);
 
 /* ★获取用户文章接口------------------------------------------- */
-userRouter.get('/:userId/article', userController.getArticle);
+// userRouter.get('/:userId/article', userController.getArticle);
 
 /* ★获取用户收藏夹文章接口------------------------------------------- */
 userRouter.get('/:userId/collect', userController.getArticleByCollectId);
