@@ -2,7 +2,7 @@ const fileService = require('../service/file.service');
 const userService = require('../service/user.service');
 const config = require('../app/config');
 const Result = require('../app/Result');
-const baseURL = `${config.APP_HOST}:${config.APP_PORT}`;
+const { baseURL } = require('../constants/urls');
 class FileController {
   async saveAvatarInfo(ctx, next) {
     // 1.获取图像数据,注意@koa/multer库也是把文件放到ctx的request对象中的,所以上传的文件在ctx.file中找到
