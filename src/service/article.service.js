@@ -1,5 +1,5 @@
-const { connection, config } = require('../app');
-const baseURL = `${config.APP_HOST}:${config.APP_PORT}`;
+const { connection } = require('../app');
+const { baseURL, redirectURL } = require('../constants/urls');
 class ArticleService {
   async addArticle(userId, title, content) {
     try {
@@ -36,7 +36,7 @@ class ArticleService {
       WHERE article.id =a.id
       ),NULL) tags,
       (SELECT JSON_ARRAYAGG(CONCAT('${baseURL}/article/images/',file.filename)) FROM file WHERE a.id = file.article_id) images,
-      CONCAT('${baseURL}/article/',a.id) articleUrl
+      CONCAT('${redirectURL}/article/',a.id) articleUrl
       FROM article a
       LEFT JOIN user u ON a.user_id = u.id
       LEFT JOIN profile p ON u.id = p.user_id
@@ -67,7 +67,7 @@ class ArticleService {
       WHERE article.id =a.id
       ),NULL) tags,
       (SELECT JSON_ARRAYAGG(CONCAT('${baseURL}/article/images/',file.filename,'?type=small')) FROM file WHERE a.id = file.article_id) cover,
-      CONCAT('${baseURL}/article/',a.id) articleUrl
+      CONCAT('${redirectURL}/article/',a.id) articleUrl
       FROM article a
       LEFT JOIN user u ON a.user_id = u.id
       LEFT JOIN profile p ON u.id = p.user_id
@@ -140,7 +140,10 @@ class ArticleService {
   }
   async getArticlesByKeyWords(keywords) {
     try {
-      const statement = `SELECT a.id id,a.title title FROM article a where title LIKE '%${keywords}%' LIMIT 0,10`;
+      const statement = `
+      SELECT a.id id,a.title title,
+      CONCAT('${redirectURL}/article/',a.id) articleUrl
+      FROM article a where title LIKE '%${keywords}%' LIMIT 0,10`;
       const [result] = await connection.execute(statement);
       return result;
     } catch (error) {

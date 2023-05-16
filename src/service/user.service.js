@@ -193,13 +193,27 @@ class UserService {
   async getCommentById(userId, offset, limit) {
     try {
       const statement = `
-      SELECT a.id id,a.title title,c.content content,c.create_at createAt
+      SELECT c.id, a.title,c.content, c.comment_id commentId, c.create_at createAt,
+      JSON_OBJECT('id', u.id, 'name', u.name,'avatarUrl',p.avatar_url) user,
+      COUNT(cl.user_id) likes
       FROM comment c
-      LEFT JOIN article a
-      ON c.article_id = a.id
-      WHERE c.user_id = ?
+      LEFT JOIN article a ON c.article_id = a.id
+      LEFT JOIN user u ON u.id = c.user_id
+      LEFT JOIN profile p ON u.id = p.user_id
+      LEFT JOIN comment_like cl ON c.id = cl.comment_id
+      WHERE u.id LIKE '%${userId}%'
+      GROUP BY c.id
+      ORDER BY c.update_at DESC;
       LIMIT ?,?;
       `;
+      // const statement = `
+      // SELECT a.id id,a.title title,c.content content,c.create_at createAt
+      // FROM comment c
+      // LEFT JOIN article a
+      // ON c.article_id = a.id
+      // WHERE c.user_id = ?
+      // LIMIT ?,?;
+      // `;
       const [result] = await connection.execute(statement, [userId, offset, limit]);
       return result;
     } catch (error) {

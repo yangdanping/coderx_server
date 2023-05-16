@@ -70,13 +70,16 @@ class CommentController {
   }
   async getList(ctx, next) {
     // 1.获取数据(由于是get请求,所以通过query的方式把其传过来,当然可以判断一些别人有没有传,没传的话最好在这里发送错误信息)
-    const { articleId } = ctx.query;
+    const { offset, limit, articleId, userId } = ctx.query;
     // 2.根据获取到的数据去查询出列表
-    const result = await commentService.getCommentList(articleId);
+    const result = await commentService.getCommentList(offset, limit, articleId, userId);
     // console.log(result);
     result.forEach((comment) => {
-      if (comment.status === '1') {
-        comment.content = '该评论已被封禁';
+      if (comment.status === '0') {
+        comment.content = comment.content.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
+      } else {
+        comment.article.title = '文章已被封禁';
+        comment.content = comment.content = '评论已被封禁';
       }
     });
     ctx.body = result ? Result.success(result) : Result.fail('获取评论列表失败!');
