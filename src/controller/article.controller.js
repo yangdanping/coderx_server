@@ -59,7 +59,7 @@ class ArticleController {
         }
       });
     }
-    if (result.status === '1') {
+    if (result.status === 1) {
       result.title = result.content = '文章已被封禁';
     }
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
@@ -74,7 +74,7 @@ class ArticleController {
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     if (result) {
       result.forEach((article) => {
-        if (article.status === '0') {
+        if (!article.status) {
           article.content = article.content.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
           if (article.content.length > 50) {
             article.content = article.content.slice(0, 50);

@@ -40,7 +40,7 @@ class UserService {
   async getProfileById(userId) {
     try {
       const statement = `
-      SELECT u.id id,u.name name,p.avatar_url avatarUrl,p.age age,p.sex sex,p.email email,
+      SELECT u.id id,u.name name,u.status status,p.avatar_url avatarUrl,p.age age,p.sex sex,p.email email,
       p.career career,p.address address,
       (SELECT COUNT(*)
       FROM article a

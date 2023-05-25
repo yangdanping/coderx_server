@@ -75,7 +75,7 @@ class CommentController {
     const result = await commentService.getCommentList(offset, limit, articleId, userId);
     // console.log(result);
     result.forEach((comment) => {
-      if (comment.status === '0') {
+      if (!comment.status) {
         comment.content = comment.content.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
       } else {
         comment.article.title = '文章已被封禁';
