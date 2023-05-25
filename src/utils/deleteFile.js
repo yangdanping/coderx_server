@@ -1,7 +1,17 @@
 const fs = require('fs');
 const { PICTURE_PATH } = require('../constants/file-path');
+const { COVER_SUFFIX } = require('../constants/file');
 
-module.exports = function deleteFile(findName, path = PICTURE_PATH) {
+module.exports = function deleteFile(files) {
+  files.forEach(({ filename }) => {
+    if (filename.endsWith(COVER_SUFFIX)) {
+      filename = filename.replace(COVER_SUFFIX, ''); // 删除后缀名,使其可以正常访问本地文件
+    }
+    handleDeleteFile(filename);
+  });
+};
+
+function handleDeleteFile(findName, path = PICTURE_PATH) {
   let filesAll = [];
   if (fs.existsSync(path)) {
     filesAll = fs.readdirSync(path);
@@ -12,7 +22,7 @@ module.exports = function deleteFile(findName, path = PICTURE_PATH) {
       }
     });
   }
-};
+}
 
 function deleteFileSync(filePath) {
   // 检测文件是否存在

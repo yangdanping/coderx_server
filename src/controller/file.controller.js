@@ -3,6 +3,8 @@ const userService = require('../service/user.service');
 const config = require('../app/config');
 const Result = require('../app/Result');
 const { baseURL } = require('../constants/urls');
+const deleteFile = require('../utils/deleteFile');
+
 class FileController {
   async saveAvatarInfo(ctx, next) {
     // 1.获取图像数据,注意@koa/multer库也是把文件放到ctx的request对象中的,所以上传的文件在ctx.file中找到
@@ -66,6 +68,13 @@ class FileController {
     const { uploaded } = ctx.request.body;
     const result = await fileService.updateFile(articleId, uploaded);
     ctx.body = result ? Result.success(result) : Result.fail('上传文章配图失败!');
+  }
+  async deleteFile(ctx, next) {
+    const { uploaded } = ctx.request.body;
+    const files = await fileService.findFileById(uploaded);
+    files.length && deleteFile(files);
+    await fileService.delete(uploaded);
+    ctx.body = files.length ? Result.success(`已删除${files.length}张图片成功`) : Result.fail('删除图片失败');
   }
 }
 

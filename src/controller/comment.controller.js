@@ -84,9 +84,9 @@ class CommentController {
     });
     ctx.body = result ? Result.success(result) : Result.fail('获取评论列表失败!');
   }
-  async getCommentLikedById(ctx, next) {
+  async getCommentById(ctx, next) {
     const { commentId } = ctx.params;
-    const result = await commentService.getCommentLikedById(commentId);
+    const result = await commentService.getCommentById(commentId);
     ctx.body = result ? Result.success(result) : Result.fail('增加文章浏览量失败!');
   }
 }

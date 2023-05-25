@@ -7,8 +7,8 @@ const { verifyAuth, verifyStatus, verifyPermission } = require('../middleware/au
 设置为不登录的用户也能看评论列表 */
 commentRouter.get('/', commentController.getList);
 
-/* ★获取文章点赞接口(用于点赞后)---------------------------------- */
-commentRouter.get('/:commentId/like', commentController.getCommentLikedById);
+/* ★获取单个评论接口(用于点赞和修改评论后)---------------------------------- */
+commentRouter.get('/:commentId', commentController.getCommentById);
 
 /* ★<用户对文章评论>的实现---------------------------------- */
 commentRouter.post('/', verifyAuth, verifyStatus, commentController.addComment);

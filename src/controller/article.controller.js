@@ -3,6 +3,7 @@ const articleService = require('../service/article.service.js');
 const userService = require('../service/user.service.js');
 const fileService = require('../service/file.service.js');
 const { PICTURE_PATH } = require('../constants/file-path');
+const { COVER_SUFFIX } = require('../constants/file');
 const Result = require('../app/Result');
 const deleteFile = require('../utils/deleteFile');
 class ArticleController {
@@ -50,6 +51,14 @@ class ArticleController {
     console.log(articleId);
     // 2.根据传递过来文章id在数据库中查询单个文章
     const result = await articleService.getArticleById(articleId);
+    // 将封面置顶
+    if (result.images) {
+      result.images.find(({ url }, index) => {
+        if (url.endsWith(COVER_SUFFIX)) {
+          return result.images.unshift(result.images.splice(index, 1)[0]);
+        }
+      });
+    }
     if (result.status === '1') {
       result.title = result.content = '文章已被封禁';
     }
@@ -58,15 +67,18 @@ class ArticleController {
   }
   async getList(ctx, next) {
     // 1.获取文章列表的偏离量和数据长度
-    const { offset, limit, tagId, userId, idList } = ctx.query;
-    console.log('offset, limit, tagId, userId idList', offset, limit, tagId, userId, JSON.parse(idList));
+    const { offset, limit, tagId, userId, order, idList } = ctx.query;
+    console.log('offset, limit, tagId, userId idList', offset, limit, tagId, userId, order, JSON.parse(idList));
     // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
-    const result = await articleService.getArticleList(offset, limit, tagId, userId, JSON.parse(idList));
+    const result = await articleService.getArticleList(offset, limit, tagId, userId, order, JSON.parse(idList));
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     if (result) {
       result.forEach((article) => {
         if (article.status === '0') {
           article.content = article.content.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
+          if (article.content.length > 50) {
+            article.content = article.content.slice(0, 50);
+          }
         } else {
           article.title = article.content = '文章已被封禁';
         }
@@ -91,9 +103,8 @@ class ArticleController {
     // 1.删除文章只需获取id
     const { articleId } = ctx.params;
     // 2.根据传递过来文章id直接在数据库删除对应id的文章
-    // 删除文章的同时,把该文章的文件也删除掉
     const files = await articleService.findFileById(articleId);
-    files.forEach((file) => deleteFile(file.filename));
+    files.length && deleteFile(files); // 删除文章的同时,把该文章的文件也删除掉
     const result = await articleService.delete(articleId);
     // // 3.将修改数据库的结果处理,给用户(前端/客户端)返回真正的数据
     ctx.body = result ? Result.success(result) : Result.fail('删除文章失败!');
@@ -132,7 +143,11 @@ class ArticleController {
     const { type } = ctx.query;
     // http://localhost:8000/article/images/1645078817803.jpg?type=small
     const fileInfo = await fileService.getFileByFilename(filename);
-    ['large', 'middle', 'small'].some((item) => item === type) && (filename += '-' + type); //调用数组的some函数,可判断数组中某个东西是等于某个值,返回布尔值
+    // ['large', 'middle', 'small'].some((item) => item === type) && (filename += '-' + type); //调用数组的some函数,可判断数组中某个东西是等于某个值,返回布尔值
+    if (filename.endsWith(COVER_SUFFIX)) {
+      filename = filename.replace(COVER_SUFFIX, ''); // 删除后缀名,使其可以正常访问本地文件
+    }
+    type === 'small' && (filename += `-${type}`);
     // 2.根据获取到的id去数据库直接查询
     if (fileInfo) {
       // console.log('获取文章图像信息成功', fileInfo);
@@ -144,7 +159,7 @@ class ArticleController {
     }
   }
   async search(ctx, next) {
-    const { keywords } = ctx.query; //拿到了关键字'
+    const { keywords } = ctx.query; //拿到了关键字
     const result = await articleService.getArticlesByKeyWords(keywords);
     ctx.body = result ? Result.success(result) : Result.fail('查询文章失败!');
   }

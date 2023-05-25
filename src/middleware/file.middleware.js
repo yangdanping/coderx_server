@@ -5,6 +5,7 @@ const { AVATAR_PATH, PICTURE_PATH } = require('../constants/file-path');
 // // 要实现用户上传头像,则先做解析form-data的准备工作--------------
 
 function setStorage(resourcePath) {
+  console.log('setStorage===========================', resourcePath);
   return multer.diskStorage({
     destination: path.resolve(`${resourcePath}`), //定义文件保存路径//注意,该相对路径是相对于process.cwd的路径的
     filename: (req, file, cb) => {
@@ -16,7 +17,7 @@ const avatarStorage = setStorage(AVATAR_PATH);
 const pictureStorage = setStorage(PICTURE_PATH);
 
 const avatarHandler = multer({ storage: avatarStorage }).single('avatar'); //因为我只保存单个文件所以用single,且对应avatar字段
-const pictureHandler = multer({ storage: pictureStorage }).array('picture', 9); //普通图片可以是多个,可以用picture,一条动态可上传9张图
+const pictureHandler = multer({ storage: pictureStorage }).array('picture', 20); //普通图片可以是多个,可以用picture,一篇文章可上传20张图
 
 // 来对上传的图片大小进行处理,最终效果是除了上传的原图,还对应生成另外三种不同大小的图片
 /* 调用Jimp.read处理图片,返回一个img对象,img.resize()直接进行处理
@@ -25,22 +26,27 @@ const pictureHandler = multer({ storage: pictureStorage }).array('picture', 9); 
 const pictureResize = async (ctx, next) => {
   //1.获取所有的图像信息
   const files = ctx.files;
-  console.log(files);
+  console.log('获取所有的图像信息', files);
   //2.对图像进行处理(利用第三方库jimp)
-  for (const file of files) {
-    const destPath = path.join(file.destination, file.filename);
-    console.log(destPath);
-    Jimp.read(file.path).then((img) => {
-      img.resize(1280, Jimp.AUTO).write(`${destPath}-large`); //处理为宽1280,然后调用Jimp.AUTO进行自动缩放,然后调用write()写入到某个地方
-      img.resize(640, Jimp.AUTO).write(`${destPath}-middle`);
-      img.resize(320, Jimp.AUTO).write(`${destPath}-small`);
-    });
-    /* 到时不加后缀就是原图 http://localhost:8000/moment/images/1635697916652.jpg
-然后前端那边在图像路径后面拼接一个参数如type=small,到时候展示的就是宽为320的小图
-http://localhost:8000/moment/images/1635697916652.jpg?type=small
-不同的后缀,获得不同大小的图片,得以在不同的地方展示
-在提供服务的地方做修改 */
+  if (files.length) {
+    const cover = files[0]; // 仅取第一张图片为封面,进行裁切
+    const destPath = path.join(cover.destination, cover.filename);
+    Jimp.read(cover.path).then((img) => img.resize(320, Jimp.AUTO).write(`${destPath}-small`));
   }
+  // for (const file of files) {
+  //   const destPath = path.join(file.destination, file.filename);
+  //   console.log(destPath);
+  //   Jimp.read(file.path).then((img) => {
+  //     img.resize(1280, Jimp.AUTO).write(`${destPath}-large`);
+  //     img.resize(640, Jimp.AUTO).write(`${destPath}-middle`);
+  //     img.resize(320, Jimp.AUTO).write(`${destPath}-small`); //处理图片宽度为320,第二个参数Jimp.AUTO表示高度自动缩放,然后调用write()写入到某个地方
+  //   });
+  // }
+  /* 到时不加后缀就是原图 http://localhost:8000/moment/images/1635697916652.jpg
+  然后前端那边在图像路径后面拼接一个参数如type=small,到时候展示的就是宽为320的小图
+  http://localhost:8000/moment/images/1635697916652.jpg?type=small
+  不同的后缀,获得不同大小的图片,得以在不同的地方展示
+  在提供服务的地方做修改 */
   await next();
 };
 

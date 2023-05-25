@@ -14,4 +14,7 @@ fileRouter.post('/picture', verifyAuth, pictureHandler, pictureResize, fileContr
 
 fileRouter.post('/picture/:articleId', verifyAuth, fileController.updateFile);
 
+//★删除图片接口----------------------------------
+fileRouter.delete('/picture', verifyAuth, fileController.deleteFile);
+
 module.exports = fileRouter;

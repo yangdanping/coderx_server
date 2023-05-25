@@ -1,5 +1,7 @@
 const { connection } = require('../app');
 const { baseURL, redirectURL } = require('../constants/urls');
+const { COVER_SUFFIX } = require('../constants/file');
+
 class ArticleService {
   async addArticle(userId, title, content) {
     try {
@@ -35,7 +37,7 @@ class ArticleService {
       LEFT JOIN tag ON tag.id = ag.tag_id
       WHERE article.id =a.id
       ),NULL) tags,
-      (SELECT JSON_ARRAYAGG(CONCAT('${baseURL}/article/images/',file.filename)) FROM file WHERE a.id = file.article_id) images,
+      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',file.id,'url',CONCAT('${baseURL}/article/images/',file.filename))) FROM file WHERE a.id = file.article_id) images,
       CONCAT('${redirectURL}/article/',a.id) articleUrl
       FROM article a
       LEFT JOIN user u ON a.user_id = u.id
@@ -50,8 +52,11 @@ class ArticleService {
       console.log(error);
     }
   }
-  async getArticleList(offset, limit, tagId = '', userId = '', idList = []) {
+  async getArticleList(offset, limit, tagId = '', userId = '', order = 'date', idList = []) {
+    // 根据文章id查询(用于文章收藏)
     let queryCollectedArticle = idList.length ? `AND a.id IN (${idList.join(',')})` : '';
+    // 文章排序
+    let listOrder = `ORDER BY ${order === 'date' ? 'a.create_at' : 'likes+a.views+commentCount'} DESC`;
     try {
       const statement = `
       SELECT a.id id,a.title title,a.content content,a.views views,a.status status,a.create_at createAt,a.update_at updateAt,
@@ -66,7 +71,7 @@ class ArticleService {
       LEFT JOIN tag ON tag.id = ag.tag_id
       WHERE article.id =a.id
       ),NULL) tags,
-      (SELECT JSON_ARRAYAGG(CONCAT('${baseURL}/article/images/',file.filename,'?type=small')) FROM file WHERE a.id = file.article_id) cover,
+      (SELECT CONCAT('${baseURL}/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%${COVER_SUFFIX}') cover,
       CONCAT('${redirectURL}/article/',a.id) articleUrl
       FROM article a
       LEFT JOIN user u ON a.user_id = u.id
@@ -76,6 +81,7 @@ class ArticleService {
       WHERE IFNULL(tag.id,'') LIKE '%${tagId}%' AND a.user_id LIKE '%${userId}%'
       ${queryCollectedArticle}
       GROUP BY a.id
+      ${listOrder}
       LIMIT ?,?;`;
       const [result] = await connection.execute(statement, [offset, limit]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
       return result; //result就是我们真实查询结果,由于查询单个取第一个结果即可
@@ -145,6 +151,7 @@ class ArticleService {
       CONCAT('${redirectURL}/article/',a.id) articleUrl
       FROM article a where title LIKE '%${keywords}%' LIMIT 0,10`;
       const [result] = await connection.execute(statement);
+      console.log('result', result);
       return result;
     } catch (error) {
       console.log(error);
