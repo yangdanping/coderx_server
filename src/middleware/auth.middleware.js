@@ -53,9 +53,9 @@ const verifyPermission = async (ctx, next) => {
 // ★3.验证状态中间件------------------------------------------
 const verifyStatus = async (ctx, next) => {
   const { id } = ctx.user;
-  const result = await authService.checkStatus(id);
+  const status = await authService.checkStatus(id);
   // console.log('verifyStatus!!!!!', result);
-  result === '0' ? await next() : (ctx.body = Result.fail('您已被封禁'));
+  !status ? await next() : (ctx.body = Result.fail('您已被封禁'));
 };
 module.exports = {
   verifyAuth,

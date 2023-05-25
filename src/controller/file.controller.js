@@ -46,22 +46,6 @@ class FileController {
     }
     ctx.body = Result.success(savedPictures);
   }
-  // async savePictureInfo(ctx, next) {
-  //   // 1.获取图像数据,由于那边是multer({ ... }).array('picture', 9),所以这里是返回数组,是files
-  //   const userId = ctx.user.id;
-  //   const files = ctx.files;
-  //   const { articleId } = ctx.query;
-  //   // 2.将所有的文件信息报尺寸到数据库中
-  //   /* 注意为了能够知道图像是属于哪条动态的,必须在前端那边定义个query拿到articleId */
-  //   const savedPictures = [];
-  //   for (const file of files) {
-  //     const { filename, mimetype, size } = file;
-  //     const result = await fileService.addFile(userId, articleId, filename, mimetype, size);
-  //     result ? savedPictures.push(result) : Result.fail('保存图片失败');
-  //   }
-  //   const count = savedPictures.length;
-  //   ctx.body = count ? Result.success(`上传${count}张图片成功`) : Result.fail('上传图片失败');
-  // }
 
   async updateFile(ctx, next) {
     const { articleId } = ctx.params;
