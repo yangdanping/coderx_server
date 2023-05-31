@@ -51,18 +51,20 @@ class FileService {
   }
   async updateFile(articleId, uploaded) {
     try {
-      // const statement = `UPDATE file SET article_id = ? WHERE id IN (${uploaded.join(',')})`;
-      const statement = `
-      UPDATE file SET article_id = ?,
-      filename = CASE id
-      WHEN ${uploaded[0]} THEN CONCAT(filename,'${COVER_SUFFIX}')
-      ELSE filename
-      END
-      WHERE id IN (${uploaded.join(',')});
-      `;
-
-      console.log(statement);
-      const [result] = await connection.execute(statement, [articleId]);
+      const statement1 = `UPDATE file SET filename = SUBSTRING_INDEX(filename,'${COVER_SUFFIX}',1) WHERE article_id = ? AND filename LIKE '%${COVER_SUFFIX}'`;
+      const [result1] = await connection.execute(statement1, [articleId]);
+      console.log('清空后缀名---------', result1);
+      const statement2 = `UPDATE file SET article_id = ? WHERE id IN (${uploaded.join(',')})`;
+      const [result2] = await connection.execute(statement2, [articleId]);
+      return result2;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  async updateCover(articleId, coverId) {
+    try {
+      const statement = `UPDATE file SET filename = CONCAT(filename,'${COVER_SUFFIX}') WHERE article_id = ? AND id = ?`;
+      const [result] = await connection.execute(statement, [articleId, coverId]);
       return result;
     } catch (error) {
       console.log(error);

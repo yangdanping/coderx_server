@@ -53,6 +53,10 @@ class ArticleService {
     }
   }
   async getArticleList(offset, limit, tagId = '', userId = '', order = 'date', idList = []) {
+    // 根据tagId查询
+    let queryTagArticle = `WHERE IFNULL(tag.id,'') ${tagId ? `= ${tagId}` : `LIKE '%%'`}`;
+    // 根据用户id查询(用于查询用户发过的文章)
+    let queryUserArticle = userId ? `AND a.user_id LIKE '%${userId}%'` : '';
     // 根据文章id查询(用于文章收藏)
     let queryCollectedArticle = idList.length ? `AND a.id IN (${idList.join(',')})` : '';
     // 文章排序
@@ -78,7 +82,8 @@ class ArticleService {
       LEFT JOIN profile p ON u.id = p.user_id
       LEFT JOIN article_tag ag ON a.id = ag.article_id
       LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE IFNULL(tag.id,'') LIKE '%${tagId}%' AND a.user_id LIKE '%${userId}%'
+      ${queryTagArticle}
+      ${queryUserArticle}
       ${queryCollectedArticle}
       GROUP BY a.id
       ${listOrder}

@@ -50,14 +50,21 @@ class FileController {
   async updateFile(ctx, next) {
     const { articleId } = ctx.params;
     const { uploaded } = ctx.request.body;
-    const result = await fileService.updateFile(articleId, uploaded);
+    const uploadedId = uploaded.map((img) => img.id);
+    const result = await fileService.updateFile(articleId, uploadedId);
+    console.log('updateFile', result);
+    const { id } = uploaded.find((img) => img.isCover);
+    if (id) {
+      await fileService.updateCover(articleId, id);
+    }
     ctx.body = result ? Result.success(result) : Result.fail('上传文章配图失败!');
   }
   async deleteFile(ctx, next) {
     const { uploaded } = ctx.request.body;
-    const files = await fileService.findFileById(uploaded);
+    const uploadedId = uploaded.map((img) => img.id);
+    const files = await fileService.findFileById(uploadedId);
     files.length && deleteFile(files);
-    await fileService.delete(uploaded);
+    await fileService.delete(uploadedId);
     ctx.body = files.length ? Result.success(`已删除${files.length}张图片成功`) : Result.fail('删除图片失败');
   }
 }
