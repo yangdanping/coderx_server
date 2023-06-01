@@ -88,6 +88,24 @@ class FileService {
       console.log(error);
     }
   }
+  async findAvatarById(userId) {
+    try {
+      const statement = `SELECT * FROM avatar ar WHERE ar.user_id = ?;`;
+      const [result] = await connection.execute(statement, [userId]);
+      return result[0];
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  async deleteAvatar(avatarId) {
+    try {
+      const statement = `DELETE FROM avatar ar WHERE ar.id = ?;`;
+      const [result] = await connection.execute(statement, [avatarId]);
+      return result;
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }
 
 module.exports = new FileService();

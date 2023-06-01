@@ -1,17 +1,22 @@
 const fs = require('fs');
-const { PICTURE_PATH } = require('../constants/file-path');
+const { PICTURE_PATH, AVATAR_PATH } = require('../constants/file-path');
 const { COVER_SUFFIX } = require('../constants/file');
 
-module.exports = function deleteFile(files) {
-  files.forEach(({ filename }) => {
-    if (filename.endsWith(COVER_SUFFIX)) {
-      filename = filename.replace(COVER_SUFFIX, ''); // 删除后缀名,使其可以正常访问本地文件
-    }
-    handleDeleteFile(filename);
-  });
+module.exports = function deleteFile(files, delType = 'picture') {
+  const delPath = delType === 'picture' ? PICTURE_PATH : AVATAR_PATH;
+  if (delPath === PICTURE_PATH) {
+    files.forEach(({ filename }) => {
+      if (filename.endsWith(COVER_SUFFIX)) {
+        filename = filename.replace(COVER_SUFFIX, ''); // 删除后缀名,使其可以正常访问本地文件
+      }
+      handleDeleteFile(filename, delPath);
+    });
+  } else {
+    handleDeleteFile(files.filename, delPath);
+  }
 };
 
-function handleDeleteFile(findName, path = PICTURE_PATH) {
+function handleDeleteFile(findName, path) {
   let filesAll = [];
   if (fs.existsSync(path)) {
     filesAll = fs.readdirSync(path);

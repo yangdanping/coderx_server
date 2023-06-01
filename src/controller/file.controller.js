@@ -67,6 +67,15 @@ class FileController {
     await fileService.delete(uploadedId);
     ctx.body = files.length ? Result.success(`已删除${files.length}张图片成功`) : Result.fail('删除图片失败');
   }
+  async deleteAvatar(ctx, next) {
+    const { userId } = ctx.params;
+    const file = await fileService.findAvatarById(userId);
+    if (file) {
+      deleteFile(file, 'avatar');
+      await fileService.deleteAvatar(file.id);
+    }
+    ctx.body = file ? Result.success(`删除头像${file.filename}成功`) : Result.fail('删除头像失败');
+  }
 }
 
 module.exports = new FileController();

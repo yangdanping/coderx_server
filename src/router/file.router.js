@@ -17,4 +17,7 @@ fileRouter.post('/picture/:articleId', verifyAuth, fileController.updateFile);
 //★删除图片接口----------------------------------
 fileRouter.delete('/picture', verifyAuth, fileController.deleteFile);
 
+//★删除头像接口----------------------------------
+fileRouter.delete('/avatar/:userId', verifyAuth, fileController.deleteAvatar);
+
 module.exports = fileRouter;
