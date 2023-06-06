@@ -52,13 +52,15 @@ class ArticleService {
       console.log(error);
     }
   }
-  async getArticleList(offset, limit, tagId = '', userId = '', order = 'date', idList = []) {
+  async getArticleList(offset, limit, tagId = '', userId = '', order = 'date', idList = [], keywords = '') {
     // 根据tagId查询
-    let queryTagArticle = `WHERE IFNULL(tag.id,'') ${tagId ? `= ${tagId}` : `LIKE '%%'`}`;
+    let queryByTag = `WHERE tag.id ${tagId ? `= ${tagId}` : `LIKE '%%'`}`;
     // 根据用户id查询(用于查询用户发过的文章)
-    let queryUserArticle = userId ? `AND a.user_id LIKE '%${userId}%'` : '';
+    let queryByUserId = userId ? `AND a.user_id = ${userId}` : '';
     // 根据文章id查询(用于文章收藏)
-    let queryCollectedArticle = idList.length ? `AND a.id IN (${idList.join(',')})` : '';
+    let queryByCollectId = idList.length ? `AND a.id IN (${idList.join(',')})` : '';
+    // 根据文章标题查询(用于文章收藏)
+    let queryByTitle = keywords ? `AND a.title LIKE '%${keywords}%'` : '';
     // 文章排序
     let listOrder = `ORDER BY ${order === 'date' ? 'a.create_at' : 'likes+a.views+commentCount'} DESC`;
     try {
@@ -82,9 +84,10 @@ class ArticleService {
       LEFT JOIN profile p ON u.id = p.user_id
       LEFT JOIN article_tag ag ON a.id = ag.article_id
       LEFT JOIN tag ON tag.id = ag.tag_id
-      ${queryTagArticle}
-      ${queryUserArticle}
-      ${queryCollectedArticle}
+      ${queryByTag}
+      ${queryByUserId}
+      ${queryByCollectId}
+      ${queryByTitle}
       GROUP BY a.id
       ${listOrder}
       LIMIT ?,?;`;

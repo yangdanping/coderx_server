@@ -67,23 +67,25 @@ class ArticleController {
   }
   async getList(ctx, next) {
     // 1.获取文章列表的偏离量和数据长度
-    const { offset, limit, tagId, userId, order, idList } = ctx.query;
-    console.log('offset, limit, tagId, userId idList', offset, limit, tagId, userId, order, JSON.parse(idList));
+    console.log('getList ctx.query', ctx.query);
+    const { offset, limit, tagId, userId, order, idList, keywords } = ctx.query;
+    const userCollectedIds = JSON.parse(idList);
     // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
-    const result = await articleService.getArticleList(offset, limit, tagId, userId, order, JSON.parse(idList));
+    const result = await articleService.getArticleList(offset, limit, tagId, userId, order, userCollectedIds, keywords);
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     if (result) {
       result.forEach((article) => {
         if (!article.status) {
           article.content = article.content.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
           if (article.content.length > 50) {
-            article.content = article.content.slice(0, 50);
+            article.content = article.content.slice(0, 50); //展示内容只截取前50个字符
           }
         } else {
           article.title = article.content = '文章已被封禁';
         }
       });
-      const total = tagId ? result.length : await articleService.getTotal();
+      const isQuery = tagId || userId || keywords;
+      let total = isQuery ? result.length : await articleService.getTotal();
       ctx.body = result ? Result.success({ result, total }) : Result.fail('获取该文章数据失败!');
       // ctx.body = { code: 0, data: result, total };
     } else {
