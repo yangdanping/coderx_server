@@ -86,11 +86,16 @@ class ArticleController {
       });
       const isQuery = tagId || userId || keywords;
       let total = isQuery ? result.length : await articleService.getTotal();
-      ctx.body = result ? Result.success({ result, total }) : Result.fail('获取该文章数据失败!');
+      ctx.body = result ? Result.success({ result, total }) : Result.fail('获取文章列表数据失败!');
       // ctx.body = { code: 0, data: result, total };
     } else {
       ctx.body = Result.fail('获取文章列表失败!');
     }
+  }
+  async getRecommendList(ctx, next) {
+    const { offset, limit } = ctx.query;
+    const result = await articleService.getRecommendArticleList(offset, limit);
+    ctx.body = result ? Result.success(result) : Result.fail('获取推荐文章列表失败!');
   }
   async update(ctx, next) {
     // 1.获取用户修改的文章内容或者标题

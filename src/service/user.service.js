@@ -256,6 +256,26 @@ class UserService {
       console.log(error);
     }
   }
+  async getHotUsers() {
+    try {
+      const statement = `
+      SELECT u.id id,u.name name,p.avatar_url avatarUrl,p.age age,p.sex sex,p.email email,
+      p.career career,p.address address,
+      (SELECT JSON_OBJECT('totalLikes',COUNT(al.article_id),'totalViews',SUM(a.views))
+      FROM article a
+      LEFT JOIN article_like al ON a.id = al.article_id
+      WHERE a.user_id = u.id) articleInfo
+      FROM user u
+      LEFT JOIN profile p
+      ON u.id = p.user_id
+      ORDER BY u.id
+      LIMIT 0,5;`;
+      const [result] = await connection.execute(statement);
+      return result;
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }
 
 module.exports = new UserService();

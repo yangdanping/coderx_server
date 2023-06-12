@@ -40,11 +40,14 @@ userRouter.get('/:userId/like', userController.getLiked);
 /* ★获取头像接口------------------------------------------- */
 userRouter.get('/:userId/avatar', userController.getAvatar);
 
-/* ★关注用户接口------------------------------------------- */
-userRouter.post('/:userId/follow', verifyAuth, userController.userFollow);
-
 /* ★获取关注信息接口------------------------------------------- */
 userRouter.get('/:userId/follow', userController.getFollow);
+
+/* ★获取热门作者接口------------------------------------------- */
+userRouter.get('/hot', userController.getHotUsers);
+
+/* ★关注用户接口------------------------------------------- */
+userRouter.post('/:userId/follow', verifyAuth, userController.userFollow);
 
 /* ★举报用户接口------------------------------------------- */
 userRouter.post('/:userId/report', verifyAuth, userController.userReport);

@@ -166,6 +166,12 @@ class UserContoller {
     const result = await userService.getReplyByUserId(userId);
     ctx.body = result ? Result.success(result) : Result.fail('获取反馈回复失败!');
   }
+  async getHotUsers(ctx, next) {
+    console.log('getHotUsers!!!!');
+    // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
+    const result = await userService.getHotUsers();
+    ctx.body = result ? Result.success(result) : Result.fail('获取反馈回复失败!');
+  }
 }
 
 module.exports = new UserContoller();

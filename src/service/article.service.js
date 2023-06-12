@@ -185,6 +185,18 @@ class ArticleService {
       console.log(error);
     }
   }
+  async getRecommendArticleList(offset, limit) {
+    try {
+      const statement = `SELECT a.id,a.title, CONCAT('${redirectURL}/article/',a.id) articleUrl,a.views
+      FROM article a
+      ORDER BY a.views DESC
+      LIMIT ?,?;`;
+      const [result] = await connection.execute(statement, [offset, limit]);
+      return result;
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }
 
 module.exports = new ArticleService();

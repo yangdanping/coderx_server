@@ -7,6 +7,9 @@ const { verifytagExists } = require('../middleware/tag.middleware.js');
 /* ★获取文章列表接口---------------------------------- */
 articleRouter.get('/', articleController.getList);
 
+/* ★获取文章列表接口---------------------------------- */
+articleRouter.get('/recommend', articleController.getRecommendList);
+
 /* ★模糊查询接口---------------------------------- */
 articleRouter.get('/search', articleController.search);
 

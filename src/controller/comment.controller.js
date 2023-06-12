@@ -75,11 +75,8 @@ class CommentController {
     const result = await commentService.getCommentList(offset, limit, articleId, userId);
     // console.log(result);
     result.forEach((comment) => {
-      if (!comment.status) {
-        comment.content = comment.content.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
-      } else {
-        comment.article.title = '文章已被封禁';
-        comment.content = comment.content = '评论已被封禁';
+      if (comment.status) {
+        comment.content = '评论已被封禁';
       }
     });
     ctx.body = result ? Result.success(result) : Result.fail('获取评论列表失败!');
