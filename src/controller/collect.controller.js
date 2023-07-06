@@ -28,6 +28,17 @@ class collectController {
       ctx.body = Result.success(result, 1); //减少一条收藏记录
     }
   }
+  async removeCollectArticle(ctx, next) {
+    const { idList } = ctx.query;
+    const { collectId } = ctx.params;
+    const userCollectedIds = JSON.parse(idList);
+    console.log('userCollectedIds', userCollectedIds);
+    const result = await collectService.removeCollectArticle(userCollectedIds);
+    if (result) {
+      const newCollectIds = await collectService.getCollectArticle(collectId);
+      ctx.body = newCollectIds ? Result.success(newCollectIds) : Result.fail('移除失败!'); //返回移除后的文章
+    }
+  }
 }
 
 module.exports = new collectController();

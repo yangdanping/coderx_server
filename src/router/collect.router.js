@@ -14,9 +14,12 @@ collectRouter.post('/:collectId', verifyAuth, verifyPermission, collectControlle
 collectRouter.get('/:userId', collectController.getList);
 
 /* ★<用户修改收藏夹>的实现---------------------------------- */
-collectRouter.put('/:collectId', verifyAuth, collectController.getList);
+// collectRouter.put('/:collectId', verifyAuth, collectController.getList);
 
 /* ★<用户删除收藏夹>的实现---------------------------------- */
-collectRouter.delete('/:collectId', verifyAuth, collectController.getList);
+// collectRouter.delete('/:collectId', verifyAuth, collectController.removeCollect);
+
+/* ★<用户删除收藏夹下的文章>的实现---------------------------------- */
+collectRouter.delete('/:collectId', verifyAuth, collectController.removeCollectArticle);
 
 module.exports = collectRouter;

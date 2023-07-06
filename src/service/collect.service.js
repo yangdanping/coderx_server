@@ -56,6 +56,25 @@ class CollectService {
       console.log(error);
     }
   }
+
+  async removeCollectArticle(idList) {
+    try {
+      const statement = `DELETE FROM article_collect WHERE article_id IN (${idList.join(',')});`;
+      const [result] = await connection.execute(statement, [idList]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
+      return result;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  async getCollectArticle(collectId) {
+    try {
+      const statement = `SELECT JSON_ARRAYAGG(ac.article_id) collectedArticle FROM article_collect ac WHERE ac.collect_id = ?;`;
+      const [result] = await connection.execute(statement, [collectId]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
+      return result[0];
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }
 
 module.exports = new CollectService();
