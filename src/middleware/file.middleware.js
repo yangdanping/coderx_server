@@ -1,5 +1,5 @@
 const multer = require('@koa/multer'); //解析form-data数据的第三方依赖库
-const Jimp = require('jimp');
+const { Jimp } = require('jimp');
 const path = require('path');
 const { AVATAR_PATH, PICTURE_PATH } = require('../constants/file-path');
 // // 要实现用户上传头像,则先做解析form-data的准备工作--------------
@@ -31,8 +31,16 @@ const pictureResize = async (ctx, next) => {
   if (files.length) {
     const cover = files[0]; // 仅取第一张图片为封面,进行裁切
     const destPath = path.join(cover.destination, cover.filename);
-    Jimp.read(cover.path).then((img) => img.resize(320, Jimp.AUTO).write(`${destPath}-small`));
+    const processedCover = await Jimp.read(cover.path);
+    processedCover.resize({ w: 320 });
+    // 在文件扩展名前添加-small
+    const extname = path.extname(destPath); // 获取扩展名 (.jpg)
+    const smallDestPath = destPath.replace(extname, `-small${extname}`); // 替换为 -small.jpg
+    await processedCover.write(`${smallDestPath}`);
+    // .then((img) => img.resize({ w: 320 })
+    // .write(`${destPath}-small`));
   }
+
   // for (const file of files) {
   //   const destPath = path.join(file.destination, file.filename);
   //   console.log(destPath);

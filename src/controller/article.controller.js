@@ -1,4 +1,5 @@
 const fs = require('fs'); //fs模块用于读取文件信息,如获取到用户头像信息后找到图像资源返回给前端
+const path = require('path');
 const articleService = require('../service/article.service.js');
 const userService = require('../service/user.service.js');
 const fileService = require('../service/file.service.js');
@@ -154,7 +155,12 @@ class ArticleController {
     if (filename.endsWith(COVER_SUFFIX)) {
       filename = filename.replace(COVER_SUFFIX, ''); // 删除后缀名,使其可以正常访问本地文件
     }
-    type === 'small' && (filename += `-${type}`);
+
+    // 处理small类型的图片
+    if (type === 'small') {
+      const extname = path.extname(filename);
+      filename = filename.replace(extname, `-${type}${extname}`);
+    }
     // 2.根据获取到的id去数据库直接查询
     if (fileInfo) {
       // console.log('获取文章图像信息成功', fileInfo);
