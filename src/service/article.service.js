@@ -3,7 +3,7 @@ const { baseURL, redirectURL } = require('../constants/urls');
 const { COVER_SUFFIX } = require('../constants/file');
 
 class ArticleService {
-  async addArticle(userId, title, content) {
+  addArticle = async (userId, title, content) => {
     try {
       const statement = 'INSERT INTO article (user_id,title, content) VALUES (?,?,?);';
       const [result] = await connection.execute(statement, [userId, title, content]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
@@ -11,8 +11,8 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async addView(articleId) {
+  };
+  addView = async (articleId) => {
     try {
       const statement = 'UPDATE article set views = views + 1 WHERE id = ?;';
       const [result] = await connection.execute(statement, [articleId]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
@@ -20,12 +20,12 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getArticleById(articleId) {
+  };
+  getArticleById = async (articleId) => {
     try {
       // const statement = 'SELECT * FROM article WHERE id = ?;';
       const statement = `
-      SELECT a.id id,a.title title,a.content content,a.views views,a.status status,a.create_at createAt,a.update_at updateAt,
+      SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
       JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url) author,
       (SELECT COUNT(al.user_id) FROM article
       LEFT JOIN article_like al ON article.id = al.article_id
@@ -51,8 +51,8 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getArticleList(offset, limit, tagId = '', userId = '', order = 'date', idList = [], keywords = '') {
+  };
+  getArticleList = async (offset, limit, tagId = '', userId = '', order = 'date', idList = [], keywords = '') => {
     // 根据tagId查询
     let queryByTag = `WHERE tag.id ${tagId ? `= ${tagId}` : `LIKE '%%'`}`;
     // 根据用户id查询(用于查询用户发过的文章)
@@ -65,7 +65,7 @@ class ArticleService {
     let listOrder = `ORDER BY ${order === 'date' ? 'a.create_at' : 'likes+a.views+commentCount'} DESC`;
     try {
       const statement = `
-      SELECT a.id id,a.title title,a.content content,a.views views,a.status status,a.create_at createAt,a.update_at updateAt,
+      SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
       JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
       (SELECT COUNT(al.user_id) FROM article
       LEFT JOIN article_like al ON article.id = al.article_id
@@ -96,8 +96,8 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getTotal() {
+  };
+  getTotal = async () => {
     try {
       const statement = `SELECT COUNT(a.id) total FROM article a;`;
       const [result] = await connection.execute(statement); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
@@ -106,8 +106,8 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async update(title, content, articleId) {
+  };
+  update = async (title, content, articleId) => {
     try {
       const statement = `UPDATE article SET title = ?,content = ? WHERE id = ?;`;
       const [result] = await connection.execute(statement, [title, content, articleId]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
@@ -115,17 +115,40 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async delete(articleId) {
+  };
+  delete = async (articleId) => {
+    // 获取独立连接以支持事务
+    const conn = await connection.getConnection();
+    let filesToDelete = [];
+
     try {
-      const statement = `DELETE FROM article WHERE id = ?;`;
-      const [result] = await connection.execute(statement, [articleId]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
-      return result;
+      // 开始事务
+      await conn.beginTransaction();
+
+      // 1. 先查询需要删除的文件列表（用于后续删除磁盘文件）
+      const statement1 = 'SELECT filename FROM file WHERE article_id = ?;';
+      const [files] = await conn.execute(statement1, [articleId]);
+      filesToDelete = files;
+
+      // 2. 删除文章（数据库会自动级联删除所有关联表：file、article_tag、article_like、article_collect、comment 等）
+      const statement2 = 'DELETE FROM article WHERE id = ?;';
+      const [result] = await conn.execute(statement2, [articleId]);
+
+      // 3. 提交事务
+      await conn.commit();
+
+      return { result, filesToDelete }; // 返回结果和需要删除的文件列表
     } catch (error) {
-      console.log(error);
+      // 回滚事务
+      await conn.rollback();
+      console.error('删除文章失败:', error);
+      throw error;
+    } finally {
+      // 释放连接
+      conn.release();
     }
-  }
-  async hasTag(articleId, tagId) {
+  };
+  hasTag = async (articleId, tagId) => {
     try {
       const statement = `SELECT * FROM article_tag WHERE article_id = ? AND tag_id = ?;`;
       const [result] = await connection.execute(statement, [articleId, tagId]);
@@ -133,8 +156,8 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async addTag(articleId, tagId) {
+  };
+  addTag = async (articleId, tagId) => {
     try {
       const statement = `INSERT INTO article_tag (article_id,tag_id) VALUES (?,?);`;
       const [result] = await connection.execute(statement, [articleId, tagId]);
@@ -142,8 +165,8 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async clearTag(articleId) {
+  };
+  clearTag = async (articleId) => {
     try {
       const statement = `DELETE FROM article_tag WHERE article_id = ?;`;
       const [result] = await connection.execute(statement, [articleId]);
@@ -151,11 +174,11 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getArticlesByKeyWords(keywords) {
+  };
+  getArticlesByKeyWords = async (keywords) => {
     try {
       const statement = `
-      SELECT a.id id,a.title title,
+      SELECT a.id,a.title,
       CONCAT('${redirectURL}/article/',a.id) articleUrl
       FROM article a where title LIKE '%${keywords}%' LIMIT 0,10`;
       const [result] = await connection.execute(statement);
@@ -164,8 +187,8 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async findFileById(articleId) {
+  };
+  findFileById = async (articleId) => {
     try {
       const statement = `SELECT f.filename FROM file f WHERE f.article_id = ?;`;
       const [result] = await connection.execute(statement, [articleId]);
@@ -173,8 +196,8 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getArticleLikedById(articleId) {
+  };
+  getArticleLikedById = async (articleId) => {
     try {
       const statement = `SELECT COUNT(al.user_id) likes FROM article a
       LEFT JOIN article_like al ON a.id = al.article_id
@@ -184,8 +207,8 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getRecommendArticleList(offset, limit) {
+  };
+  getRecommendArticleList = async (offset, limit) => {
     try {
       const statement = `SELECT a.id,a.title, CONCAT('${redirectURL}/article/',a.id) articleUrl,a.views
       FROM article a
@@ -196,7 +219,7 @@ class ArticleService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 }
 
 module.exports = new ArticleService();

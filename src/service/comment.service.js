@@ -1,7 +1,7 @@
 const { connection } = require('../app');
 const { baseURL, redirectURL } = require('../constants/urls');
 class CommentService {
-  async addComment(userId, articleId, content) {
+  addComment = async (userId, articleId, content) => {
     try {
       const statement = `INSERT INTO comment (user_id,article_id,content) VALUES (?,?,?)`;
       const [result] = await connection.execute(statement, [userId, articleId, content]);
@@ -9,8 +9,8 @@ class CommentService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async reply(userId, articleId, commentId, content) {
+  };
+  reply = async (userId, articleId, commentId, content) => {
     try {
       const statement = `INSERT INTO comment (user_id,article_id,comment_id,content) VALUES (?,?,?,?)`;
       const [result] = await connection.execute(statement, [userId, articleId, commentId, content]);
@@ -18,8 +18,8 @@ class CommentService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async replyToComment(userId, articleId, commentId, replyId, content) {
+  };
+  replyToComment = async (userId, articleId, commentId, replyId, content) => {
     try {
       const statement = `INSERT INTO comment (user_id,article_id,comment_id,reply_id,content) VALUES (?,?,?,?,?)`;
       const [result] = await connection.execute(statement, [userId, articleId, commentId, replyId, content]);
@@ -27,8 +27,8 @@ class CommentService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async update(content, commentId) {
+  };
+  update = async (content, commentId) => {
     try {
       const statement = `UPDATE comment SET content = ? WHERE id = ?;`;
       const [result] = await connection.execute(statement, [content, commentId]);
@@ -36,8 +36,8 @@ class CommentService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async delete(commentId) {
+  };
+  delete = async (commentId) => {
     try {
       const statement = `DELETE FROM comment WHERE id = ?;`;
       const [result] = await connection.execute(statement, [commentId]);
@@ -45,8 +45,8 @@ class CommentService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getCommentList(offset, limit, articleId, userId) {
+  };
+  getCommentList = async (offset, limit, articleId, userId) => {
     console.log('getCommentList getCommentList', offset, limit, articleId, userId);
     try {
       // 注意!获取了comment_id才能知道你当前这个评论是否是回复了别人的评论,知道这个东西前端在那边展示的时候就知道这条评论展示在什么位置了
@@ -89,8 +89,8 @@ class CommentService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getCommentById(commentId) {
+  };
+  getCommentById = async (commentId) => {
     try {
       // const statement = `SELECT COUNT(cl.user_id) likes FROM comment c
       // LEFT JOIN comment_like cl ON c.id = cl.comment_id
@@ -118,7 +118,7 @@ class CommentService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 }
 
 module.exports = new CommentService();

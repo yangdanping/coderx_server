@@ -1,7 +1,7 @@
 const { connection } = require('../app');
 
 class UserService {
-  async getUserByName(name) {
+  getUserByName = async (name) => {
     try {
       const statement = 'SELECT * FROM user WHERE name = ?;';
       const [result] = await connection.execute(statement, [name]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
@@ -9,26 +9,56 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async addUser(user) {
+  };
+  addUser = async (user) => {
+    // 获取独立连接以支持事务
+    const conn = await connection.getConnection();
     try {
+      // 开始事务
+      await conn.beginTransaction();
+
       const { name, password } = user;
-      const statement = 'INSERT INTO user (name,password) VALUES (?,?);';
-      const [result] = await connection.execute(statement, [name, password]);
-      if (result.affectedRows) {
-        try {
-          const statement = 'INSERT INTO profile (user_id) VALUES (?);';
-          await connection.execute(statement, [result.insertId]);
-          return result; //把插入用户表成功的结果返回,而非用户信息表
-        } catch (error) {
-          console.log(error);
-        }
-      }
+
+      // 第一步：插入用户表
+      const statement1 = 'INSERT INTO user (name, password) VALUES (?, ?);';
+      const [result] = await conn.execute(statement1, [name, password]);
+
+      // 第二步：插入用户信息表，关联新用户ID
+      const statement2 = 'INSERT INTO profile (user_id) VALUES (?);';
+      await conn.execute(statement2, [result.insertId]);
+
+      // 提交事务：两条SQL一起生效
+      await conn.commit();
+
+      return result; // 返回用户表插入结果
     } catch (error) {
-      console.log(error);
+      // 回滚事务：撤销所有操作
+      await conn.rollback();
+      console.error('添加用户失败:', error);
+      throw error; // 抛出错误让上层处理
+    } finally {
+      // 释放连接回连接池
+      conn.release();
     }
-  }
-  async updateAvatarUrl(avatarUrl, userId) {
+
+    // try {
+    //   const { name, password } = user;
+    //   const statement = 'INSERT INTO user (name,password) VALUES (?,?);';
+    //   const [result] = await connection.execute(statement, [name, password]);
+    //   if (result.affectedRows) {
+    //     try {
+    //       const statement = 'INSERT INTO profile (user_id) VALUES (?);';
+    //       await connection.execute(statement, [result.insertId]);
+    //       return result; //把插入用户表成功的结果返回,而非用户信息表
+    //     } catch (error) {
+    //       console.log(error);
+    //     }
+    //   }
+    // } catch (error) {
+    //   console.log(error);
+    // }
+  };
+  updateAvatarUrl = async (avatarUrl, userId) => {
     try {
       const statement = `UPDATE profile SET avatar_url = ? WHERE user_id = ?;`;
       const [result] = await connection.execute(statement, [avatarUrl, userId]);
@@ -36,12 +66,12 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getProfileById(userId) {
+  };
+  getProfileById = async (userId) => {
     try {
       const statement = `
-      SELECT u.id id,u.name name,u.status status,p.avatar_url avatarUrl,p.age age,p.sex sex,p.email email,
-      p.career career,p.address address,
+      SELECT u.id,u.name,u.status,p.avatar_url avatarUrl,p.age,p.sex,p.email,
+      p.career,p.address,
       (SELECT COUNT(*)
       FROM article a
       WHERE a.user_id = u.id) articleCount,
@@ -57,8 +87,8 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async updateProfileById(userId, profile) {
+  };
+  updateProfileById = async (userId, profile) => {
     try {
       let updateValue = [];
       Object.keys(profile).forEach((key) => updateValue.push(profile[key]));
@@ -71,8 +101,8 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async hasLike(tableName, dataId, userId) {
+  };
+  hasLike = async (tableName, dataId, userId) => {
     try {
       const statement = `SELECT * FROM ${tableName}_like WHERE ${tableName}_id = ? AND user_id = ?;`;
       const [result] = await connection.execute(statement, [dataId, userId]);
@@ -80,8 +110,8 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async changeLike(tableName, dataId, userId, isLike) {
+  };
+  changeLike = async (tableName, dataId, userId, isLike) => {
     try {
       const statement = !isLike
         ? `INSERT INTO ${tableName}_like (${tableName}_id,user_id) VALUES (?,?);`
@@ -91,11 +121,11 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getLikedById(userId) {
+  };
+  getLikedById = async (userId) => {
     try {
       const statement = `
-      SELECT u.id id,u.name name,JSON_ARRAYAGG(al.article_id) articleLiked,
+      SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
       (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
       LEFT JOIN comment_like cl
       ON user.id = cl.user_id
@@ -111,8 +141,8 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async hasFollowed(userId, followerId) {
+  };
+  hasFollowed = async (userId, followerId) => {
     try {
       const statement = `SELECT * FROM user_follow WHERE user_id = ? AND follower_id= ?;`;
       const [result] = await connection.execute(statement, [userId, followerId]);
@@ -120,8 +150,8 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async follow(userId, followerId) {
+  };
+  follow = async (userId, followerId) => {
     try {
       const statement = `INSERT INTO user_follow (user_id,follower_id) VALUES (?,?);`;
       const [result] = await connection.execute(statement, [userId, followerId]);
@@ -129,8 +159,8 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async unfollow(userId, followerId) {
+  };
+  unfollow = async (userId, followerId) => {
     try {
       const statement = `DELETE FROM user_follow WHERE user_id = ? AND follower_id = ?;`;
       const [result] = await connection.execute(statement, [userId, followerId]);
@@ -138,11 +168,11 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getFollowInfo(userId) {
+  };
+  getFollowInfo = async (userId) => {
     try {
       const statement = `
-      SELECT u.id id,u.name name,
+      SELECT u.id,u.name,
       IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
       (SELECT user.name from user WHERE user.id = uf.user_id),
       'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
@@ -159,7 +189,7 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
   // async getArticleById(userId, offset, limit) {
   //   try {
   //     const statement = `
@@ -174,10 +204,10 @@ class UserService {
   //     console.log(error);
   //   }
   // }
-  async getArticleByCollectId(userId, collectId, offset, limit) {
+  getArticleByCollectId = async (userId, collectId, offset, limit) => {
     try {
       const statement = `
-      SELECT a.id id,a.title title,a.content content,a.create_at createAt
+      SELECT a.id,a.title,a.content,a.create_at createAt
       FROM article_collect ac
       LEFT JOIN collect c ON ac.collect_id = c.id
       LEFT JOIN article a ON ac.article_id = a.id
@@ -189,8 +219,8 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getCommentById(userId, offset, limit) {
+  };
+  getCommentById = async (userId, offset, limit) => {
     try {
       const statement = `
       SELECT c.id, a.title,c.content, c.comment_id commentId, c.create_at createAt,
@@ -219,8 +249,8 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async userReport(userId, reportOptions, articleId, commentId) {
+  };
+  userReport = async (userId, reportOptions, articleId, commentId) => {
     try {
       const statement = `INSERT INTO report (user_id,content,${articleId ? 'article_id' : 'comment_id'}) VALUES (?,?,?);`;
       console.log(statement);
@@ -231,8 +261,8 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async userFeedback(userId, content) {
+  };
+  userFeedback = async (userId, content) => {
     try {
       const statement = `INSERT INTO feedback (user_id,content) VALUES (?,?);`;
       const [result] = await connection.execute(statement, [userId, content]);
@@ -240,11 +270,11 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getReplyByUserId(userId) {
+  };
+  getReplyByUserId = async (userId) => {
     try {
       const statement = `
-      SELECT f.id id,u.name name,f.content content,a.name admin,f.reply reply,f.create_at createAt
+      SELECT f.id,u.name,f.content,a.name admin,f.reply,f.create_at createAt
       FROM feedback f
       LEFT JOIN user u ON u.id = f.user_id
       LEFT JOIN admin a ON a.id = f.admin_id
@@ -255,12 +285,12 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async getHotUsers() {
+  };
+  getHotUsers = async () => {
     try {
       const statement = `
-      SELECT u.id id,u.name name,p.avatar_url avatarUrl,p.age age,p.sex sex,p.email email,
-      p.career career,p.address address,
+      SELECT u.id,u.name,p.avatar_url avatarUrl,p.age,p.sex,p.email,
+      p.career,p.address,
       (SELECT JSON_OBJECT('totalLikes',COUNT(al.article_id),'totalViews',SUM(a.views))
       FROM article a
       LEFT JOIN article_like al ON a.id = al.article_id
@@ -275,7 +305,7 @@ class UserService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 }
 
 module.exports = new UserService();

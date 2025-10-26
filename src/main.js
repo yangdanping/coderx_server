@@ -1,8 +1,13 @@
 const Koa = require('koa');
 const app = new Koa();
 const { config, bodyParser, useRoutes, errorHandler } = require('./app');
+const loggerMiddleware = require('./middleware/logger.middleware');
 
 app.on('error', errorHandler);
+
+// 日志中间件要放在最前面，这样可以记录所有请求
+app.use(loggerMiddleware);
+
 app.use(bodyParser());
 app.listen(config.APP_PORT, () => {
   useRoutes.call(app);

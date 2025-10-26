@@ -10,7 +10,7 @@ const { AVATAR_PATH } = require('../constants/file-path');
 const Result = require('../app/Result');
 
 class UserContoller {
-  async userLogin(ctx, next) {
+  userLogin = async (ctx, next) => {
     // 1.拿到验证中间件设置的user(仅取出id, name作为token的payload,为了安全性不取出密码,id非常重要,各种一对一,一对多,多对多需要用)
     const { id, name } = ctx.user;
     // // 2.生成密钥和公钥,生成token,并传入携带的用户数据,授权中间件verifyAuth通过ctx.user = verifyResult获得这边传来的id,name
@@ -25,8 +25,8 @@ class UserContoller {
     const data = { id, name, token };
     console.log('userLogin data', data);
     ctx.body = token ? Result.success(data) : Result.fail('生成token失败'); // 将token放入data中
-  }
-  async addUser(ctx, next) {
+  };
+  addUser = async (ctx, next) => {
     // 1.获取用户请求传递的参数
     const user = ctx.request.body; //注意!request是koa自定义的重新封装后的对象
     // 2.根据传递过来参数在数据库中创建用户(要对JSON数据进行解析,要用koa-bodyparser,在app/config.js中注册)
@@ -34,16 +34,16 @@ class UserContoller {
     const result = await userService.addUser(user);
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     ctx.body = result ? Result.success(result) : Result.fail('创建用户失败');
-  }
-  async getProfile(ctx, next) {
+  };
+  getProfile = async (ctx, next) => {
     // 1.拿到路径中拼接的用户id
     const { userId } = ctx.params;
     // 2.根据id将用户表左连接用户信息表查找用户
     const userInfo = await userService.getProfileById(userId);
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     ctx.body = userInfo ? Result.success(userInfo) : Result.fail('获取用户信息失败');
-  }
-  async updateProfile(ctx, next) {
+  };
+  updateProfile = async (ctx, next) => {
     // 1.拿到验证中间件中获取到的id和前端传来的用户信息
     const { id } = ctx.user;
     const profile = ctx.request.body;
@@ -51,16 +51,16 @@ class UserContoller {
     const result = await userService.updateProfileById(id, profile);
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     ctx.body = result ? Result.success(result) : Result.fail('修改用户信息失败!');
-  }
-  async getLiked(ctx, next) {
+  };
+  getLiked = async (ctx, next) => {
     // 1.拿到路径中拼接的用户id
     const { userId } = ctx.params;
     // 2.根据id将用户表左连接用户信息表查找用户
     const likedInfo = await userService.getLikedById(userId);
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     ctx.body = likedInfo ? Result.success(likedInfo) : Result.fail('获取点赞信息失败');
-  }
-  async getAvatar(ctx, next) {
+  };
+  getAvatar = async (ctx, next) => {
     // 1.拿到路径中拼接的用户id(注意!用户上传图片的服务器地址要保存到用户信息表中)
     const { userId } = ctx.params;
     // 2.根据拿到的用户id在avatar表中查看是否有该用户id的头像信息,
@@ -78,8 +78,8 @@ class UserContoller {
     } else {
       Result.fail('获取用户头像信息失败');
     }
-  }
-  async userFollow(ctx, next) {
+  };
+  userFollow = async (ctx, next) => {
     // 1.获取关注者id与被关注者id
     const followerId = ctx.user.id;
     const { userId } = ctx.params;
@@ -96,14 +96,14 @@ class UserContoller {
     } else {
       ctx.body = Result.fail('不能关注自己');
     }
-  }
-  async getFollow(ctx, next) {
+  };
+  getFollow = async (ctx, next) => {
     // 1.获取关注者id与被关注者id
     const { userId } = ctx.params;
     // 2.根据被关注者id去数据库查询关注者,以及被关注者自己关注的人
     const result = await userService.getFollowInfo(userId);
     ctx.body = result ? Result.success(result) : Result.fail('获取用户关注信息失败');
-  }
+  };
   // async getArticle(ctx, next) {
   //   const { userId } = ctx.params;
   //   const { offset, limit } = ctx.query;
@@ -116,7 +116,7 @@ class UserContoller {
   //     ctx.body = Result.fail('获取用户发表过的文章失败');
   //   }
   // }
-  async getComment(ctx, next) {
+  getComment = async (ctx, next) => {
     const { userId } = ctx.params;
     const { offset, limit } = ctx.query;
     const userComment = await userService.getCommentById(userId, offset, limit);
@@ -126,8 +126,8 @@ class UserContoller {
     } else {
       ctx.body = Result.fail('获取用户发表过的评论失败');
     }
-  }
-  async getArticleByCollectId(ctx, next) {
+  };
+  getArticleByCollectId = async (ctx, next) => {
     const { userId } = ctx.params;
     const { collectId, offset, limit } = ctx.query;
     console.log(userId, collectId, offset, limit);
@@ -139,8 +139,8 @@ class UserContoller {
     } else {
       ctx.body = Result.fail('获取用户发表过的文章失败');
     }
-  }
-  async userReport(ctx, next) {
+  };
+  userReport = async (ctx, next) => {
     const { userId } = ctx.params;
     const { reportOptions, articleId, commentId } = ctx.request.body;
     if (!commentId) {
@@ -152,26 +152,26 @@ class UserContoller {
       ctx.body = result ? Result.success(result) : Result.fail('举报用户失败!');
       console.log('我举报的是评论', parseInt(userId), commentId, reportOptions);
     }
-  }
-  async userFeedback(ctx, next) {
+  };
+  userFeedback = async (ctx, next) => {
     const { userId } = ctx.params;
     const { content } = ctx.request.body;
     const result = await userService.userFeedback(parseInt(userId), content);
     ctx.body = result ? Result.success(result) : Result.fail('举报用户失败!');
-  }
-  async getReplyByUserId(ctx, next) {
+  };
+  getReplyByUserId = async (ctx, next) => {
     const { userId } = ctx.params;
     console.log('getReplyByUserId!!!!', userId);
     // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
     const result = await userService.getReplyByUserId(userId);
     ctx.body = result ? Result.success(result) : Result.fail('获取反馈回复失败!');
-  }
-  async getHotUsers(ctx, next) {
+  };
+  getHotUsers = async (ctx, next) => {
     console.log('getHotUsers!!!!');
     // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
     const result = await userService.getHotUsers();
     ctx.body = result ? Result.success(result) : Result.fail('获取反馈回复失败!');
-  }
+  };
 }
 
 module.exports = new UserContoller();

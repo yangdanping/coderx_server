@@ -6,7 +6,7 @@ const { baseURL } = require('../constants/urls');
 const deleteFile = require('../utils/deleteFile');
 
 class FileController {
-  async saveAvatarInfo(ctx, next) {
+  saveAvatarInfo = async (ctx, next) => {
     // 1.获取图像数据,注意@koa/multer库也是把文件放到ctx的request对象中的,所以上传的文件在ctx.file中找到
     const userId = ctx.user.id; //由于来到这里,说明用户已验证登陆(授权),所以可以拿到id
     const { filename, mimetype, size } = ctx.file;
@@ -22,8 +22,8 @@ class FileController {
     } else {
       ctx.body = Result.fail('上传用户头像失败!');
     }
-  }
-  async savePictureInfo(ctx, next) {
+  };
+  savePictureInfo = async (ctx, next) => {
     // 1.获取图像数据,由于那边是multer({ ... }).array('picture', 9),所以这里是返回数组,是files
     const userId = ctx.user.id;
     const files = ctx.files;
@@ -45,9 +45,9 @@ class FileController {
       }
     }
     ctx.body = Result.success(savedPictures);
-  }
+  };
 
-  async updateFile(ctx, next) {
+  updateFile = async (ctx, next) => {
     const { articleId } = ctx.params;
     const { uploaded } = ctx.request.body;
     const uploadedId = uploaded.map((img) => img.id);
@@ -58,16 +58,16 @@ class FileController {
       await fileService.updateCover(articleId, id);
     }
     ctx.body = result ? Result.success(result) : Result.fail('上传文章配图失败!');
-  }
-  async deleteFile(ctx, next) {
+  };
+  deleteFile = async (ctx, next) => {
     const { uploaded } = ctx.request.body;
     const uploadedId = uploaded.map((img) => img.id);
     const files = await fileService.findFileById(uploadedId);
     files.length && deleteFile(files);
     await fileService.delete(uploadedId);
     ctx.body = files.length ? Result.success(`已删除${files.length}张图片成功`) : Result.fail('删除图片失败');
-  }
-  async deleteAvatar(ctx, next) {
+  };
+  deleteAvatar = async (ctx, next) => {
     const { userId } = ctx.params;
     const file = await fileService.findAvatarById(userId);
     if (file) {
@@ -75,7 +75,7 @@ class FileController {
       await fileService.deleteAvatar(file.id);
     }
     ctx.body = file ? Result.success(`删除头像${file.filename}成功`) : Result.fail('删除头像失败');
-  }
+  };
 }
 
 module.exports = new FileController();
