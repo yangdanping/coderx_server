@@ -1,7 +1,7 @@
 const { connection } = require('../app');
 
 class TagService {
-  async addTag(name) {
+  addTag = async (name) => {
     try {
       const statement = `INSERT INTO tag (name) VALUES (?);`;
       const [result] = await connection.execute(statement, [name]);
@@ -9,9 +9,9 @@ class TagService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 
-  async getTagByName(name) {
+  getTagByName = async (name) => {
     try {
       const statement = `SELECT * FROM tag WHERE name = ?;`;
       const [result] = await connection.execute(statement, [name]);
@@ -19,9 +19,11 @@ class TagService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 
-  async getTagList(offset, limit) {
+  getTagList = async (offset, limit) => {
+    console.log('getTagList offset, limit', offset, limit);
+
     try {
       const statement = `SELECT * FROM tag LIMIT ?,?;`;
       const [result] = await connection.execute(statement, [offset, limit]);
@@ -29,7 +31,7 @@ class TagService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 }
 
 module.exports = new TagService();

@@ -3,7 +3,7 @@ const { connection } = require('../app');
 class AuthService {
   /* 根据表名/内容id/用户id从数据库中查询该用户是否具备更新/删除<某表>的权限
   id和user_id是固定的,这里只需改表名 */
-  async checkPermission(tableName, dataId, userId) {
+  checkPermission = async (tableName, dataId, userId) => {
     try {
       const statement = `SELECT * FROM ${tableName} WHERE id = ? AND user_id = ?;`;
       const [result] = await connection.execute(statement, [dataId, userId]);
@@ -11,9 +11,9 @@ class AuthService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 
-  async checkStatus(userId) {
+  checkStatus = async (userId) => {
     try {
       const statement = `SELECT status FROM user WHERE id = ?;`;
       const [result] = await connection.execute(statement, [userId]);
@@ -22,7 +22,7 @@ class AuthService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 }
 
 module.exports = new AuthService();

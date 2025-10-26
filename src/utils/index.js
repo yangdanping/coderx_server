@@ -6,10 +6,11 @@ class Utils {
   // 自动加载路由工具-----------------------------
   useRoutes() {
     //fs模块传入__dirname读取当前index文件所在的目录,返回的数组里面含有当前所在文件夹里的所有文件
-    const routerDir = path.resolve(__dirname, '../router'); //C:\Users\daniel\Desktop\coderhub3.0\src\router
+    const routerDir = path.resolve(__dirname, '../router'); // /Users/yangdanping/Desktop/personal_project/coderx_server/src/router
     fs.readdirSync(routerDir).forEach((file) => {
       if (file) {
         const router = require(path.resolve(routerDir, `./${file}`));
+        console.log('useRoutes this-----------', this);
         this.use(router.routes()).use(router.allowedMethods());
         console.log(`路由文件${file}已注册`);
       } else {
@@ -34,6 +35,37 @@ class Utils {
   }
   removeHTMLTag(str) {
     return str.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
+  }
+  // 将下划线命名转换为驼峰命名-----------------------------
+  toCamelCase(data) {
+    if (!data) return data;
+
+    // 转换单个字段名：avatar_url -> avatarUrl
+    const convertKey = (key) => {
+      return key.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
+    };
+
+    // 转换单个对象
+    const convertObject = (obj) => {
+      if (obj === null || typeof obj !== 'object') {
+        return obj;
+      }
+
+      if (Array.isArray(obj)) {
+        return obj.map((item) => convertObject(item));
+      }
+
+      const newObj = {};
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          const camelKey = convertKey(key);
+          newObj[camelKey] = convertObject(obj[key]);
+        }
+      }
+      return newObj;
+    };
+
+    return convertObject(data);
   }
 }
 

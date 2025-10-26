@@ -3,12 +3,14 @@ const path = require('path');
 const articleService = require('../service/article.service.js');
 const userService = require('../service/user.service.js');
 const fileService = require('../service/file.service.js');
+const historyService = require('../service/history.service.js');
 const { PICTURE_PATH } = require('../constants/file-path');
 const { COVER_SUFFIX } = require('../constants/file');
+const { removeHTMLTag } = require('../utils');
 const Result = require('../app/Result');
 const deleteFile = require('../utils/deleteFile');
 class ArticleController {
-  async addArticle(ctx, next) {
+  addArticle = async (ctx, next) => {
     // 1.获取用户id(从验证token的结果中拿到)文章数据
     const userId = ctx.user.id;
     const { title, content } = ctx.request.body;
@@ -16,15 +18,15 @@ class ArticleController {
     const result = await articleService.addArticle(userId, title, content);
     // 3.将插入数据库的结果处理,给用户(前端/客户端)返回真正的数据
     ctx.body = result ? Result.success(result) : Result.fail('发布文章失败!');
-  }
-  async viewArticle(ctx, next) {
+  };
+  viewArticle = async (ctx, next) => {
     // 1.获取文章id
     const { articleId } = ctx.params;
     // 2.根据传递过来参数在数据库中增加文章浏览量
     const result = await articleService.addView(articleId);
     ctx.body = result ? Result.success(result) : Result.fail('增加文章浏览量失败!');
-  }
-  async likeArticle(ctx, next) {
+  };
+  likeArticle = async (ctx, next) => {
     // 1.获取用户id和点赞的评论id
     const userId = ctx.user.id;
     const [urlKey] = Object.keys(ctx.params); //从params中取出对象的key,即我们拼接的资源id,如评论就是commentId
@@ -39,19 +41,29 @@ class ArticleController {
       const result = await userService.changeLike(tableName, dataId, userId, isliked);
       ctx.body = Result.success(result, '1'); //删除一条点赞记录
     }
-  }
+  };
 
-  async getArticleLikedById(ctx, next) {
+  getArticleLikedById = async (ctx, next) => {
     const { articleId } = ctx.params;
     const result = await articleService.getArticleLikedById(articleId);
     ctx.body = result ? Result.success(result) : Result.fail('增加文章浏览量失败!');
-  }
-  async getDetail(ctx, next) {
+  };
+  getDetail = async (ctx, next) => {
     // 1.获取文章id
     const { articleId } = ctx.params;
     console.log(articleId);
     // 2.根据传递过来文章id在数据库中查询单个文章
     const result = await articleService.getArticleById(articleId);
+
+    // 3.如果用户已登录，添加浏览记录
+    if (ctx.user && ctx.user.id) {
+      try {
+        await historyService.addHistory(ctx.user.id, articleId);
+      } catch (error) {
+        console.log('添加浏览记录失败:', error);
+      }
+    }
+
     // 将封面置顶
     if (result.images) {
       result.images.find(({ url }, index) => {
@@ -63,10 +75,10 @@ class ArticleController {
     if (result.status === 1) {
       result.title = result.content = '文章已被封禁';
     }
-    // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
+    // 4.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     ctx.body = result ? Result.success(result) : Result.fail('获取该文章数据失败!');
-  }
-  async getList(ctx, next) {
+  };
+  getList = async (ctx, next) => {
     // 1.获取文章列表的偏离量和数据长度
     console.log('getList ctx.query', ctx.query);
     const { offset, limit, tagId, userId, order, idList, keywords } = ctx.query;
@@ -77,28 +89,30 @@ class ArticleController {
     if (result) {
       result.forEach((article) => {
         if (!article.status) {
-          article.content = article.content.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
+          // 清理HTML标签并截取内容长度
+          article.content = removeHTMLTag(article.content);
           if (article.content.length > 50) {
-            article.content = article.content.slice(0, 50); //展示内容只截取前50个字符
+            article.content = article.content.slice(0, 50);
           }
         } else {
+          // 被封禁的文章显示提示信息
           article.title = article.content = '文章已被封禁';
         }
       });
       const isQuery = tagId || userId || keywords;
+      // 如果是有查询条件,则查询条件的结果长度就是总条数,否则查询总条数
       let total = isQuery ? result.length : await articleService.getTotal();
       ctx.body = result ? Result.success({ result, total }) : Result.fail('获取文章列表数据失败!');
-      // ctx.body = { code: 0, data: result, total };
     } else {
       ctx.body = Result.fail('获取文章列表失败!');
     }
-  }
-  async getRecommendList(ctx, next) {
+  };
+  getRecommendList = async (ctx, next) => {
     const { offset, limit } = ctx.query;
     const result = await articleService.getRecommendArticleList(offset, limit);
     ctx.body = result ? Result.success(result) : Result.fail('获取推荐文章列表失败!');
-  }
-  async update(ctx, next) {
+  };
+  update = async (ctx, next) => {
     // 1.获取用户修改的文章内容或者标题
     const { title, content } = ctx.request.body;
     const { articleId } = ctx.params; //articleId来自路径
@@ -106,18 +120,36 @@ class ArticleController {
     const result = await articleService.update(title, content, articleId);
     // 3.将修改数据库的结果处理,给用户(前端/客户端)返回真正的数据
     ctx.body = result ? Result.success(result) : Result.fail('修改文章失败!');
-  }
-  async delete(ctx, next) {
-    // 1.删除文章只需获取id
-    const { articleId } = ctx.params;
-    // 2.根据传递过来文章id直接在数据库删除对应id的文章
-    const files = await articleService.findFileById(articleId);
-    files.length && deleteFile(files); // 删除文章的同时,把该文章的文件也删除掉
-    const result = await articleService.delete(articleId);
-    // // 3.将修改数据库的结果处理,给用户(前端/客户端)返回真正的数据
-    ctx.body = result ? Result.success(result) : Result.fail('删除文章失败!');
-  }
-  async changeTag(ctx, next) {
+  };
+  delete = async (ctx, next) => {
+    try {
+      // 1. 获取文章ID
+      const { articleId } = ctx.params;
+
+      // 2. 删除文章（事务处理，包括查询文件列表和删除数据库记录）
+      const { result, filesToDelete } = await articleService.delete(articleId);
+
+      // 3. 返回成功响应
+      ctx.body = Result.success(result);
+
+      // 4. 事务成功后，异步删除磁盘文件（不阻塞响应）
+      if (filesToDelete && filesToDelete.length > 0) {
+        // 使用 Promise.resolve().then() 异步执行，不影响用户响应
+        Promise.resolve().then(() => {
+          try {
+            deleteFile(filesToDelete);
+            console.log(`成功删除文章 ${articleId} 的 ${filesToDelete.length} 个文件`);
+          } catch (fileError) {
+            console.error('删除磁盘文件失败（不影响业务）:', fileError);
+            // TODO: 可以将失败的文件记录到待清理队列，由定时任务处理
+          }
+        });
+      }
+    } catch (error) {
+      ctx.body = Result.fail('删除文章失败!');
+    }
+  };
+  changeTag = async (ctx, next) => {
     // 1.获取数据(获取我们之前verifytagExists整合好的tags数组和文章id)
     const { tags } = ctx; //拿到了用户所选择的标签
     const { articleId } = ctx.params; //拿到了被添加标签的文章
@@ -143,8 +175,8 @@ class ArticleController {
       // 3.不需要返回数据其实,总结:多对多的核心是这张关系表
       // ctx.body = '为该文章添加标签成功!';
     }
-  }
-  async getFileInfo(ctx, next) {
+  };
+  getFileInfo = async (ctx, next) => {
     // 1.获取数据(一条动态的每张图片来说,是用filename来区分不同的图的,所以路径中要拼接filename,到这里来获取)
     // 注意!要对前端传来的图片的尺寸参数判断,没有则请求的是原图,有则拼接上对应尺寸
     let { filename } = ctx.params; //改成let以便在下面进行type的拼接
@@ -170,12 +202,12 @@ class ArticleController {
     } else {
       console.log('获取文章图像信息失败');
     }
-  }
-  async search(ctx, next) {
+  };
+  search = async (ctx, next) => {
     const { keywords } = ctx.query; //拿到了关键字
     const result = await articleService.getArticlesByKeyWords(keywords);
     ctx.body = result ? Result.success(result) : Result.fail('查询文章失败!');
-  }
+  };
 }
 
 module.exports = new ArticleController();

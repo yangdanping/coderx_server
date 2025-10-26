@@ -2,7 +2,7 @@ const { connection } = require('../app');
 const { COVER_SUFFIX } = require('../constants/file');
 
 class FileService {
-  async addAvatar(userId, filename, mimetype, size) {
+  addAvatar = async (userId, filename, mimetype, size) => {
     try {
       const statement = `INSERT INTO avatar (user_id,filename, mimetype, size) VALUES (?,?,?,?)`;
       const [result] = await connection.execute(statement, [userId, filename, mimetype, size]);
@@ -10,9 +10,9 @@ class FileService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 
-  async getAvatarById(userId) {
+  getAvatarById = async (userId) => {
     try {
       const statement = `SELECT * FROM avatar WHERE user_id = ?;`;
       const [result] = await connection.execute(statement, [userId]);
@@ -20,8 +20,8 @@ class FileService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async addFile(userId, filename, mimetype, size) {
+  };
+  addFile = async (userId, filename, mimetype, size) => {
     try {
       const statement = `INSERT INTO file (user_id,filename, mimetype, size) VALUES (?,?,?,?);`;
       const [result] = await connection.execute(statement, [userId, filename, mimetype, size]);
@@ -29,7 +29,7 @@ class FileService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
   // async addFile(userId, articleId, filename, mimetype, size) {
   //   try {
   //     const statement = `INSERT INTO file (user_id, article_id, filename, mimetype, size) VALUES (?,?,?,?,?);`;
@@ -40,7 +40,7 @@ class FileService {
   //   }
   // }
 
-  async getFileByFilename(filename) {
+  getFileByFilename = async (filename) => {
     try {
       const statement = `SELECT * FROM file WHERE filename LIKE '${filename}%';`; //只看前缀
       const [result] = await connection.execute(statement);
@@ -48,8 +48,8 @@ class FileService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async updateFile(articleId, uploaded) {
+  };
+  updateFile = async (articleId, uploaded) => {
     try {
       const statement1 = `UPDATE file SET filename = SUBSTRING_INDEX(filename,'${COVER_SUFFIX}',1) WHERE article_id = ? AND filename LIKE '%${COVER_SUFFIX}'`;
       const [result1] = await connection.execute(statement1, [articleId]);
@@ -60,8 +60,8 @@ class FileService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async updateCover(articleId, coverId) {
+  };
+  updateCover = async (articleId, coverId) => {
     try {
       const statement = `UPDATE file SET filename = CONCAT(filename,'${COVER_SUFFIX}') WHERE article_id = ? AND id = ?`;
       const [result] = await connection.execute(statement, [articleId, coverId]);
@@ -69,8 +69,8 @@ class FileService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async findFileById(uploaded) {
+  };
+  findFileById = async (uploaded) => {
     try {
       const statement = `SELECT f.filename FROM file f WHERE f.id IN (${uploaded.join(',')});`;
       const [result] = await connection.execute(statement);
@@ -78,8 +78,8 @@ class FileService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async delete(uploaded) {
+  };
+  delete = async (uploaded) => {
     try {
       const statement = `DELETE FROM file f WHERE f.id IN (${uploaded.join(',')});`;
       const [result] = await connection.execute(statement);
@@ -87,8 +87,8 @@ class FileService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async findAvatarById(userId) {
+  };
+  findAvatarById = async (userId) => {
     try {
       const statement = `SELECT * FROM avatar ar WHERE ar.user_id = ?;`;
       const [result] = await connection.execute(statement, [userId]);
@@ -96,8 +96,8 @@ class FileService {
     } catch (error) {
       console.log(error);
     }
-  }
-  async deleteAvatar(avatarId) {
+  };
+  deleteAvatar = async (avatarId) => {
     try {
       const statement = `DELETE FROM avatar ar WHERE ar.id = ?;`;
       const [result] = await connection.execute(statement, [avatarId]);
@@ -105,7 +105,7 @@ class FileService {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 }
 
 module.exports = new FileService();

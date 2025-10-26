@@ -1,8 +1,10 @@
 const commentService = require('../service/comment.service.js');
 const userService = require('../service/user.service.js');
 const Result = require('../app/Result');
+const { removeHTMLTag } = require('../utils');
+
 class CommentController {
-  async addComment(ctx, next) {
+  addComment = async (ctx, next) => {
     // 1.获取数据(包括用户id,评论的文章id,评论内容content)
     const userId = ctx.user.id; // 不需要再从前端获取用户id,因为我授权的这个人,已携带了用户信息了
     const { articleId, content } = ctx.request.body;
@@ -10,8 +12,8 @@ class CommentController {
     const result = await commentService.addComment(userId, articleId, content);
     // 3.将插入数据库的结果处理,给用户(前端/客户端)返回真正的数据
     ctx.body = result ? Result.success(result) : Result.fail('发表评论失败!');
-  }
-  async likeComment(ctx, next) {
+  };
+  likeComment = async (ctx, next) => {
     // 1.获取用户id和点赞的评论id
     const userId = ctx.user.id;
     const [urlKey] = Object.keys(ctx.params); //从params中取出对象的key,即我们拼接的资源id,如评论就是commentId
@@ -26,8 +28,8 @@ class CommentController {
       const result = await userService.changeLike(tableName, dataId, userId, isliked);
       ctx.body = Result.success(result, '1'); //删除一条点赞记录
     }
-  }
-  async reply(ctx, next) {
+  };
+  reply = async (ctx, next) => {
     const userId = ctx.user.id;
     const { commentId } = ctx.params;
     const { articleId, content, replyId } = ctx.request.body;
@@ -40,7 +42,7 @@ class CommentController {
       result = await commentService.replyToComment(userId, articleId, commentId, replyId, content);
     }
     ctx.body = result ? Result.success(result) : Result.fail('回复评论失败!');
-  }
+  };
   // async reply(ctx, next) {
   //   // 1.获取数据(在上面基础上多个commentId,也就是说我需要知道我是对那条评论进行回复了)
   //   const userId = ctx.user.id;
@@ -51,7 +53,7 @@ class CommentController {
   //   // 3.将插入数据的结果处理,给用户(前端/客户端)返回真正的数据
   //   ctx.body = result ? Result.success(result) : Result.fail('回复评论失败!');
   // }
-  async update(ctx, next) {
+  update = async (ctx, next) => {
     // // 1.获取数据(在上面基础上多个commentId,也就是说我需要知道我是对那条评论进行修改)
     const { commentId } = ctx.params;
     const { content } = ctx.request.body;
@@ -59,33 +61,35 @@ class CommentController {
     const result = await commentService.update(content, commentId);
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     ctx.body = result ? Result.success(result) : Result.fail('修改评论失败!');
-  }
-  async delete(ctx, next) {
+  };
+  delete = async (ctx, next) => {
     // 1.获取数据(只需评论的id即可删除)
     const { commentId } = ctx.params;
     // 2.根据获取到的数据去数据库进行删除操作
     const result = await commentService.delete(commentId);
     // 3.将删除结果处理,给用户(前端/客户端)返回真正的数据
     ctx.body = result ? Result.success(result) : Result.fail('删除评论失败!');
-  }
-  async getList(ctx, next) {
+  };
+  getList = async (ctx, next) => {
     // 1.获取数据(由于是get请求,所以通过query的方式把其传过来,当然可以判断一些别人有没有传,没传的话最好在这里发送错误信息)
     const { offset, limit, articleId, userId } = ctx.query;
     // 2.根据获取到的数据去查询出列表
     const result = await commentService.getCommentList(offset, limit, articleId, userId);
     // console.log(result);
     result.forEach((comment) => {
-      if (comment.status) {
+      if (!comment.status) {
+        comment.content = removeHTMLTag(comment.content);
+      } else {
         comment.content = '评论已被封禁';
       }
     });
     ctx.body = result ? Result.success(result) : Result.fail('获取评论列表失败!');
-  }
-  async getCommentById(ctx, next) {
+  };
+  getCommentById = async (ctx, next) => {
     const { commentId } = ctx.params;
     const result = await commentService.getCommentById(commentId);
     ctx.body = result ? Result.success(result) : Result.fail('增加文章浏览量失败!');
-  }
+  };
 }
 
 module.exports = new CommentController();
