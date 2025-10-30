@@ -9,7 +9,7 @@ const verifyUserRegister = async (ctx, next) => {
   // 2.判断用户名/密码不能为空(null/undefined/空字符串取反都是true,都会进到这里面来)
   if (!name || !password) {
     console.log(`verifyUserRegister<用户名/密码>校验---用户名${name ? name : '为空'},用户密码${password ? password : '为空'}`);
-    return emitErrMsg(ctx, errorTypes.NAME_OR_PWD_IS_INCORRECT); //进到这里,我就要发射错误信息,在另外一个地方通过ctx.app.on拿到这个错误信息,而且return后,后续的代码都不会执行了
+    return emitErrMsg(ctx, errorTypes.NAME_OR_PWD_IS_INCORRECT); // emit错误信息,在另外一个地方通过ctx.app.on拿到这个错误信息,而且return后,后续的代码都不会执行了
   } else {
     console.log('verifyUserRegister<用户名/密码>校验---用户名/密码不为空,可进行用户<存在>校验');
   }

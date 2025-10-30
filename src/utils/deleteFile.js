@@ -20,9 +20,20 @@ function handleDeleteFile(findName, path) {
   let filesAll = [];
   if (fs.existsSync(path)) {
     filesAll = fs.readdirSync(path);
+
+    // 提取文件名（不含扩展名）用于匹配
+    // 例如: 1686222236683.png -> 1686222236683
+    const fileNameWithoutExt = findName.replace(/\.[^/.]+$/, '');
+
     filesAll.forEach((fileItem) => {
       let findCurrPath = path + '/' + fileItem;
-      if (fileItem.indexOf(findName) !== -1) {
+
+      // 匹配原图和 -small 缩略图
+      // 匹配规则: 文件名以 fileNameWithoutExt 开头
+      const isOriginal = fileItem.indexOf(findName) !== -1; // 原图
+      const isSmallVersion = fileItem.indexOf(`${fileNameWithoutExt}-small`) !== -1; // -small 缩略图
+
+      if (isOriginal || isSmallVersion) {
         deleteFileSync(findCurrPath);
       }
     });
