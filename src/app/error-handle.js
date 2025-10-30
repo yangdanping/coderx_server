@@ -1,7 +1,7 @@
 const errorTypes = require('../constants/error-types');
 const Result = require('./Result');
 const { errorLogger } = require('./logger');
-// 只有发生了错误才会来到这,将user.middleware传过来的错误信息(error.message)进一步细化并传给用户
+// 只有发生了错误才会来到这,比如user.middleware传过来的错误信息(error.message)进一步细化并传给用户
 const errorHandler = (error, ctx) => {
   //由于我在emit时,都把error, ctx这两个发射出去了,所以这里可以拿到
   let code, msg;
@@ -12,8 +12,16 @@ const errorHandler = (error, ctx) => {
       code = 400; // Bad Request(参数传错/错误请求)
       msg = errorTypes.NAME_OR_PWD_IS_INCORRECT;
       break;
+    case errorTypes.PWD_IS_INCORRECT:
+      code = 401; // Unauthorized(用户密码错误)
+      msg = errorTypes.PWD_IS_INCORRECT;
+      break;
+    case errorTypes.UNAUTH:
+      code = 401; // Unauthorized(未认证/token无效)
+      msg = errorTypes.UNAUTH;
+      break;
     case errorTypes.USERNAME_EXISTS:
-      code = 409; // Conflict(发生冲突)
+      code = 409; // Conflict(发生冲突:用户名已存在)
       msg = errorTypes.USERNAME_EXISTS;
       break;
     case errorTypes.NAME_EXISTS:
@@ -21,24 +29,29 @@ const errorHandler = (error, ctx) => {
       msg = errorTypes.NAME_EXISTS;
       break;
     case errorTypes.USER_DOES_NOT_EXISTS:
-      code = 400; // Bad Request(参数传错/错误请求)
+      code = 404; // Not Found(用户不存在)
       msg = errorTypes.USER_DOES_NOT_EXISTS;
       break;
-    case errorTypes.PWD_IS_INCORRECT:
-      code = 400; // Bad Request(参数传错/错误请求)
-      msg = errorTypes.PWD_IS_INCORRECT;
-      break;
-    case errorTypes.UNAUTH:
-      code = 401; // Unauthorized
-      msg = errorTypes.UNAUTH;
-      break;
+
     case errorTypes.UNPERMISSION:
-      code = 401; // Unauthorized
+      code = 403; // Forbidden(已认证但权限不足)
       msg = errorTypes.UNPERMISSION;
       break;
+    case errorTypes.INTERNAL_SERVER_ERROR:
+      code = 500; // Internal Server Error(服务器内部错误)
+      msg = errorTypes.INTERNAL_SERVER_ERROR;
+      break;
+    case errorTypes.DATABASE_ERROR:
+      code = 500; // Internal Server Error(数据库错误)
+      msg = errorTypes.DATABASE_ERROR;
+      break;
+    case errorTypes.SERVICE_UNAVAILABLE:
+      code = 503; // Service Unavailable(服务不可用)
+      msg = errorTypes.SERVICE_UNAVAILABLE;
+      break;
     default:
-      code = 404; // Bad Request
-      msg = 'NOT FOUND';
+      code = 500; // Internal Server Error(未知错误)
+      msg = 'Internal Server Error';
   }
 
   console.log(`error-handle返回客户端的错误信息---${msg}`); //控制台打印测试

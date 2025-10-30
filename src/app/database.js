@@ -45,21 +45,21 @@ promisePool.execute = async function (sql, params) {
 };
 
 // 包装 query 方法（如果使用了 query）
-const originalQuery = promisePool.query.bind(promisePool);
-promisePool.query = async function (sql, params) {
-  const startTime = Date.now();
+// const originalQuery = promisePool.query.bind(promisePool);
+// promisePool.query = async function (sql, params) {
+//   const startTime = Date.now();
 
-  try {
-    sqlLogger.debug(`执行Query: ${sql.trim()} | 参数: ${JSON.stringify(params)}`);
-    const result = await originalQuery(sql, params);
-    const duration = Date.now() - startTime;
-    sqlLogger.info(`✓ Query执行成功 (${duration}ms)`);
-    return result;
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    sqlLogger.error(`✗ Query执行失败 (${duration}ms): ${error.message}`);
-    throw error;
-  }
-};
+//   try {
+//     sqlLogger.debug(`执行Query: ${sql.trim()} | 参数: ${JSON.stringify(params)}`);
+//     const result = await originalQuery(sql, params);
+//     const duration = Date.now() - startTime;
+//     sqlLogger.info(`✓ Query执行成功 (${duration}ms)`);
+//     return result;
+//   } catch (error) {
+//     const duration = Date.now() - startTime;
+//     sqlLogger.error(`✗ Query执行失败 (${duration}ms): ${error.message}`);
+//     throw error;
+//   }
+// };
 
 module.exports = promisePool;

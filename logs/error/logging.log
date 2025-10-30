@@ -1,0 +1,324 @@
+[2025-10-30 16:48:47] [ERROR] 错误 [500] Internal Server Error | 路径: /api/article | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:49:03] [ERROR] 错误 [500] Internal Server Error | 路径: /api/article | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:49:07] [ERROR] 错误 [500] Internal Server Error | 路径: /article | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:49:21] [ERROR] 错误 [500] Internal Server Error | 路径: /user/hot | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:49:23] [ERROR] 错误 [500] Internal Server Error | 路径: /tag | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:49:23] [ERROR] 错误 [500] Internal Server Error | 路径: /article/recommend?offset=0&limit=10 | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:49:23] [ERROR] 错误 [500] Internal Server Error | 路径: /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:49:28] [ERROR] 错误 [500] Internal Server Error | 路径: /tag | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:49:28] [ERROR] 错误 [500] Internal Server Error | 路径: /article/recommend?offset=0&limit=10 | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:49:28] [ERROR] 错误 [500] Internal Server Error | 路径: /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:50:09] [ERROR] 错误 [500] Internal Server Error | 路径: /tag | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:50:09] [ERROR] 错误 [500] Internal Server Error | 路径: /article/recommend?offset=0&limit=10 | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:50:09] [ERROR] 错误 [500] Internal Server Error | 路径: /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:50:30] [ERROR] 错误 [500] Internal Server Error | 路径: /article/recommend?offset=0&limit=10 | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:50:30] [ERROR] 错误 [500] Internal Server Error | 路径: /tag | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:50:30] [ERROR] 错误 [500] Internal Server Error | 路径: /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | 方法: GET | IP: ::1 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:50:45] [ERROR] 错误 [500] Internal Server Error | 路径: /article | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: SyntaxError: "undefined" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at getList (/Users/yangdanping/Desktop/personal_project/coderx_server/src/controller/article.controller.js:85:35)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-router/lib/router.js:260:18
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:34:12
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-router/lib/router.js:265:33)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+    at bodyParser (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-bodyparser/index.js:78:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+[2025-10-30 16:50:46] [ERROR] 错误 [500] Internal Server Error | 路径: /article | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: SyntaxError: "undefined" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at getList (/Users/yangdanping/Desktop/personal_project/coderx_server/src/controller/article.controller.js:85:35)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-router/lib/router.js:260:18
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:34:12
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-router/lib/router.js:265:33)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+    at bodyParser (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-bodyparser/index.js:78:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+[2025-10-30 16:50:47] [ERROR] 错误 [500] Internal Server Error | 路径: /article | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: SyntaxError: "undefined" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at getList (/Users/yangdanping/Desktop/personal_project/coderx_server/src/controller/article.controller.js:85:35)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-router/lib/router.js:260:18
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:34:12
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-router/lib/router.js:265:33)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+    at bodyParser (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-bodyparser/index.js:78:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+[2025-10-30 16:52:03] [ERROR] 错误 [500] Internal Server Error | 路径: /dev-api/article | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:52:03] [ERROR] 错误 [500] Internal Server Error | 路径: /dev-api/article | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:52:04] [ERROR] 错误 [500] Internal Server Error | 路径: /dev-api/article | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:52:15] [ERROR] 错误 [500] Internal Server Error | 路径: /dev-api/article | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:52:25] [ERROR] 错误 [500] Internal Server Error | 路径: /dev-api/article?offset=0&limit=10 | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:52:26] [ERROR] 错误 [500] Internal Server Error | 路径: /dev-api/article?offset=0&limit=10 | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:53:18] [ERROR] 错误 [500] Internal Server Error | 路径: /dev-api/article?offset=0&limit=10 | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
+[2025-10-30 16:53:19] [ERROR] 错误 [500] Internal Server Error | 路径: /dev-api/article?offset=0&limit=10 | 方法: GET | IP: ::ffff:192.168.3.96 | 堆栈: TypeError: res.setHeader is not a function
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:153:15)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at applyHeaders (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:149:11)
+    at cors (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:187:7)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:224:17
+    at originCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:214:15)
+    at /Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:219:13
+    at optionsCallback (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:199:9)
+    at corsMiddleware (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/cors/lib/index.js:204:7)
+    at dispatch (/Users/yangdanping/Desktop/personal_project/coderx_server/node_modules/koa-compose/index.js:42:32)
+
