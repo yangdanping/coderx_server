@@ -4,8 +4,7 @@ const articleService = require('../service/article.service.js');
 const userService = require('../service/user.service.js');
 const fileService = require('../service/file.service.js');
 const historyService = require('../service/history.service.js');
-const { PICTURE_PATH } = require('../constants/file-path');
-const { COVER_SUFFIX } = require('../constants/file');
+const { IMG_PATH, VIDEO_PATH } = require('../constants/file-path');
 const { removeHTMLTag } = require('../utils');
 const Result = require('../app/Result');
 const deleteFile = require('../utils/deleteFile');
@@ -64,14 +63,8 @@ class ArticleController {
       }
     }
 
-    // 将封面置顶
-    if (result.images) {
-      result.images.find(({ url }, index) => {
-        if (url.endsWith(COVER_SUFFIX)) {
-          return result.images.unshift(result.images.splice(index, 1)[0]);
-        }
-      });
-    }
+    // 封面已通过 SQL 查询单独获取，images 数组按创建时间排序
+    // 不需要额外的封面置顶逻辑
     if (result.status === 1) {
       result.title = result.content = '文章已被封禁';
     }
@@ -127,25 +120,40 @@ class ArticleController {
       const { articleId } = ctx.params;
 
       // 2. 删除文章（事务处理，包括查询文件列表和删除数据库记录）
-      const { result, filesToDelete } = await articleService.delete(articleId);
+      const { result, imagesToDelete, videosToDelete } = await articleService.delete(articleId);
 
       // 3. 返回成功响应
       ctx.body = Result.success(result);
 
       // 4. 事务成功后，异步删除磁盘文件（不阻塞响应）
-      if (filesToDelete && filesToDelete.length > 0) {
-        // 使用 Promise.resolve().then() 异步执行，不影响用户响应
-        Promise.resolve().then(() => {
-          try {
-            deleteFile(filesToDelete);
-            console.log(`成功删除文章 ${articleId} 的 ${filesToDelete.length} 个文件`);
-          } catch (fileError) {
-            console.error('删除磁盘文件失败（不影响业务）:', fileError);
-            // TODO: 可以将失败的文件记录到待清理队列，由定时任务处理
+      Promise.resolve().then(() => {
+        try {
+          let deletedCount = 0;
+
+          // 删除图片文件
+          if (imagesToDelete && imagesToDelete.length > 0) {
+            deleteFile(imagesToDelete, 'img');
+            deletedCount += imagesToDelete.length;
+            console.log(`✅ 成功删除文章 ${articleId} 的 ${imagesToDelete.length} 个图片文件`);
           }
-        });
-      }
+
+          // 删除视频文件和封面
+          if (videosToDelete && videosToDelete.length > 0) {
+            deleteFile(videosToDelete, 'video');
+            deletedCount += videosToDelete.length;
+            console.log(`✅ 成功删除文章 ${articleId} 的 ${videosToDelete.length} 个视频文件（含封面）`);
+          }
+
+          if (deletedCount > 0) {
+            console.log(`📁 文章 ${articleId} 共删除 ${deletedCount} 个文件`);
+          }
+        } catch (fileError) {
+          console.error('❌ 删除磁盘文件失败（不影响业务）:', fileError);
+          // TODO: 可以将失败的文件记录到待清理队列，由定时任务处理
+        }
+      });
     } catch (error) {
+      console.error('删除文章失败:', error);
       ctx.body = Result.fail('删除文章失败!');
     }
   };
@@ -183,10 +191,6 @@ class ArticleController {
     const { type } = ctx.query;
     // http://localhost:8000/article/images/1645078817803.jpg?type=small
     const fileInfo = await fileService.getFileByFilename(filename);
-    // ['large', 'middle', 'small'].some((item) => item === type) && (filename += '-' + type); //调用数组的some函数,可判断数组中某个东西是等于某个值,返回布尔值
-    if (filename.endsWith(COVER_SUFFIX)) {
-      filename = filename.replace(COVER_SUFFIX, ''); // 删除后缀名,使其可以正常访问本地文件
-    }
 
     // 处理small类型的图片
     if (type === 'small') {
@@ -198,7 +202,7 @@ class ArticleController {
       // console.log('获取文章图像信息成功', fileInfo);
       // 3.把查询到的图片做和用户获取头像一样也做特殊处理,就能返回
       ctx.response.set('content-type', fileInfo.mimetype);
-      ctx.body = fs.createReadStream(`${PICTURE_PATH}/${filename}`); //拼接上我们对应图片的路径
+      ctx.body = fs.createReadStream(`${IMG_PATH}/${filename}`); //拼接上我们对应图片的路径
     } else {
       console.log('获取文章图像信息失败');
     }
@@ -207,6 +211,71 @@ class ArticleController {
     const { keywords } = ctx.query; //拿到了关键字
     const result = await articleService.getArticlesByKeyWords(keywords);
     ctx.body = result ? Result.success(result) : Result.fail('查询文章失败!');
+  };
+
+  /**
+   * 获取视频文件和封面图
+   * 支持访问视频文件(.mp4等)和封面图(-poster.jpg)
+   */
+  getVideoInfo = async (ctx, next) => {
+    const { filename } = ctx.params;
+
+    try {
+      // 拼接视频文件的完整路径
+      const videoPath = path.join(VIDEO_PATH, filename);
+
+      // 检查文件是否存在
+      if (!fs.existsSync(videoPath)) {
+        console.log('视频文件不存在:', videoPath);
+        ctx.status = 404;
+        ctx.body = Result.fail('视频文件不存在');
+        return;
+      }
+
+      // 获取文件信息
+      const stats = fs.statSync(videoPath);
+
+      // 设置响应头
+      // 根据文件扩展名设置正确的 MIME 类型
+      const ext = path.extname(filename).toLowerCase();
+      const mimeTypes = {
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.ogg': 'video/ogg',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png'
+      };
+
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      ctx.response.set('content-type', contentType);
+      ctx.response.set('content-length', stats.size);
+
+      // 支持视频流式传输(支持拖动进度条)
+      const range = ctx.headers.range;
+      if (range) {
+        // 解析 Range 头
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : stats.size - 1;
+        const chunksize = end - start + 1;
+
+        ctx.status = 206; // Partial Content
+        ctx.response.set('content-range', `bytes ${start}-${end}/${stats.size}`);
+        ctx.response.set('accept-ranges', 'bytes');
+        ctx.response.set('content-length', chunksize);
+
+        // 创建可读流,只读取请求的部分
+        ctx.body = fs.createReadStream(videoPath, { start, end });
+      } else {
+        // 没有 Range 请求,返回整个文件
+        ctx.body = fs.createReadStream(videoPath);
+      }
+    } catch (error) {
+      console.error('getVideoInfo error:', error);
+      ctx.status = 500;
+      ctx.body = Result.fail('获取视频失败: ' + error.message);
+    }
   };
 }
 

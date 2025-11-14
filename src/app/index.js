@@ -10,11 +10,14 @@ const bodyParser = require('koa-bodyparser');
 const errorHandler = require('./error-handle');
 // 6.用从工具类导出的路由加载器
 const { useRoutes } = require('../utils');
+
+const cleanOrphanFilesTask = require('../tasks/cleanOrphanFiles');
 module.exports = {
   config,
   validator,
   connection,
   bodyParser,
   errorHandler,
-  useRoutes
+  useRoutes,
+  cleanOrphanFilesTask
 };

@@ -44,4 +44,9 @@ articleRouter.delete('/:articleId', verifyAuth, verifyPermission, articleControl
 到时起前端通过拼接上query参数来这里获取对应对应尺寸的图片*/
 articleRouter.get('/images/:filename', articleController.getFileInfo);
 
+/* ★<获取文章视频>的实现
+前端通过返回的视频URL进行访问,<video :src="videoUrl">
+支持视频文件和封面图的访问*/
+articleRouter.get('/video/:filename', articleController.getVideoInfo);
+
 module.exports = articleRouter;

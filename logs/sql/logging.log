@@ -1,4 +1,6 @@
-[2025-10-30 02:10:22] [DEBUG] 执行SQL: SELECT u.id,u.name,p.avatar_url avatarUrl,p.age,p.sex,p.email,
+[2025-11-14 15:30:53] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["1"]
+
+[2025-11-14 15:30:53] [DEBUG] 执行SQL: SELECT u.id,u.name,p.avatar_url avatarUrl,p.age,p.sex,p.email,
       p.career,p.address,
       (SELECT JSON_OBJECT('totalLikes',COUNT(al.article_id),'totalViews',SUM(a.views))
       FROM article a
@@ -10,217 +12,11 @@
       ORDER BY u.id
       LIMIT 0,5; | 参数: undefined
 
-[2025-10-30 02:10:23] [INFO] ✓ SQL执行成功 (111ms)
+[2025-11-14 15:30:53] [INFO] ✓ SQL执行成功 (52ms)
 
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
+[2025-11-14 15:30:53] [INFO] ✓ SQL执行成功 (54ms)
 
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (67ms)
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (133ms)
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (159ms)
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (12ms)
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (14ms)
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (13ms)
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (13ms)
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (58ms)
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (63ms)
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (36ms)
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (10ms)
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (13ms)
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (12ms)
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (14ms)
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 16:50:03] [INFO] ✓ SQL执行成功 (17ms)
-
-[2025-10-30 16:50:37] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 16:50:37] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 16:50:37] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 16:50:37] [INFO] ✓ SQL执行成功 (20ms)
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (196ms)
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (218ms)
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (10ms)
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (10ms)
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (32ms)
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (28ms)
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 16:50:38] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 16:50:38] [INFO] ✓ SQL执行成功 (10ms)
-
-[2025-10-30 16:50:50] [DEBUG] 执行SQL: SELECT u.id,u.name,p.avatar_url avatarUrl,p.age,p.sex,p.email,
+[2025-11-14 15:30:53] [DEBUG] 执行SQL: SELECT u.id,u.name,p.avatar_url avatarUrl,p.age,p.sex,p.email,
       p.career,p.address,
       (SELECT JSON_OBJECT('totalLikes',COUNT(al.article_id),'totalViews',SUM(a.views))
       FROM article a
@@ -232,30 +28,28 @@
       ORDER BY u.id
       LIMIT 0,5; | 参数: undefined
 
-[2025-10-30 16:50:50] [INFO] ✓ SQL执行成功 (6ms)
+[2025-11-14 15:30:53] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 16:50:50] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["1"]
+[2025-11-14 15:30:53] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["1"]
 
-[2025-10-30 16:50:50] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
+[2025-11-14 15:30:53] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
 
-[2025-10-30 16:50:50] [INFO] ✓ SQL执行成功 (5ms)
+[2025-11-14 15:30:53] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
 
-[2025-10-30 16:50:50] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
+[2025-11-14 15:30:53] [INFO] ✓ SQL执行成功 (6ms)
 
-[2025-10-30 16:50:50] [INFO] ✓ SQL执行成功 (3ms)
+[2025-11-14 15:30:53] [INFO] ✓ SQL执行成功 (4ms)
 
-[2025-10-30 16:50:50] [INFO] ✓ SQL执行成功 (3ms)
+[2025-11-14 15:30:53] [INFO] ✓ SQL执行成功 (15ms)
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
       FROM article a
       ORDER BY a.views DESC
       LIMIT ?,?; | 参数: ["0","10"]
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
       JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
       (SELECT COUNT(al.user_id) FROM article
       LEFT JOIN article_like al ON article.id = al.article_id
@@ -267,7 +61,11 @@
       LEFT JOIN tag ON tag.id = ag.tag_id
       WHERE article.id =a.id
       ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
+      (SELECT CONCAT('http://localhost:8000/article/images/',f.filename,'?type=small') 
+       FROM file f 
+       LEFT JOIN image_meta im ON f.id = im.file_id 
+       WHERE f.article_id = a.id AND f.file_type = 'image' AND im.is_cover = TRUE 
+       LIMIT 1) cover,
       CONCAT('http://localhost:8080/article/',a.id) articleUrl
       FROM article a
       LEFT JOIN user u ON a.user_id = u.id
@@ -282,645 +80,77 @@
       ORDER BY a.create_at DESC
       LIMIT ?,?; | 参数: ["0","10"]
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (6ms)
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (10ms)
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (12ms)
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (10ms)
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (30ms)
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (0ms)
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (6ms)
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (3ms)
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (3ms)
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686221837379.png%"]
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (17ms)
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686220507024.jpg%"]
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686219335028.jpg%"]
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686218679815.jpg%"]
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (23ms)
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685622311147.png%"]
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (11ms)
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (4ms)
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (12ms)
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (0ms)
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685613097871.png%"]
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (3ms)
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (9ms)
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (28ms)
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (4ms)
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685612251452.png%"]
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685611740220.png%"]
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 16:50:51] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (3ms)
+[2025-11-14 15:30:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685546152822.png%"]
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (3ms)
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (44ms)
 
-[2025-10-30 16:50:51] [INFO] ✓ SQL执行成功 (8ms)
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
+[2025-11-14 15:30:58] [INFO] ✓ SQL执行成功 (46ms)
 
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM user WHERE name = ?; | 参数: ["ydp"]
 
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (8ms)
 
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (25ms)
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (49ms)
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (59ms)
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 16:51:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (12ms)
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 16:51:03] [INFO] ✓ SQL执行成功 (27ms)
-
-[2025-10-30 16:51:04] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 16:51:04] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 16:51:04] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:04] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 16:51:09] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 16:51:09] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 16:51:09] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 16:51:09] [INFO] ✓ SQL执行成功 (18ms)
-
-[2025-10-30 16:51:09] [INFO] ✓ SQL执行成功 (32ms)
-
-[2025-10-30 16:51:09] [INFO] ✓ SQL执行成功 (38ms)
-
-[2025-10-30 16:51:09] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 16:51:09] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (16ms)
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (34ms)
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (12ms)
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (13ms)
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (14ms)
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 16:51:10] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:10] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 16:51:11] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 16:51:11] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (10ms)
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (136ms)
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 16:51:13] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:13] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (46ms)
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (110ms)
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (105ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (23ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (43ms)
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (28ms)
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (13ms)
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 16:51:58] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 16:51:58] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (43ms)
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (51ms)
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (68ms)
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (0ms)
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (14ms)
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (18ms)
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:18:26] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:18:26] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM user WHERE name = ?; | 参数: ["andy"]
-
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT u.id,u.name,u.status,p.avatar_url avatarUrl,p.age,p.sex,p.email,
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT u.id,u.name,u.status,p.avatar_url avatarUrl,p.age,p.sex,p.email,
       p.career,p.address,
       (SELECT COUNT(*)
       FROM article a
@@ -931,22 +161,26 @@
       FROM user u
       LEFT JOIN profile p
       ON u.id = p.user_id
-      WHERE u.id = ?; | 参数: ["8"]
+      WHERE u.id = ?; | 参数: ["1"]
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (6ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (12ms)
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["1"]
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (3ms)
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["1"]
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (5ms)
+
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
+
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
       FROM article a
       ORDER BY a.views DESC
       LIMIT ?,?; | 参数: ["0","10"]
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
       JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
       (SELECT COUNT(al.user_id) FROM article
       LEFT JOIN article_like al ON article.id = al.article_id
@@ -958,7 +192,11 @@
       LEFT JOIN tag ON tag.id = ag.tag_id
       WHERE article.id =a.id
       ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
+      (SELECT CONCAT('http://localhost:8000/article/images/',f.filename,'?type=small') 
+       FROM file f 
+       LEFT JOIN image_meta im ON f.id = im.file_id 
+       WHERE f.article_id = a.id AND f.file_type = 'image' AND im.is_cover = TRUE 
+       LIMIT 1) cover,
       CONCAT('http://localhost:8080/article/',a.id) articleUrl
       FROM article a
       LEFT JOIN user u ON a.user_id = u.id
@@ -973,77 +211,73 @@
       ORDER BY a.create_at DESC
       LIMIT ?,?; | 参数: ["0","10"]
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (5ms)
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (3ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (12ms)
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (9ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (72ms)
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (0ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (0ms)
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686221837379.png%"]
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (6ms)
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686220507024.jpg%"]
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (4ms)
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (5ms)
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (4ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (7ms)
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686219335028.jpg%"]
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (7ms)
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (3ms)
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (5ms)
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686218679815.jpg%"]
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (3ms)
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (12ms)
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685622311147.png%"]
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (11ms)
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685613097871.png%"]
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (10ms)
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (3ms)
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685612251452.png%"]
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (3ms)
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685611740220.png%"]
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (3ms)
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (4ms)
 
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:18:36] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
       (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
       LEFT JOIN comment_like cl
       ON user.id = cl.user_id
@@ -1053,11 +287,19 @@
       LEFT JOIN article_like al
       ON u.id = al.user_id
       WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
+      GROUP BY u.id; | 参数: ["1"]
 
-[2025-10-30 20:18:36] [INFO] ✓ SQL执行成功 (10ms)
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
 
-[2025-10-30 20:18:37] [DEBUG] 执行SQL: SELECT u.id,u.name,
+[2025-11-14 15:31:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685546152822.png%"]
+
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (4ms)
+
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (6ms)
+
+[2025-11-14 15:31:45] [INFO] ✓ SQL执行成功 (18ms)
+
+[2025-11-14 15:31:59] [DEBUG] 执行SQL: SELECT u.id,u.name,
       IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
       (SELECT user.name from user WHERE user.id = uf.user_id),
       'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
@@ -1068,24 +310,11 @@
       WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
       FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
       WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
+      GROUP BY u.id; | 参数: ["1"]
 
-[2025-10-30 20:18:37] [INFO] ✓ SQL执行成功 (8ms)
+[2025-11-14 15:31:59] [INFO] ✓ SQL执行成功 (8ms)
 
-[2025-10-30 20:18:38] [DEBUG] 执行SQL: SELECT u.id,u.name,u.status,p.avatar_url avatarUrl,p.age,p.sex,p.email,
-      p.career,p.address,
-      (SELECT COUNT(*)
-      FROM article a
-      WHERE a.user_id = u.id) articleCount,
-      (SELECT COUNT(*)
-      FROM comment c
-      WHERE c.user_id = u.id) commentCount
-      FROM user u
-      LEFT JOIN profile p
-      ON u.id = p.user_id
-      WHERE u.id = ?; | 参数: ["8"]
-
-[2025-10-30 20:18:38] [DEBUG] 执行SQL: SELECT u.id,u.name,
+[2025-11-14 15:31:59] [DEBUG] 执行SQL: SELECT u.id,u.name,
       IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
       (SELECT user.name from user WHERE user.id = uf.user_id),
       'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
@@ -1096,181 +325,36 @@
       WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
       FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
       WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
+      GROUP BY u.id; | 参数: ["1"]
 
-[2025-10-30 20:18:38] [INFO] ✓ SQL执行成功 (5ms)
+[2025-11-14 15:31:59] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 20:18:38] [INFO] ✓ SQL执行成功 (7ms)
+[2025-11-14 15:32:49] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1763105569383.png%"]
 
-[2025-10-30 20:18:38] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      AND a.user_id = 8
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
+[2025-11-14 15:32:49] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 20:18:38] [INFO] ✓ SQL执行成功 (13ms)
+[2025-11-14 15:32:49] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1763105569458.png%"]
 
-[2025-10-30 20:18:38] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
+[2025-11-14 15:32:49] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 20:18:38] [INFO] ✓ SQL执行成功 (0ms)
+[2025-11-14 15:32:50] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
 
-[2025-10-30 20:18:39] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
+[2025-11-14 15:32:50] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 20:18:39] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["1"]
 
-[2025-10-30 20:19:24] [DEBUG] 执行SQL: INSERT INTO file (user_id,filename, mimetype, size) VALUES (?,?,?,?); | 参数: [8,"1761826764231.png","image/png",13845]
+[2025-11-14 15:33:01] [INFO] ✓ SQL执行成功 (13ms)
 
-[2025-10-30 20:19:24] [INFO] ✓ SQL执行成功 (30ms)
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: SELECT f.filename FROM file f WHERE f.id IN (354,355) AND f.file_type = 'image'; | 参数: undefined
 
-[2025-10-30 20:19:24] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761826764231.png%'; | 参数: undefined
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
 
-[2025-10-30 20:19:24] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:19:28] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761826764231.png%'; | 参数: undefined
-
-[2025-10-30 20:19:28] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:19:49] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761826764231.png%'; | 参数: undefined
-
-[2025-10-30 20:19:49] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:19:49] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:19:49] [INFO] ✓ SQL执行成功 (12ms)
-
-[2025-10-30 20:20:17] [DEBUG] 执行SQL: SELECT status FROM user WHERE id = ?; | 参数: [8]
-
-[2025-10-30 20:20:17] [INFO] ✓ SQL执行成功 (10ms)
-
-[2025-10-30 20:20:17] [DEBUG] 执行SQL: INSERT INTO article (user_id,title, content) VALUES (?,?,?); | 参数: [8,"测试图片上传","<h1>测试一下图片上传</h1><h1></h1><h1>3213123</h1><p><img src=\"http://localhost:8000/article/images/1761826764231.png\" alt=\"\" data-href=\"http://localhost:8000/article/images/1761826764231.png\" style=\"width: 742.00px;height: 492.69px;\"/></p><p>3213123</p><p><br></p><p>3</p><p>3</p>"]
-
-[2025-10-30 20:20:17] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 20:20:17] [DEBUG] 执行SQL: UPDATE file SET filename = SUBSTRING_INDEX(filename,'-cover',1) WHERE article_id = ? AND filename LIKE '%-cover' | 参数: ["71"]
-
-[2025-10-30 20:20:17] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:20:17] [DEBUG] 执行SQL: UPDATE file SET article_id = ? WHERE id IN (242) | 参数: ["71"]
-
-[2025-10-30 20:20:17] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 20:20:17] [DEBUG] 执行SQL: UPDATE file SET filename = CONCAT(filename,'-cover') WHERE article_id = ? AND id = ? | 参数: ["71",242]
-
-[2025-10-30 20:20:17] [INFO] ✓ SQL执行成功 (12ms)
-
-[2025-10-30 20:20:18] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 20:20:18] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:20:18] [DEBUG] 执行SQL: UPDATE article set views = views + 1 WHERE id = ?; | 参数: ["71"]
-
-[2025-10-30 20:20:18] [DEBUG] 执行SQL: INSERT INTO article_history (user_id, article_id) 
-        VALUES (?, ?) 
-        ON DUPLICATE KEY UPDATE update_at = CURRENT_TIMESTAMP; | 参数: [8,"71"]
-
-[2025-10-30 20:20:18] [INFO] ✓ SQL执行成功 (16ms)
-
-[2025-10-30 20:20:18] [INFO] ✓ SQL执行成功 (16ms)
-
-[2025-10-30 20:20:18] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:20:18] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',file.id,'url',CONCAT('http://localhost:8000/article/images/',file.filename))) FROM file WHERE a.id = file.article_id) images,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE a.id = ?
-      GROUP BY a.id; | 参数: ["71"]
-
-[2025-10-30 20:20:18] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:20:18] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 20:20:18] [DEBUG] 执行SQL: SELECT c.id, c.name,c.user_id userId,c.create_at createAt,
-      IF(COUNT(ac.article_id),JSON_ARRAYAGG(ac.article_id),NULL) count
-      FROM collect c
-      LEFT JOIN article_collect ac
-      ON c.id = ac.collect_id
-      WHERE user_id = ?
-      GROUP BY c.id
-      LIMIT ?,?; | 参数: ["8","0","10"]
-
-[2025-10-30 20:20:18] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
       FROM article a
       ORDER BY a.views DESC
       LIMIT ?,?; | 参数: ["0","10"]
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
       JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
       (SELECT COUNT(al.user_id) FROM article
       LEFT JOIN article_like al ON article.id = al.article_id
@@ -1282,7 +366,11 @@
       LEFT JOIN tag ON tag.id = ag.tag_id
       WHERE article.id =a.id
       ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
+      (SELECT CONCAT('http://localhost:8000/article/images/',f.filename,'?type=small') 
+       FROM file f 
+       LEFT JOIN image_meta im ON f.id = im.file_id 
+       WHERE f.article_id = a.id AND f.file_type = 'image' AND im.is_cover = TRUE 
+       LIMIT 1) cover,
       CONCAT('http://localhost:8080/article/',a.id) articleUrl
       FROM article a
       LEFT JOIN user u ON a.user_id = u.id
@@ -1297,39 +385,45 @@
       ORDER BY a.create_at DESC
       LIMIT ?,?; | 参数: ["0","10"]
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:33:01] [INFO] ✓ SQL执行成功 (6ms)
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:33:01] [INFO] ✓ SQL执行成功 (13ms)
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (17ms)
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: DELETE FROM file WHERE id IN (354,355) AND file_type = 'image'; | 参数: undefined
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
+[2025-11-14 15:33:01] [INFO] ✓ SQL执行成功 (14ms)
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:33:01] [INFO] ✓ SQL执行成功 (21ms)
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
+[2025-11-14 15:33:01] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:33:01] [INFO] ✓ SQL执行成功 (10ms)
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
+[2025-11-14 15:33:01] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:33:01] [INFO] ✓ SQL执行成功 (3ms)
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
+[2025-11-14 15:33:01] [INFO] ✓ SQL执行成功 (5ms)
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:33:01] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
+[2025-11-14 15:33:01] [INFO] ✓ SQL执行成功 (5ms)
+
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
+
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (2ms)
+
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
       (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
       LEFT JOIN comment_like cl
       ON user.id = cl.user_id
@@ -1339,49 +433,53 @@
       LEFT JOIN article_like al
       ON u.id = al.user_id
       WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
+      GROUP BY u.id; | 参数: ["1"]
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (10ms)
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686221837379.png%"]
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (6ms)
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (3ms)
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (15ms)
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686220507024.jpg%"]
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686219335028.jpg%"]
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1686218679815.jpg%"]
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (0ms)
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (0ms)
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685622311147.png%"]
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (6ms)
 
-[2025-10-30 20:20:20] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685613097871.png%"]
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (6ms)
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (3ms)
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685612251452.png%"]
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685611740220.png%"]
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (1ms)
+[2025-11-14 15:33:02] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1685546152822.png%"]
 
-[2025-10-30 20:20:20] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 20:20:22] [DEBUG] 执行SQL: SELECT u.id,u.name,
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (1ms)
+
+[2025-11-14 15:33:02] [INFO] ✓ SQL执行成功 (2ms)
+
+[2025-11-14 15:33:08] [DEBUG] 执行SQL: SELECT u.id,u.name,
       IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
       (SELECT user.name from user WHERE user.id = uf.user_id),
       'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
@@ -1392,2283 +490,23 @@
       WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
       FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
       WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
+      GROUP BY u.id; | 参数: ["1"]
 
-[2025-10-30 20:20:22] [INFO] ✓ SQL执行成功 (6ms)
+[2025-11-14 15:33:08] [INFO] ✓ SQL执行成功 (9ms)
 
-[2025-10-30 20:20:22] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
+[2025-11-14 15:33:13] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1763105593111.png%"]
 
-[2025-10-30 20:20:22] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 15:33:13] [INFO] ✓ SQL执行成功 (0ms)
 
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
+[2025-11-14 15:33:13] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1763105593147.png%"]
 
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (3ms)
+[2025-11-14 15:33:13] [INFO] ✓ SQL执行成功 (1ms)
 
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
+[2025-11-14 16:19:07] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1763108347727.png%"]
 
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 16:19:07] [INFO] ✓ SQL执行成功 (2ms)
 
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
+[2025-11-14 16:19:07] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE ? LIMIT 1; | 参数: ["1763108347814.png%"]
 
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (0ms)
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:20:45] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:20:45] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:20:48] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:20:48] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:20:50] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:20:50] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 20:20:50] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:20:50] [INFO] ✓ SQL执行成功 (0ms)
-
-[2025-10-30 20:20:50] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:20:50] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:21:20] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 20:21:20] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:21:20] [DEBUG] 执行SQL: UPDATE article set views = views + 1 WHERE id = ?; | 参数: ["70"]
-
-[2025-10-30 20:21:20] [DEBUG] 执行SQL: INSERT INTO article_history (user_id, article_id) 
-        VALUES (?, ?) 
-        ON DUPLICATE KEY UPDATE update_at = CURRENT_TIMESTAMP; | 参数: [8,"70"]
-
-[2025-10-30 20:21:20] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 20:21:20] [INFO] ✓ SQL执行成功 (13ms)
-
-[2025-10-30 20:21:20] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:21:20] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',file.id,'url',CONCAT('http://localhost:8000/article/images/',file.filename))) FROM file WHERE a.id = file.article_id) images,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE a.id = ?
-      GROUP BY a.id; | 参数: ["70"]
-
-[2025-10-30 20:21:20] [INFO] ✓ SQL执行成功 (47ms)
-
-[2025-10-30 20:21:20] [INFO] ✓ SQL执行成功 (47ms)
-
-[2025-10-30 20:21:21] [DEBUG] 执行SQL: SELECT c.id, c.name,c.user_id userId,c.create_at createAt,
-      IF(COUNT(ac.article_id),JSON_ARRAYAGG(ac.article_id),NULL) count
-      FROM collect c
-      LEFT JOIN article_collect ac
-      ON c.id = ac.collect_id
-      WHERE user_id = ?
-      GROUP BY c.id
-      LIMIT ?,?; | 参数: ["8","0","10"]
-
-[2025-10-30 20:21:21] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (12ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (0ms)
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 20:21:22] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:21:22] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:21:23] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:21:23] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:21:25] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id = 1
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:21:25] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 20:21:25] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["1"]
-
-[2025-10-30 20:21:25] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:21:25] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:21:25] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:21:25] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685019719021.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:25] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685531482816.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:25] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:21:25] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685532236865.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:25] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685542264455.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:25] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:21:25] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685543790008.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:21:25] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:21:25] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:21:25] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:21:26] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:21:26] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 20:21:26] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:21:26] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:21:26] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:21:26] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:21:27] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:21:27] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:21:31] [DEBUG] 执行SQL: SELECT u.id,u.name,u.status,p.avatar_url avatarUrl,p.age,p.sex,p.email,
-      p.career,p.address,
-      (SELECT COUNT(*)
-      FROM article a
-      WHERE a.user_id = u.id) articleCount,
-      (SELECT COUNT(*)
-      FROM comment c
-      WHERE c.user_id = u.id) commentCount
-      FROM user u
-      LEFT JOIN profile p
-      ON u.id = p.user_id
-      WHERE u.id = ?; | 参数: ["8"]
-
-[2025-10-30 20:21:31] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:21:31] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:21:31] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:21:31] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      AND a.user_id = 8
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:21:31] [INFO] ✓ SQL执行成功 (41ms)
-
-[2025-10-30 20:21:31] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:21:31] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:21:33] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:21:33] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:21:33] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:21:33] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:21:33] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:21:33] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:21:33] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:21:33] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:21:33] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:21:33] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:26] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:22:26] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:22:28] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:22:28] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:22:31] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["10","10"]
-
-[2025-10-30 20:22:31] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:22:31] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:22:31] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:22:31] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["1"]
-
-[2025-10-30 20:22:31] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:31] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:22:31] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:31] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685545493482.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:31] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685544271887.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:31] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685543790008.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:31] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:22:31] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:22:31] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:22:31] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685542264455.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:31] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685021156287.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:31] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685532236865.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:31] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:31] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685531482816.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:31] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:31] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:31] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:22:34] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:22:34] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (0ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (0ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:24:27] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:24:27] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:24:28] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:24:28] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:25:03] [DEBUG] 执行SQL: INSERT INTO file (user_id,filename, mimetype, size) VALUES (?,?,?,?); | 参数: [8,"1761827103239.png","image/png",11128]
-
-[2025-10-30 20:25:03] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:25:03] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761827103239.png%'; | 参数: undefined
-
-[2025-10-30 20:25:03] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:05] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761827103239.png%'; | 参数: undefined
-
-[2025-10-30 20:25:05] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:05] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:25:05] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:15] [DEBUG] 执行SQL: SELECT status FROM user WHERE id = ?; | 参数: [8]
-
-[2025-10-30 20:25:15] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:25:15] [DEBUG] 执行SQL: INSERT INTO article (user_id,title, content) VALUES (?,?,?); | 参数: [8,"测试图片!!!!","<h1>测试图片</h1><p><br></p><p><br></p><p><br></p><p>2132</p><p>3</p><p>2</p><p>321</p><p>31</p><p>3</p><p><img src=\"http://localhost:8000/article/images/1761827103239.png\" alt=\"\" data-href=\"http://localhost:8000/article/images/1761827103239.png\" style=\"\"/></p><p>21</p><p>312</p><p>3212</p>"]
-
-[2025-10-30 20:25:15] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:25:15] [DEBUG] 执行SQL: UPDATE file SET filename = SUBSTRING_INDEX(filename,'-cover',1) WHERE article_id = ? AND filename LIKE '%-cover' | 参数: ["72"]
-
-[2025-10-30 20:25:15] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:15] [DEBUG] 执行SQL: UPDATE file SET article_id = ? WHERE id IN (243) | 参数: ["72"]
-
-[2025-10-30 20:25:15] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:25:15] [DEBUG] 执行SQL: UPDATE file SET filename = CONCAT(filename,'-cover') WHERE article_id = ? AND id = ? | 参数: ["72",243]
-
-[2025-10-30 20:25:15] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:25:15] [DEBUG] 执行SQL: SELECT * FROM article WHERE id = ? AND user_id = ?; | 参数: ["72",8]
-
-[2025-10-30 20:25:15] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:25:15] [DEBUG] 执行SQL: SELECT * FROM tag WHERE name = ?; | 参数: ["前端"]
-
-[2025-10-30 20:25:15] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:25:15] [DEBUG] 执行SQL: SELECT * FROM article_tag WHERE article_id = ? AND tag_id = ?; | 参数: ["72",1]
-
-[2025-10-30 20:25:15] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:25:15] [DEBUG] 执行SQL: INSERT INTO article_tag (article_id,tag_id) VALUES (?,?); | 参数: ["72",1]
-
-[2025-10-30 20:25:15] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:25:16] [DEBUG] 执行SQL: UPDATE article set views = views + 1 WHERE id = ?; | 参数: ["72"]
-
-[2025-10-30 20:25:16] [DEBUG] 执行SQL: INSERT INTO article_history (user_id, article_id) 
-        VALUES (?, ?) 
-        ON DUPLICATE KEY UPDATE update_at = CURRENT_TIMESTAMP; | 参数: [8,"72"]
-
-[2025-10-30 20:25:16] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:25:16] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:25:16] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:25:16] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',file.id,'url',CONCAT('http://localhost:8000/article/images/',file.filename))) FROM file WHERE a.id = file.article_id) images,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE a.id = ?
-      GROUP BY a.id; | 参数: ["72"]
-
-[2025-10-30 20:25:16] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:16] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:25:16] [DEBUG] 执行SQL: SELECT c.id, c.name,c.user_id userId,c.create_at createAt,
-      IF(COUNT(ac.article_id),JSON_ARRAYAGG(ac.article_id),NULL) count
-      FROM collect c
-      LEFT JOIN article_collect ac
-      ON c.id = ac.collect_id
-      WHERE user_id = ?
-      GROUP BY c.id
-      LIMIT ?,?; | 参数: ["8","0","10"]
-
-[2025-10-30 20:25:16] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:22] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:25:22] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:22] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:25:22] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:25:22] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:22] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:25:22] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:25:22] [INFO] ✓ SQL执行成功 (0ms)
-
-[2025-10-30 20:25:22] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:25:22] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:22] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761827103239.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:25:22] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:25:31] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 20:25:31] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:31] [DEBUG] 执行SQL: UPDATE article set views = views + 1 WHERE id = ?; | 参数: ["72"]
-
-[2025-10-30 20:25:31] [DEBUG] 执行SQL: INSERT INTO article_history (user_id, article_id) 
-        VALUES (?, ?) 
-        ON DUPLICATE KEY UPDATE update_at = CURRENT_TIMESTAMP; | 参数: [8,"72"]
-
-[2025-10-30 20:25:31] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:25:31] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:25:31] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:25:31] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',file.id,'url',CONCAT('http://localhost:8000/article/images/',file.filename))) FROM file WHERE a.id = file.article_id) images,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE a.id = ?
-      GROUP BY a.id; | 参数: ["72"]
-
-[2025-10-30 20:25:31] [INFO] ✓ SQL执行成功 (31ms)
-
-[2025-10-30 20:25:31] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:25:31] [DEBUG] 执行SQL: SELECT c.id, c.name,c.user_id userId,c.create_at createAt,
-      IF(COUNT(ac.article_id),JSON_ARRAYAGG(ac.article_id),NULL) count
-      FROM collect c
-      LEFT JOIN article_collect ac
-      ON c.id = ac.collect_id
-      WHERE user_id = ?
-      GROUP BY c.id
-      LIMIT ?,?; | 参数: ["8","0","10"]
-
-[2025-10-30 20:25:31] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:31] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761827103239.png%'; | 参数: undefined
-
-[2025-10-30 20:25:31] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM article WHERE id = ? AND user_id = ?; | 参数: ["72",8]
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (0ms)
-
-[2025-10-30 20:25:33] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:33] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:25:34] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:25:34] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:29:54] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["6"]
-
-[2025-10-30 20:29:54] [INFO] ✓ SQL执行成功 (16ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (12ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (18ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (28ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (21ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["10","10"]
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["1"]
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685545493482.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685544271887.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685543790008.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685542264455.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685532236865.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685531482816.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (10ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (10ms)
-
-[2025-10-30 20:29:55] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685021156287.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (16ms)
-
-[2025-10-30 20:29:55] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:29:56] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685020978917.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:56] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:29:56] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685020211629.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:56] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:29:56] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685020083363.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:29:56] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:29:58] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:29:58] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:29:59] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:29:59] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:30:14] [DEBUG] 执行SQL: INSERT INTO file (user_id,filename, mimetype, size) VALUES (?,?,?,?); | 参数: [8,"1761827413977.png","image/png",58918]
-
-[2025-10-30 20:30:14] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 20:30:14] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761827413977.png%'; | 参数: undefined
-
-[2025-10-30 20:30:14] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:30:42] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761827413977.png%'; | 参数: undefined
-
-[2025-10-30 20:30:42] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:30:42] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:30:42] [INFO] ✓ SQL执行成功 (13ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: SELECT status FROM user WHERE id = ?; | 参数: [8]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: INSERT INTO article (user_id,title, content) VALUES (?,?,?); | 参数: [8,"测试文章图片上传","<p>测试文章图片</p><p><br></p><p><br></p><p><br></p><p><br></p><p><br></p><p><img src=\"http://localhost:8000/article/images/1761827413977.png\" alt=\"\" data-href=\"http://localhost:8000/article/images/1761827413977.png\" style=\"width: 806.00px;height: 551.47px;\"/></p>"]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: UPDATE file SET filename = SUBSTRING_INDEX(filename,'-cover',1) WHERE article_id = ? AND filename LIKE '%-cover' | 参数: ["73"]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: UPDATE file SET article_id = ? WHERE id IN (244) | 参数: ["73"]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: UPDATE file SET filename = CONCAT(filename,'-cover') WHERE article_id = ? AND id = ? | 参数: ["73",244]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: SELECT * FROM article WHERE id = ? AND user_id = ?; | 参数: ["73",8]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: SELECT * FROM tag WHERE name = ?; | 参数: ["前端"]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: SELECT * FROM article_tag WHERE article_id = ? AND tag_id = ?; | 参数: ["73",1]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: INSERT INTO article_tag (article_id,tag_id) VALUES (?,?); | 参数: ["73",1]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: UPDATE article set views = views + 1 WHERE id = ?; | 参数: ["73"]
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: INSERT INTO article_history (user_id, article_id) 
-        VALUES (?, ?) 
-        ON DUPLICATE KEY UPDATE update_at = CURRENT_TIMESTAMP; | 参数: [8,"73"]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',file.id,'url',CONCAT('http://localhost:8000/article/images/',file.filename))) FROM file WHERE a.id = file.article_id) images,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE a.id = ?
-      GROUP BY a.id; | 参数: ["73"]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (33ms)
-
-[2025-10-30 20:30:57] [DEBUG] 执行SQL: SELECT c.id, c.name,c.user_id userId,c.create_at createAt,
-      IF(COUNT(ac.article_id),JSON_ARRAYAGG(ac.article_id),NULL) count
-      FROM collect c
-      LEFT JOIN article_collect ac
-      ON c.id = ac.collect_id
-      WHERE user_id = ?
-      GROUP BY c.id
-      LIMIT ?,?; | 参数: ["8","0","10"]
-
-[2025-10-30 20:30:57] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:31:03] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:31:03] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:31:03] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:31:03] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:31:03] [INFO] ✓ SQL执行成功 (7ms)
-
-[2025-10-30 20:31:03] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:31:03] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:31:03] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:31:03] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:31:04] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:31:04] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761827413977.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:31:04] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:31:06] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 20:31:06] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:31:06] [DEBUG] 执行SQL: UPDATE article set views = views + 1 WHERE id = ?; | 参数: ["73"]
-
-[2025-10-30 20:31:06] [DEBUG] 执行SQL: INSERT INTO article_history (user_id, article_id) 
-        VALUES (?, ?) 
-        ON DUPLICATE KEY UPDATE update_at = CURRENT_TIMESTAMP; | 参数: [8,"73"]
-
-[2025-10-30 20:31:06] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:31:06] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:31:06] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:31:06] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 20:31:06] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',file.id,'url',CONCAT('http://localhost:8000/article/images/',file.filename))) FROM file WHERE a.id = file.article_id) images,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE a.id = ?
-      GROUP BY a.id; | 参数: ["73"]
-
-[2025-10-30 20:31:06] [INFO] ✓ SQL执行成功 (10ms)
-
-[2025-10-30 20:31:06] [DEBUG] 执行SQL: SELECT c.id, c.name,c.user_id userId,c.create_at createAt,
-      IF(COUNT(ac.article_id),JSON_ARRAYAGG(ac.article_id),NULL) count
-      FROM collect c
-      LEFT JOIN article_collect ac
-      ON c.id = ac.collect_id
-      WHERE user_id = ?
-      GROUP BY c.id
-      LIMIT ?,?; | 参数: ["8","0","10"]
-
-[2025-10-30 20:31:06] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:31:06] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761827413977.png%'; | 参数: undefined
-
-[2025-10-30 20:31:06] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:31:07] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:31:07] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761827413977.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:31:36] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:31:36] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:32:26] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["8"]
-
-[2025-10-30 20:32:26] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:32:26] [DEBUG] 执行SQL: UPDATE article set views = views + 1 WHERE id = ?; | 参数: ["73"]
-
-[2025-10-30 20:32:26] [DEBUG] 执行SQL: INSERT INTO article_history (user_id, article_id) 
-        VALUES (?, ?) 
-        ON DUPLICATE KEY UPDATE update_at = CURRENT_TIMESTAMP; | 参数: [8,"73"]
-
-[2025-10-30 20:32:26] [INFO] ✓ SQL执行成功 (16ms)
-
-[2025-10-30 20:32:26] [INFO] ✓ SQL执行成功 (22ms)
-
-[2025-10-30 20:32:26] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:32:26] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',file.id,'url',CONCAT('http://localhost:8000/article/images/',file.filename))) FROM file WHERE a.id = file.article_id) images,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE a.id = ?
-      GROUP BY a.id; | 参数: ["73"]
-
-[2025-10-30 20:32:26] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:32:26] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:32:26] [DEBUG] 执行SQL: SELECT c.id, c.name,c.user_id userId,c.create_at createAt,
-      IF(COUNT(ac.article_id),JSON_ARRAYAGG(ac.article_id),NULL) count
-      FROM collect c
-      LEFT JOIN article_collect ac
-      ON c.id = ac.collect_id
-      WHERE user_id = ?
-      GROUP BY c.id
-      LIMIT ?,?; | 参数: ["8","0","10"]
-
-[2025-10-30 20:32:26] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:32:26] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1761827413977.png%'; | 参数: undefined
-
-[2025-10-30 20:32:26] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM article WHERE id = ? AND user_id = ?; | 参数: ["73",8]
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM tag LIMIT ?,?; | 参数: ["0","99"]
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT a.id,a.title, CONCAT('http://localhost:8080/article/',a.id) articleUrl,a.views
-      FROM article a
-      ORDER BY a.views DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('http://localhost:8000/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%-cover') cover,
-      CONCAT('http://localhost:8080/article/',a.id) articleUrl
-      FROM article a
-      LEFT JOIN user u ON a.user_id = u.id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE tag.id LIKE '%%'
-      
-      
-      
-      GROUP BY a.id
-      ORDER BY a.create_at DESC
-      LIMIT ?,?; | 参数: ["0","10"]
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT COUNT(a.id) total FROM article a; | 参数: undefined
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["7"]
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["6"]
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["5"]
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["3"]
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["2"]
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM avatar WHERE user_id = ?; | 参数: ["4"]
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686221837379.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (3ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686220507024.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686219335028.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (6ms)
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (8ms)
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (16ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1686218679815.jpg-cover%'; | 参数: undefined
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685622311147.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685613097871.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (11ms)
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (24ms)
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (28ms)
-
-[2025-10-30 20:32:43] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685612251452.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:32:43] [INFO] ✓ SQL执行成功 (9ms)
-
-[2025-10-30 20:32:44] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685611740220.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:32:44] [DEBUG] 执行SQL: SELECT * FROM file WHERE filename LIKE '1685546152822.png-cover%'; | 参数: undefined
-
-[2025-10-30 20:32:44] [INFO] ✓ SQL执行成功 (1ms)
-
-[2025-10-30 20:32:44] [INFO] ✓ SQL执行成功 (5ms)
-
-[2025-10-30 20:33:05] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:33:05] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:33:08] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:33:08] [INFO] ✓ SQL执行成功 (2ms)
-
-[2025-10-30 20:33:39] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:33:39] [INFO] ✓ SQL执行成功 (4ms)
-
-[2025-10-30 20:33:39] [DEBUG] 执行SQL: SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id; | 参数: ["8"]
-
-[2025-10-30 20:33:39] [INFO] ✓ SQL执行成功 (2ms)
+[2025-11-14 16:19:07] [INFO] ✓ SQL执行成功 (0ms)
 

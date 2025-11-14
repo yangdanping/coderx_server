@@ -1,6 +1,5 @@
 const { connection } = require('../app');
 const { baseURL, redirectURL } = require('../constants/urls');
-const { COVER_SUFFIX } = require('../constants/file');
 
 class ArticleService {
   addArticle = async (userId, title, content) => {
@@ -77,7 +76,11 @@ class ArticleService {
       LEFT JOIN tag ON tag.id = ag.tag_id
       WHERE article.id =a.id
       ),NULL) tags,
-      (SELECT CONCAT('${baseURL}/article/images/',file.filename,'?type=small') FROM file WHERE a.id = file.article_id AND file.filename LIKE '%${COVER_SUFFIX}') cover,
+      (SELECT CONCAT('${baseURL}/article/images/',f.filename,'?type=small') 
+       FROM file f 
+       LEFT JOIN image_meta im ON f.id = im.file_id 
+       WHERE f.article_id = a.id AND f.file_type = 'image' AND im.is_cover = TRUE 
+       LIMIT 1) cover,
       CONCAT('${redirectURL}/article/',a.id) articleUrl
       FROM article a
       LEFT JOIN user u ON a.user_id = u.id
@@ -119,25 +122,40 @@ class ArticleService {
   delete = async (articleId) => {
     // 获取独立连接以支持事务
     const conn = await connection.getConnection();
-    let filesToDelete = [];
+    let imagesToDelete = [];
+    let videosToDelete = [];
 
     try {
       // 开始事务
       await conn.beginTransaction();
 
-      // 1. 先查询需要删除的文件列表（用于后续删除磁盘文件）
-      const statement1 = 'SELECT filename FROM file WHERE article_id = ?;';
-      const [files] = await conn.execute(statement1, [articleId]);
-      filesToDelete = files;
+      // 1. 先查询需要删除的图片文件列表（用于后续删除磁盘文件）
+      const statement1 = "SELECT filename FROM file WHERE article_id = ? AND (file_type = 'image' OR file_type IS NULL);";
+      const [images] = await conn.execute(statement1, [articleId]);
+      imagesToDelete = images;
 
-      // 2. 删除文章（数据库会自动级联删除所有关联表：file、article_tag、article_like、article_collect、comment 等）
-      const statement2 = 'DELETE FROM article WHERE id = ?;';
-      const [result] = await conn.execute(statement2, [articleId]);
+      // 2. 查询需要删除的视频文件列表（包括封面）
+      const statement2 = "SELECT filename, poster FROM file WHERE article_id = ? AND file_type = 'video';";
+      const [videos] = await conn.execute(statement2, [articleId]);
+      videosToDelete = videos;
 
-      // 3. 提交事务
+      console.log(`删除文章 ${articleId}:`, {
+        图片数量: imagesToDelete.length,
+        视频数量: videosToDelete.length
+      });
+
+      // 3. 先删除 file 表中的所有关联记录（包括图片和视频）
+      const statement3 = 'DELETE FROM file WHERE article_id = ?;';
+      await conn.execute(statement3, [articleId]);
+
+      // 4. 删除文章（数据库会自动级联删除其他关联表：article_tag、article_like、article_collect、comment 等）
+      const statement4 = 'DELETE FROM article WHERE id = ?;';
+      const [result] = await conn.execute(statement4, [articleId]);
+
+      // 5. 提交事务
       await conn.commit();
 
-      return { result, filesToDelete }; // 返回结果和需要删除的文件列表
+      return { result, imagesToDelete, videosToDelete }; // 返回结果和需要删除的文件列表
     } catch (error) {
       // 回滚事务
       await conn.rollback();

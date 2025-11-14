@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const userService = require('../service/user.service');
 const articleService = require('../service/article.service');
 const fileService = require('../service/file.service');
+const avatarService = require('../service/avatar.service');
 const { removeHTMLTag } = require('../utils');
 const { PRIVATE_KEY } = require('../app/config');
 const { AVATAR_PATH } = require('../constants/file-path');
@@ -64,7 +65,7 @@ class UserContoller {
     // 1.拿到路径中拼接的用户id(注意!用户上传图片的服务器地址要保存到用户信息表中)
     const { userId } = ctx.params;
     // 2.根据拿到的用户id在avatar表中查看是否有该用户id的头像信息,
-    const avatarInfo = await fileService.getAvatarById(userId);
+    const avatarInfo = await avatarService.getAvatarById(userId);
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     /* cxt.body可以放各种类型的数据,所以我们这里完全可以放个Stream类型的数据
       到时候它会读取我们的Stream流,然后直接把我们对应的数据返回

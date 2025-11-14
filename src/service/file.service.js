@@ -1,109 +1,56 @@
 const { connection } = require('../app');
-const { COVER_SUFFIX } = require('../constants/file');
 
+/**
+ * 文件服务层（通用）
+ * 保留真正通用的文件操作方法
+ * 头像、图片、视频的专用逻辑已拆分到各自的 service
+ */
 class FileService {
-  addAvatar = async (userId, filename, mimetype, size) => {
-    try {
-      const statement = `INSERT INTO avatar (user_id,filename, mimetype, size) VALUES (?,?,?,?)`;
-      const [result] = await connection.execute(statement, [userId, filename, mimetype, size]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  getAvatarById = async (userId) => {
-    try {
-      const statement = `SELECT * FROM avatar WHERE user_id = ?;`;
-      const [result] = await connection.execute(statement, [userId]);
-      return result.pop(); //.pop(),取到的永远是数组中的最后一个,也就是该id用户的上传的最后一个头像
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  addFile = async (userId, filename, mimetype, size) => {
-    try {
-      const statement = `INSERT INTO file (user_id,filename, mimetype, size) VALUES (?,?,?,?);`;
-      const [result] = await connection.execute(statement, [userId, filename, mimetype, size]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  // async addFile(userId, articleId, filename, mimetype, size) {
-  //   try {
-  //     const statement = `INSERT INTO file (user_id, article_id, filename, mimetype, size) VALUES (?,?,?,?,?);`;
-  //     const [result] = await connection.execute(statement, [userId, articleId, filename, mimetype, size]);
-  //     return result;
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // }
-
+  /**
+   * 根据文件名获取文件信息（通用方法）
+   * @param {string} filename - 文件名
+   * @returns {Promise} 文件信息
+   */
   getFileByFilename = async (filename) => {
     try {
-      const statement = `SELECT * FROM file WHERE filename LIKE '${filename}%';`; //只看前缀
-      const [result] = await connection.execute(statement);
+      const statement = `SELECT * FROM file WHERE filename LIKE ? LIMIT 1;`;
+      const [result] = await connection.execute(statement, [`${filename}%`]);
       return result[0];
     } catch (error) {
-      console.log(error);
+      console.log('getFileByFilename error:', error);
+      throw error;
     }
   };
-  updateFile = async (articleId, uploaded) => {
+
+  /**
+   * 根据ID查询文件（通用方法，用于删除等）
+   * @param {Array<number>} fileIds - 文件ID数组
+   * @returns {Promise<Array>} 文件列表
+   */
+  findFileById = async (fileIds) => {
     try {
-      const statement1 = `UPDATE file SET filename = SUBSTRING_INDEX(filename,'${COVER_SUFFIX}',1) WHERE article_id = ? AND filename LIKE '%${COVER_SUFFIX}'`;
-      const [result1] = await connection.execute(statement1, [articleId]);
-      console.log('清空后缀名---------', result1);
-      const statement2 = `UPDATE file SET article_id = ? WHERE id IN (${uploaded.join(',')})`;
-      const [result2] = await connection.execute(statement2, [articleId]);
-      return result2;
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  updateCover = async (articleId, coverId) => {
-    try {
-      const statement = `UPDATE file SET filename = CONCAT(filename,'${COVER_SUFFIX}') WHERE article_id = ? AND id = ?`;
-      const [result] = await connection.execute(statement, [articleId, coverId]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  findFileById = async (uploaded) => {
-    try {
-      const statement = `SELECT f.filename FROM file f WHERE f.id IN (${uploaded.join(',')});`;
+      const statement = `SELECT f.filename, f.file_type FROM file f WHERE f.id IN (${fileIds.join(',')});`;
       const [result] = await connection.execute(statement);
       return result;
     } catch (error) {
-      console.log(error);
+      console.log('findFileById error:', error);
+      throw error;
     }
   };
-  delete = async (uploaded) => {
+
+  /**
+   * 删除文件（通用方法）
+   * @param {Array<number>} fileIds - 文件ID数组
+   * @returns {Promise} 删除结果
+   */
+  delete = async (fileIds) => {
     try {
-      const statement = `DELETE FROM file f WHERE f.id IN (${uploaded.join(',')});`;
+      const statement = `DELETE FROM file f WHERE f.id IN (${fileIds.join(',')});`;
       const [result] = await connection.execute(statement);
       return result;
     } catch (error) {
-      console.log(error);
-    }
-  };
-  findAvatarById = async (userId) => {
-    try {
-      const statement = `SELECT * FROM avatar ar WHERE ar.user_id = ?;`;
-      const [result] = await connection.execute(statement, [userId]);
-      return result[0];
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  deleteAvatar = async (avatarId) => {
-    try {
-      const statement = `DELETE FROM avatar ar WHERE ar.id = ?;`;
-      const [result] = await connection.execute(statement, [avatarId]);
-      return result;
-    } catch (error) {
-      console.log(error);
+      console.log('delete error:', error);
+      throw error;
     }
   };
 }
