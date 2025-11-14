@@ -135,7 +135,12 @@ class ArticleService {
       imagesToDelete = images;
 
       // 2. 查询需要删除的视频文件列表（包括封面）
-      const statement2 = "SELECT filename, poster FROM file WHERE article_id = ? AND file_type = 'video';";
+      const statement2 = `
+        SELECT f.filename, vm.poster 
+        FROM file f
+        LEFT JOIN video_meta vm ON f.id = vm.file_id
+        WHERE f.article_id = ? AND f.file_type = 'video';
+      `;
       const [videos] = await conn.execute(statement2, [articleId]);
       videosToDelete = videos;
 
