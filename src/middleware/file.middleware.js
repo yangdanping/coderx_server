@@ -1,7 +1,7 @@
 const multer = require('@koa/multer'); //解析form-data数据的第三方依赖库
 const { Jimp } = require('jimp');
 const path = require('path');
-const { AVATAR_PATH, PICTURE_PATH } = require('../constants/file-path');
+const { AVATAR_PATH, IMG_PATH, VIDEO_PATH } = require('../constants/file-path');
 // // 要实现用户上传头像,则先做解析form-data的准备工作--------------
 
 function setStorage(resourcePath) {
@@ -14,16 +14,33 @@ function setStorage(resourcePath) {
   });
 }
 const avatarStorage = setStorage(AVATAR_PATH);
-const pictureStorage = setStorage(PICTURE_PATH);
+const imgStorage = setStorage(IMG_PATH);
+const videoStorage = setStorage(VIDEO_PATH);
 
 const avatarHandler = multer({ storage: avatarStorage }).single('avatar'); //因为我只保存单个文件所以用single,且对应avatar字段
-const pictureHandler = multer({ storage: pictureStorage }).array('picture', 20); //普通图片可以是多个,可以用picture,一篇文章可上传20张图
+const imgHandler = multer({ storage: imgStorage }).array('img', 20); //普通图片可以是多个,可以用img,一篇文章可上传20张图
+
+// 视频上传处理器
+const videoHandler = multer({
+  storage: videoStorage,
+  limits: {
+    fileSize: 100 * 1024 * 1024 // 限制视频大小为 100MB
+  },
+  fileFilter: (req, file, cb) => {
+    // 只允许视频格式
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('只能上传视频文件!'));
+    }
+  }
+}).single('video'); // 一次只上传一个视频
 
 // 来对上传的图片大小进行处理,最终效果是除了上传的原图,还对应生成另外三种不同大小的图片
 /* 调用Jimp.read处理图片,返回一个img对象,img.resize()直接进行处理
   由于处理图片可能比较耗时,我希望直接给用户返回,让它就在这慢慢处理,
   所以这里不用await,直接拿到Promise执行 */
-const pictureResize = async (ctx, next) => {
+const imgResize = async (ctx, next) => {
   //1.获取所有的图像信息
   const files = ctx.files;
   console.log('获取所有的图像信息', files);
@@ -60,6 +77,7 @@ const pictureResize = async (ctx, next) => {
 
 module.exports = {
   avatarHandler,
-  pictureHandler,
-  pictureResize
+  imgHandler,
+  imgResize,
+  videoHandler
 };

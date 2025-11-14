@@ -1,2162 +1,358 @@
-[2025-10-30 02:10:22] [INFO] → GET /user/hot | IP: ::1
+[2025-11-14 15:30:53] [INFO] → GET /user/checkAuth | IP: ::1
 
-[2025-10-30 02:10:23] [INFO] ✓ GET /user/hot | Status: 200 | 149ms
+[2025-11-14 15:30:53] [INFO] ✗ GET /user/checkAuth | Status: 401 | 94ms
 
-[2025-10-30 16:48:08] [INFO] → GET /api/article | IP: ::ffff:192.168.3.96
+[2025-11-14 15:30:53] [WARN]   响应体: {"msg":"未认证/token无效","code":401}
 
-[2025-10-30 16:48:08] [INFO] ✗ GET /api/article | Status: 404 | 8ms
+[2025-11-14 15:30:53] [INFO] → GET /user/1/avatar | IP: ::1
 
-[2025-10-30 16:48:08] [WARN]   响应体: undefined
+[2025-11-14 15:30:53] [INFO] → GET /user/hot | IP: ::1
 
-[2025-10-30 16:48:09] [INFO] → GET /api/article | IP: ::ffff:192.168.3.96
+[2025-11-14 15:30:53] [INFO] ✓ GET /user/1/avatar | Status: 200 | 55ms
 
-[2025-10-30 16:48:09] [INFO] ✗ GET /api/article | Status: 404 | 4ms
+[2025-11-14 15:30:53] [INFO] ✓ GET /user/hot | Status: 200 | 55ms
 
-[2025-10-30 16:48:09] [WARN]   响应体: undefined
+[2025-11-14 15:30:53] [INFO] → GET /user/hot | IP: ::1
 
-[2025-10-30 16:48:47] [INFO] → GET /api/article | IP: ::ffff:192.168.3.96
+[2025-11-14 15:30:53] [INFO] ✓ GET /user/hot | Status: 200 | 2ms
 
-[2025-10-30 16:48:47] [ERROR] ✗ GET /api/article | Error: res.setHeader is not a function | 2ms
+[2025-11-14 15:30:53] [INFO] → GET /user/1/avatar | IP: ::1
 
-[2025-10-30 16:49:03] [INFO] → GET /api/article | IP: ::ffff:192.168.3.96
+[2025-11-14 15:30:53] [INFO] → GET /user/2/avatar | IP: ::1
 
-[2025-10-30 16:49:03] [ERROR] ✗ GET /api/article | Error: res.setHeader is not a function | 3ms
+[2025-11-14 15:30:53] [INFO] → GET /user/3/avatar | IP: ::1
 
-[2025-10-30 16:49:07] [INFO] → GET /article | IP: ::ffff:192.168.3.96
+[2025-11-14 15:30:53] [INFO] ✓ GET /user/1/avatar | Status: 200 | 8ms
 
-[2025-10-30 16:49:07] [ERROR] ✗ GET /article | Error: res.setHeader is not a function | 8ms
+[2025-11-14 15:30:53] [INFO] ✓ GET /user/2/avatar | Status: 200 | 5ms
 
-[2025-10-30 16:49:21] [INFO] → GET /user/hot | IP: ::1
+[2025-11-14 15:30:53] [INFO] ✓ GET /user/3/avatar | Status: 200 | 16ms
 
-[2025-10-30 16:49:21] [ERROR] ✗ GET /user/hot | Error: res.setHeader is not a function | 1ms
+[2025-11-14 15:30:58] [INFO] → GET /tag | IP: ::1
 
-[2025-10-30 16:49:23] [INFO] → GET /tag | IP: ::1
+[2025-11-14 15:30:58] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
 
-[2025-10-30 16:49:23] [ERROR] ✗ GET /tag | Error: res.setHeader is not a function | 1ms
+[2025-11-14 15:30:58] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
 
-[2025-10-30 16:49:23] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
+[2025-11-14 15:30:58] [INFO] ✓ GET /tag | Status: 200 | 18ms
 
-[2025-10-30 16:49:23] [ERROR] ✗ GET /article/recommend?offset=0&limit=10 | Error: res.setHeader is not a function | 0ms
+[2025-11-14 15:30:58] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 11ms
 
-[2025-10-30 16:49:23] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
+[2025-11-14 15:30:58] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 40ms
 
-[2025-10-30 16:49:23] [ERROR] ✗ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Error: res.setHeader is not a function | 1ms
+[2025-11-14 15:30:58] [INFO] → GET /user/8/avatar | IP: ::1
 
-[2025-10-30 16:49:28] [INFO] → GET /tag | IP: ::1
+[2025-11-14 15:30:58] [INFO] → GET /user/7/avatar | IP: ::1
 
-[2025-10-30 16:49:28] [ERROR] ✗ GET /tag | Error: res.setHeader is not a function | 1ms
+[2025-11-14 15:30:58] [INFO] → GET /user/6/avatar | IP: ::1
 
-[2025-10-30 16:49:28] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
+[2025-11-14 15:30:58] [INFO] ✓ GET /user/8/avatar | Status: 200 | 2ms
 
-[2025-10-30 16:49:28] [ERROR] ✗ GET /article/recommend?offset=0&limit=10 | Error: res.setHeader is not a function | 0ms
+[2025-11-14 15:30:58] [INFO] ✓ GET /user/7/avatar | Status: 200 | 1ms
 
-[2025-10-30 16:49:28] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
+[2025-11-14 15:30:58] [INFO] ✓ GET /user/6/avatar | Status: 200 | 2ms
 
-[2025-10-30 16:49:28] [ERROR] ✗ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Error: res.setHeader is not a function | 1ms
+[2025-11-14 15:30:58] [INFO] → GET /user/5/avatar | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
+[2025-11-14 15:30:58] [INFO] → GET /user/4/avatar | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] → GET /tag | IP: ::1
+[2025-11-14 15:30:58] [INFO] ✓ GET /user/5/avatar | Status: 200 | 1ms
 
-[2025-10-30 16:50:03] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
+[2025-11-14 15:30:58] [INFO] ✓ GET /user/4/avatar | Status: 200 | 2ms
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /tag | Status: 200 | 126ms
+[2025-11-14 15:30:58] [INFO] → GET /article/images/1686221837379.png?type=small | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 139ms
+[2025-11-14 15:30:58] [INFO] → GET /article/images/1686220507024.jpg?type=small | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 166ms
+[2025-11-14 15:30:58] [INFO] → GET /article/images/1686219335028.jpg?type=small | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] → GET /user/7/avatar | IP: ::1
+[2025-11-14 15:30:58] [INFO] → GET /article/images/1686218679815.jpg?type=small | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] → GET /user/6/avatar | IP: ::1
+[2025-11-14 15:30:58] [INFO] → GET /article/images/1685622311147.png?type=small | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] → GET /user/5/avatar | IP: ::1
+[2025-11-14 15:30:58] [INFO] ✓ GET /article/images/1686221837379.png?type=small | Status: 200 | 13ms
 
-[2025-10-30 16:50:03] [INFO] → GET /user/2/avatar | IP: ::1
+[2025-11-14 15:30:58] [INFO] ✓ GET /article/images/1686219335028.jpg?type=small | Status: 200 | 13ms
 
-[2025-10-30 16:50:03] [INFO] → GET /user/3/avatar | IP: ::1
+[2025-11-14 15:30:58] [INFO] → GET /article/images/1685613097871.png?type=small | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] → GET /user/8/avatar | IP: ::1
+[2025-11-14 15:30:58] [INFO] ✓ GET /article/images/1685613097871.png?type=small | Status: 200 | 12ms
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /user/5/avatar | Status: 200 | 12ms
+[2025-11-14 15:30:58] [INFO] ✓ GET /article/images/1686220507024.jpg?type=small | Status: 200 | 28ms
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /user/7/avatar | Status: 200 | 15ms
+[2025-11-14 15:30:58] [INFO] → GET /article/images/1685612251452.png?type=small | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /user/6/avatar | Status: 200 | 13ms
+[2025-11-14 15:30:58] [INFO] → GET /article/images/1685611740220.png?type=small | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /user/2/avatar | Status: 200 | 13ms
+[2025-11-14 15:30:58] [INFO] ✓ GET /article/images/1685612251452.png?type=small | Status: 200 | 1ms
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /user/8/avatar | Status: 200 | 59ms
+[2025-11-14 15:30:58] [INFO] ✓ GET /article/images/1685611740220.png?type=small | Status: 200 | 1ms
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /user/3/avatar | Status: 200 | 63ms
+[2025-11-14 15:30:58] [INFO] → GET /article/images/1685546152822.png?type=small | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] → GET /user/4/avatar | IP: ::1
+[2025-11-14 15:30:58] [INFO] ✓ GET /article/images/1686218679815.jpg?type=small | Status: 200 | 44ms
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /user/4/avatar | Status: 200 | 43ms
+[2025-11-14 15:30:58] [INFO] ✓ GET /article/images/1685546152822.png?type=small | Status: 200 | 2ms
 
-[2025-10-30 16:50:03] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
+[2025-11-14 15:30:58] [INFO] ✓ GET /article/images/1685622311147.png?type=small | Status: 200 | 46ms
 
-[2025-10-30 16:50:03] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
+[2025-11-14 15:31:45] [INFO] → POST /user/login | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 12ms
+[2025-11-14 15:31:45] [INFO] ✓ POST /user/login | Status: 200 | 44ms
 
-[2025-10-30 16:50:03] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /user/1/profile | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/1/profile | Status: 200 | 12ms
 
-[2025-10-30 16:50:03] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /user/1/avatar | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 15ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/1/avatar | Status: 200 | 3ms
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 5ms
+[2025-11-14 15:31:45] [INFO] → GET /user/checkAuth | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/checkAuth | Status: 200 | 4ms
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 11ms
+[2025-11-14 15:31:45] [INFO] → GET /user/1/avatar | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 12ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/1/avatar | Status: 200 | 12ms
 
-[2025-10-30 16:50:03] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /tag | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 16ms
+[2025-11-14 15:31:45] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 12ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /tag | Status: 200 | 7ms
 
-[2025-10-30 16:50:03] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 17ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 13ms
 
-[2025-10-30 16:50:09] [INFO] → GET /tag | IP: ::1
+[2025-11-14 15:31:45] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 75ms
 
-[2025-10-30 16:50:09] [ERROR] ✗ GET /tag | Error: res.setHeader is not a function | 1ms
+[2025-11-14 15:31:45] [INFO] → GET /user/8/avatar | IP: ::1
 
-[2025-10-30 16:50:09] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/8/avatar | Status: 200 | 3ms
 
-[2025-10-30 16:50:09] [ERROR] ✗ GET /article/recommend?offset=0&limit=10 | Error: res.setHeader is not a function | 1ms
+[2025-11-14 15:31:45] [INFO] → GET /article/images/1686221837379.png?type=small | IP: ::1
 
-[2025-10-30 16:50:09] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
+[2025-11-14 15:31:45] [INFO] ✓ GET /article/images/1686221837379.png?type=small | Status: 200 | 10ms
 
-[2025-10-30 16:50:09] [ERROR] ✗ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Error: res.setHeader is not a function | 0ms
+[2025-11-14 15:31:45] [INFO] → GET /user/7/avatar | IP: ::1
 
-[2025-10-30 16:50:30] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /article/images/1686220507024.jpg?type=small | IP: ::1
 
-[2025-10-30 16:50:30] [ERROR] ✗ GET /article/recommend?offset=0&limit=10 | Error: res.setHeader is not a function | 1ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/7/avatar | Status: 200 | 4ms
 
-[2025-10-30 16:50:30] [INFO] → GET /tag | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /user/6/avatar | IP: ::1
 
-[2025-10-30 16:50:30] [ERROR] ✗ GET /tag | Error: res.setHeader is not a function | 1ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /article/images/1686220507024.jpg?type=small | Status: 200 | 8ms
 
-[2025-10-30 16:50:30] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /article/images/1686219335028.jpg?type=small | IP: ::1
 
-[2025-10-30 16:50:30] [ERROR] ✗ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Error: res.setHeader is not a function | 1ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/6/avatar | Status: 200 | 7ms
 
-[2025-10-30 16:50:37] [INFO] → GET /tag | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /user/5/avatar | IP: ::1
 
-[2025-10-30 16:50:37] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
+[2025-11-14 15:31:45] [INFO] ✓ GET /article/images/1686219335028.jpg?type=small | Status: 200 | 3ms
 
-[2025-10-30 16:50:37] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /article/images/1686218679815.jpg?type=small | IP: ::1
 
-[2025-10-30 16:50:37] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 136ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/5/avatar | Status: 200 | 5ms
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /tag | Status: 200 | 203ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /article/images/1686218679815.jpg?type=small | Status: 200 | 12ms
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 222ms
+[2025-11-14 15:31:45] [INFO] → GET /user/3/avatar | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] → GET /user/7/avatar | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /article/images/1685622311147.png?type=small | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] → GET /user/8/avatar | IP: ::1
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/3/avatar | Status: 200 | 12ms
 
-[2025-10-30 16:50:38] [INFO] → GET /user/6/avatar | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /article/images/1685613097871.png?type=small | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] → GET /user/3/avatar | IP: ::1
+[2025-11-14 15:31:45] [INFO] ✓ GET /article/images/1685622311147.png?type=small | Status: 200 | 11ms
 
-[2025-10-30 16:50:38] [INFO] → GET /user/2/avatar | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /user/2/avatar | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /user/7/avatar | Status: 200 | 14ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /article/images/1685613097871.png?type=small | Status: 200 | 5ms
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /user/8/avatar | Status: 200 | 11ms
+[2025-11-14 15:31:45] [INFO] → GET /article/images/1685612251452.png?type=small | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /user/6/avatar | Status: 200 | 9ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/2/avatar | Status: 200 | 3ms
 
-[2025-10-30 16:50:38] [INFO] → GET /user/5/avatar | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /article/images/1685611740220.png?type=small | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /user/5/avatar | Status: 200 | 5ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /article/images/1685611740220.png?type=small | Status: 200 | 2ms
 
-[2025-10-30 16:50:38] [INFO] → GET /user/4/avatar | IP: ::1
+[2025-11-14 15:31:45] [INFO] ✓ GET /article/images/1685612251452.png?type=small | Status: 200 | 4ms
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /user/3/avatar | Status: 200 | 32ms
+[2025-11-14 15:31:45] [INFO] → GET /user/1/like | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /user/4/avatar | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
+[2025-11-14 15:31:45] [INFO] → GET /article/images/1685546152822.png?type=small | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /user/2/avatar | Status: 200 | 28ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/4/avatar | Status: 200 | 4ms
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /user/4/avatar | Status: 200 | 3ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /article/images/1685546152822.png?type=small | Status: 200 | 6ms
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 4ms
+[2025-11-14 15:31:45] [INFO] ✓ GET /user/1/like | Status: 200 | 20ms
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 8ms
+[2025-11-14 15:31:59] [INFO] → GET /user/1/follow | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
+[2025-11-14 15:31:59] [INFO] ✓ GET /user/1/follow | Status: 200 | 12ms
 
-[2025-10-30 16:50:38] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
+[2025-11-14 15:31:59] [INFO] → GET /user/1/follow | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
+[2025-11-14 15:31:59] [INFO] ✓ GET /user/1/follow | Status: 200 | 4ms
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 4ms
+[2025-11-14 15:32:49] [INFO] → POST /img | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
+[2025-11-14 15:32:49] [INFO] ✓ POST /img | Status: 200 | 68ms
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 5ms
+[2025-11-14 15:32:49] [INFO] → GET /article/images/1763105569383.png | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
+[2025-11-14 15:32:49] [INFO] ✓ GET /article/images/1763105569383.png | Status: 200 | 1ms
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 5ms
+[2025-11-14 15:32:49] [INFO] → POST /img | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 3ms
+[2025-11-14 15:32:49] [INFO] ✓ POST /img | Status: 200 | 11ms
 
-[2025-10-30 16:50:38] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
+[2025-11-14 15:32:49] [INFO] → GET /article/images/1763105569458.png | IP: ::1
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 10ms
+[2025-11-14 15:32:49] [INFO] ✓ GET /article/images/1763105569458.png | Status: 200 | 1ms
 
-[2025-10-30 16:50:38] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 11ms
+[2025-11-14 15:32:50] [INFO] → GET /tag | IP: ::1
 
-[2025-10-30 16:50:45] [INFO] → GET /article | IP: ::ffff:192.168.3.96
+[2025-11-14 15:32:50] [INFO] ✓ GET /tag | Status: 200 | 2ms
 
-[2025-10-30 16:50:45] [ERROR] ✗ GET /article | Error: "undefined" is not valid JSON | 1ms
+[2025-11-14 15:33:01] [INFO] → GET /user/1/avatar | IP: ::1
 
-[2025-10-30 16:50:46] [INFO] → GET /article | IP: ::ffff:192.168.3.96
+[2025-11-14 15:33:01] [INFO] ✓ GET /user/1/avatar | Status: 200 | 21ms
 
-[2025-10-30 16:50:46] [ERROR] ✗ GET /article | Error: "undefined" is not valid JSON | 2ms
+[2025-11-14 15:33:01] [INFO] → DELETE /img | IP: ::1
 
-[2025-10-30 16:50:47] [INFO] → GET /article | IP: ::ffff:192.168.3.96
+[2025-11-14 15:33:01] [INFO] → GET /tag | IP: ::1
 
-[2025-10-30 16:50:47] [ERROR] ✗ GET /article | Error: "undefined" is not valid JSON | 2ms
+[2025-11-14 15:33:01] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
 
-[2025-10-30 16:50:50] [INFO] → GET /user/hot | IP: ::1
+[2025-11-14 15:33:01] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
 
-[2025-10-30 16:50:50] [INFO] ✓ GET /user/hot | Status: 200 | 9ms
+[2025-11-14 15:33:01] [INFO] ✓ GET /tag | Status: 200 | 6ms
 
-[2025-10-30 16:50:50] [INFO] → GET /user/1/avatar | IP: ::1
+[2025-11-14 15:33:01] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 14ms
 
-[2025-10-30 16:50:50] [INFO] → GET /user/2/avatar | IP: ::1
+[2025-11-14 15:33:01] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 22ms
 
-[2025-10-30 16:50:50] [INFO] ✓ GET /user/1/avatar | Status: 200 | 6ms
+[2025-11-14 15:33:01] [INFO] ✓ DELETE /img | Status: 200 | 51ms
 
-[2025-10-30 16:50:50] [INFO] → GET /user/3/avatar | IP: ::1
+[2025-11-14 15:33:01] [INFO] → GET /user/8/avatar | IP: ::1
 
-[2025-10-30 16:50:50] [INFO] ✓ GET /user/2/avatar | Status: 200 | 6ms
+[2025-11-14 15:33:01] [INFO] → GET /user/7/avatar | IP: ::1
 
-[2025-10-30 16:50:50] [INFO] ✓ GET /user/3/avatar | Status: 200 | 4ms
+[2025-11-14 15:33:01] [INFO] ✓ GET /user/8/avatar | Status: 200 | 4ms
 
-[2025-10-30 16:50:51] [INFO] → GET /tag | IP: ::1
+[2025-11-14 15:33:01] [INFO] → GET /user/6/avatar | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
+[2025-11-14 15:33:01] [INFO] ✓ GET /user/7/avatar | Status: 200 | 5ms
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /tag | Status: 200 | 4ms
+[2025-11-14 15:33:01] [INFO] → GET /user/5/avatar | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
+[2025-11-14 15:33:01] [INFO] ✓ GET /user/6/avatar | Status: 200 | 6ms
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 6ms
+[2025-11-14 15:33:01] [INFO] → GET /user/3/avatar | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 14ms
+[2025-11-14 15:33:01] [INFO] ✓ GET /user/5/avatar | Status: 200 | 5ms
 
-[2025-10-30 16:50:51] [INFO] → GET /user/8/avatar | IP: ::1
+[2025-11-14 15:33:01] [INFO] → GET /user/2/avatar | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] → GET /user/7/avatar | IP: ::1
+[2025-11-14 15:33:02] [INFO] ✓ GET /user/3/avatar | Status: 200 | 3ms
 
-[2025-10-30 16:50:51] [INFO] → GET /user/6/avatar | IP: ::1
+[2025-11-14 15:33:02] [INFO] → GET /user/1/like | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /user/8/avatar | Status: 200 | 3ms
+[2025-11-14 15:33:02] [INFO] ✓ GET /user/2/avatar | Status: 200 | 3ms
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /user/7/avatar | Status: 200 | 3ms
+[2025-11-14 15:33:02] [INFO] → GET /user/4/avatar | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /user/6/avatar | Status: 200 | 3ms
+[2025-11-14 15:33:02] [INFO] → GET /article/images/1686221837379.png?type=small | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] → GET /user/5/avatar | IP: ::1
+[2025-11-14 15:33:02] [INFO] ✓ GET /user/1/like | Status: 200 | 2ms
 
-[2025-10-30 16:50:51] [INFO] → GET /user/4/avatar | IP: ::1
+[2025-11-14 15:33:02] [INFO] ✓ GET /user/4/avatar | Status: 200 | 3ms
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /user/5/avatar | Status: 200 | 3ms
+[2025-11-14 15:33:02] [INFO] → GET /article/images/1686220507024.jpg?type=small | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /user/4/avatar | Status: 200 | 4ms
+[2025-11-14 15:33:02] [INFO] ✓ GET /article/images/1686221837379.png?type=small | Status: 200 | 2ms
 
-[2025-10-30 16:50:51] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
+[2025-11-14 15:33:02] [INFO] → GET /article/images/1686219335028.jpg?type=small | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
+[2025-11-14 15:33:02] [INFO] → GET /article/images/1686218679815.jpg?type=small | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 18ms
+[2025-11-14 15:33:02] [INFO] ✓ GET /article/images/1686219335028.jpg?type=small | Status: 200 | 0ms
 
-[2025-10-30 16:50:51] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
+[2025-11-14 15:33:02] [INFO] ✓ GET /article/images/1686218679815.jpg?type=small | Status: 200 | 1ms
 
-[2025-10-30 16:50:51] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
+[2025-11-14 15:33:02] [INFO] → GET /article/images/1685622311147.png?type=small | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 24ms
+[2025-11-14 15:33:02] [INFO] ✓ GET /article/images/1685622311147.png?type=small | Status: 200 | 1ms
 
-[2025-10-30 16:50:51] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
+[2025-11-14 15:33:02] [INFO] ✓ GET /article/images/1686220507024.jpg?type=small | Status: 200 | 6ms
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 5ms
+[2025-11-14 15:33:02] [INFO] → GET /article/images/1685613097871.png?type=small | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 2ms
+[2025-11-14 15:33:02] [INFO] ✓ GET /article/images/1685613097871.png?type=small | Status: 200 | 4ms
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 4ms
+[2025-11-14 15:33:02] [INFO] → GET /article/images/1685612251452.png?type=small | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
+[2025-11-14 15:33:02] [INFO] → GET /article/images/1685611740220.png?type=small | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 4ms
+[2025-11-14 15:33:02] [INFO] → GET /article/images/1685546152822.png?type=small | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
+[2025-11-14 15:33:02] [INFO] ✓ GET /article/images/1685612251452.png?type=small | Status: 200 | 2ms
 
-[2025-10-30 16:50:51] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
+[2025-11-14 15:33:02] [INFO] ✓ GET /article/images/1685611740220.png?type=small | Status: 200 | 2ms
 
-[2025-10-30 16:50:51] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
+[2025-11-14 15:33:02] [INFO] ✓ GET /article/images/1685546152822.png?type=small | Status: 200 | 2ms
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 4ms
+[2025-11-14 15:33:08] [INFO] → GET /user/1/follow | IP: ::1
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 5ms
+[2025-11-14 15:33:08] [INFO] ✓ GET /user/1/follow | Status: 200 | 11ms
 
-[2025-10-30 16:50:51] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 9ms
+[2025-11-14 15:33:13] [INFO] → POST /img | IP: ::1
 
-[2025-10-30 16:51:03] [INFO] → GET /tag | IP: ::1
+[2025-11-14 15:33:13] [INFO] ✓ POST /img | Status: 200 | 31ms
 
-[2025-10-30 16:51:03] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
+[2025-11-14 15:33:13] [INFO] → GET /article/images/1763105593111.png | IP: ::1
 
-[2025-10-30 16:51:03] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
+[2025-11-14 15:33:13] [INFO] ✓ GET /article/images/1763105593111.png | Status: 200 | 2ms
 
-[2025-10-30 16:51:03] [INFO] ✓ GET /tag | Status: 200 | 60ms
+[2025-11-14 15:33:13] [INFO] → POST /img | IP: ::1
 
-[2025-10-30 16:51:03] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 51ms
+[2025-11-14 15:33:13] [INFO] ✓ POST /img | Status: 200 | 11ms
 
-[2025-10-30 16:51:03] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 63ms
+[2025-11-14 15:33:13] [INFO] → GET /article/images/1763105593147.png | IP: ::1
 
-[2025-10-30 16:51:03] [INFO] → GET /user/8/avatar | IP: ::1
+[2025-11-14 15:33:13] [INFO] ✓ GET /article/images/1763105593147.png | Status: 200 | 1ms
 
-[2025-10-30 16:51:03] [INFO] → GET /user/7/avatar | IP: ::1
+[2025-11-14 15:33:32] [INFO] → GET /user/checkAuth | IP: ::1
 
-[2025-10-30 16:51:03] [INFO] ✓ GET /user/8/avatar | Status: 200 | 8ms
+[2025-11-14 15:33:32] [INFO] ✓ GET /user/checkAuth | Status: 200 | 7ms
 
-[2025-10-30 16:51:03] [INFO] → GET /user/6/avatar | IP: ::1
+[2025-11-14 16:19:07] [INFO] → POST /img | IP: ::1
 
-[2025-10-30 16:51:03] [INFO] → GET /user/5/avatar | IP: ::1
+[2025-11-14 16:19:07] [INFO] ✓ POST /img | Status: 200 | 74ms
 
-[2025-10-30 16:51:03] [INFO] ✓ GET /user/7/avatar | Status: 200 | 11ms
+[2025-11-14 16:19:07] [INFO] → GET /article/images/1763108347727.png | IP: ::1
 
-[2025-10-30 16:51:03] [INFO] ✓ GET /user/6/avatar | Status: 200 | 8ms
+[2025-11-14 16:19:07] [INFO] ✓ GET /article/images/1763108347727.png | Status: 200 | 3ms
 
-[2025-10-30 16:51:03] [INFO] → GET /user/3/avatar | IP: ::1
+[2025-11-14 16:19:07] [INFO] → POST /img | IP: ::1
 
-[2025-10-30 16:51:03] [INFO] → GET /user/2/avatar | IP: ::1
+[2025-11-14 16:19:07] [INFO] ✓ POST /img | Status: 200 | 9ms
 
-[2025-10-30 16:51:03] [INFO] ✓ GET /user/5/avatar | Status: 200 | 11ms
+[2025-11-14 16:19:07] [INFO] → GET /article/images/1763108347814.png | IP: ::1
 
-[2025-10-30 16:51:03] [INFO] ✓ GET /user/3/avatar | Status: 200 | 6ms
+[2025-11-14 16:19:07] [INFO] ✓ GET /article/images/1763108347814.png | Status: 200 | 1ms
 
-[2025-10-30 16:51:03] [INFO] ✓ GET /user/2/avatar | Status: 200 | 5ms
+[2025-11-14 16:20:27] [INFO] → GET /user/checkAuth | IP: ::1
 
-[2025-10-30 16:51:03] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 16:51:03] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:03] [INFO] ✓ GET /user/4/avatar | Status: 200 | 5ms
-
-[2025-10-30 16:51:03] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:03] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 6ms
-
-[2025-10-30 16:51:03] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:03] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:03] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:03] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 10ms
-
-[2025-10-30 16:51:03] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 16:51:03] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 7ms
-
-[2025-10-30 16:51:03] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:03] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:03] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 16:51:03] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:03] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 13ms
-
-[2025-10-30 16:51:03] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 9ms
-
-[2025-10-30 16:51:03] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 27ms
-
-[2025-10-30 16:51:04] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 16:51:04] [INFO] ✓ GET /user/8/follow | Status: 200 | 9ms
-
-[2025-10-30 16:51:04] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:04] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 6ms
-
-[2025-10-30 16:51:09] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 16:51:09] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 16:51:09] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 16:51:09] [INFO] ✓ GET /tag | Status: 200 | 36ms
-
-[2025-10-30 16:51:09] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 35ms
-
-[2025-10-30 16:51:09] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 41ms
-
-[2025-10-30 16:51:10] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /user/7/avatar | Status: 200 | 6ms
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /user/8/avatar | Status: 200 | 12ms
-
-[2025-10-30 16:51:10] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /user/6/avatar | Status: 200 | 17ms
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /user/3/avatar | Status: 200 | 6ms
-
-[2025-10-30 16:51:10] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /user/5/avatar | Status: 200 | 34ms
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /user/2/avatar | Status: 200 | 5ms
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /user/4/avatar | Status: 200 | 3ms
-
-[2025-10-30 16:51:10] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 9ms
-
-[2025-10-30 16:51:10] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 13ms
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 15ms
-
-[2025-10-30 16:51:10] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 13ms
-
-[2025-10-30 16:51:10] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 14ms
-
-[2025-10-30 16:51:10] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 6ms
-
-[2025-10-30 16:51:10] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:10] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 16:51:11] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 16:51:11] [INFO] ✓ GET /user/8/follow | Status: 200 | 9ms
-
-[2025-10-30 16:51:13] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 10ms
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /tag | Status: 200 | 9ms
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 16ms
-
-[2025-10-30 16:51:13] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /user/8/avatar | Status: 200 | 12ms
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /user/6/avatar | Status: 200 | 10ms
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /user/2/avatar | Status: 200 | 9ms
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /user/7/avatar | Status: 200 | 8ms
-
-[2025-10-30 16:51:13] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /user/3/avatar | Status: 200 | 5ms
-
-[2025-10-30 16:51:13] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /user/5/avatar | Status: 200 | 136ms
-
-[2025-10-30 16:51:13] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /user/4/avatar | Status: 200 | 2ms
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 8ms
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 16:51:13] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 11ms
-
-[2025-10-30 16:51:13] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 16:51:13] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:13] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 16:51:58] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /tag | Status: 200 | 100ms
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 115ms
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 114ms
-
-[2025-10-30 16:51:58] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /user/7/avatar | Status: 200 | 7ms
-
-[2025-10-30 16:51:58] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /user/8/avatar | Status: 200 | 40ms
-
-[2025-10-30 16:51:58] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /user/6/avatar | Status: 200 | 44ms
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /user/5/avatar | Status: 200 | 35ms
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /user/3/avatar | Status: 200 | 5ms
-
-[2025-10-30 16:51:58] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /user/2/avatar | Status: 200 | 8ms
-
-[2025-10-30 16:51:58] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /user/4/avatar | Status: 200 | 3ms
-
-[2025-10-30 16:51:58] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 13ms
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 8ms
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 12ms
-
-[2025-10-30 16:51:58] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 16:51:58] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 16:51:58] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 16:51:58] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 16:51:58] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 16:52:03] [INFO] → GET /dev-api/article | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:52:03] [ERROR] ✗ GET /dev-api/article | Error: res.setHeader is not a function | 2ms
-
-[2025-10-30 16:52:03] [INFO] → GET /dev-api/article | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:52:03] [ERROR] ✗ GET /dev-api/article | Error: res.setHeader is not a function | 3ms
-
-[2025-10-30 16:52:04] [INFO] → GET /dev-api/article | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:52:04] [ERROR] ✗ GET /dev-api/article | Error: res.setHeader is not a function | 1ms
-
-[2025-10-30 16:52:15] [INFO] → GET /dev-api/article | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:52:15] [ERROR] ✗ GET /dev-api/article | Error: res.setHeader is not a function | 2ms
-
-[2025-10-30 16:52:25] [INFO] → GET /dev-api/article?offset=0&limit=10 | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:52:25] [ERROR] ✗ GET /dev-api/article?offset=0&limit=10 | Error: res.setHeader is not a function | 7ms
-
-[2025-10-30 16:52:26] [INFO] → GET /dev-api/article?offset=0&limit=10 | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:52:26] [ERROR] ✗ GET /dev-api/article?offset=0&limit=10 | Error: res.setHeader is not a function | 6ms
-
-[2025-10-30 16:53:07] [INFO] → GET /dev-api/article?offset=0&limit=10 | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:53:07] [INFO] ✗ GET /dev-api/article?offset=0&limit=10 | Status: 404 | 4ms
-
-[2025-10-30 16:53:07] [WARN]   响应体: undefined
-
-[2025-10-30 16:53:07] [INFO] → GET /dev-api/article?offset=0&limit=10 | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:53:07] [INFO] ✗ GET /dev-api/article?offset=0&limit=10 | Status: 404 | 3ms
-
-[2025-10-30 16:53:07] [WARN]   响应体: undefined
-
-[2025-10-30 16:53:13] [INFO] → GET /dev-api/article?offset=0&limit=10 | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:53:13] [INFO] ✗ GET /dev-api/article?offset=0&limit=10 | Status: 404 | 1ms
-
-[2025-10-30 16:53:13] [WARN]   响应体: undefined
-
-[2025-10-30 16:53:18] [INFO] → GET /dev-api/article?offset=0&limit=10 | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:53:18] [ERROR] ✗ GET /dev-api/article?offset=0&limit=10 | Error: res.setHeader is not a function | 5ms
-
-[2025-10-30 16:53:19] [INFO] → GET /dev-api/article?offset=0&limit=10 | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:53:19] [ERROR] ✗ GET /dev-api/article?offset=0&limit=10 | Error: res.setHeader is not a function | 3ms
-
-[2025-10-30 16:53:48] [INFO] → GET /dev-api/article?offset=0&limit=10 | IP: ::ffff:192.168.3.96
-
-[2025-10-30 16:53:48] [INFO] ✗ GET /dev-api/article?offset=0&limit=10 | Status: 404 | 9ms
-
-[2025-10-30 16:53:48] [WARN]   响应体: undefined
-
-[2025-10-30 20:18:26] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /tag | Status: 200 | 56ms
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 51ms
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 70ms
-
-[2025-10-30 20:18:26] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /user/6/avatar | Status: 200 | 5ms
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /user/8/avatar | Status: 200 | 9ms
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /user/7/avatar | Status: 200 | 7ms
-
-[2025-10-30 20:18:26] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /user/5/avatar | Status: 200 | 11ms
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /user/4/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /user/2/avatar | Status: 200 | 15ms
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /user/3/avatar | Status: 200 | 18ms
-
-[2025-10-30 20:18:26] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:18:26] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:18:26] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:18:26] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:18:26] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:18:26] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:18:26] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 7ms
-
-[2025-10-30 20:18:36] [INFO] → POST /user/login | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ POST /user/login | Status: 200 | 26ms
-
-[2025-10-30 20:18:36] [INFO] → GET /user/8/profile | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /user/8/profile | Status: 200 | 6ms
-
-[2025-10-30 20:18:36] [INFO] → GET /user/checkAuth | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /user/checkAuth | Status: 200 | 3ms
-
-[2025-10-30 20:18:36] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /user/8/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:18:36] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /tag | Status: 200 | 1ms
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 3ms
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 11ms
-
-[2025-10-30 20:18:36] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /user/7/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:18:36] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /user/6/avatar | Status: 200 | 4ms
-
-[2025-10-30 20:18:36] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:18:36] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /user/5/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /user/3/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:18:36] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /user/2/avatar | Status: 200 | 1ms
-
-[2025-10-30 20:18:36] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:18:36] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /user/4/avatar | Status: 200 | 1ms
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:18:36] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:18:36] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:18:36] [INFO] ✓ GET /user/8/like | Status: 200 | 10ms
-
-[2025-10-30 20:18:37] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:18:37] [INFO] ✓ GET /user/8/follow | Status: 200 | 9ms
-
-[2025-10-30 20:18:38] [INFO] → GET /user/8/profile | IP: ::1
-
-[2025-10-30 20:18:38] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:18:38] [INFO] ✓ GET /user/8/profile | Status: 200 | 5ms
-
-[2025-10-30 20:18:38] [INFO] ✓ GET /user/8/follow | Status: 200 | 7ms
-
-[2025-10-30 20:18:38] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=8&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:18:38] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=8&idList=%5B%5D&keywords= | Status: 200 | 14ms
-
-[2025-10-30 20:18:38] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:18:38] [INFO] ✓ GET /user/8/like | Status: 200 | 2ms
-
-[2025-10-30 20:18:39] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:18:39] [INFO] ✓ GET /user/8/follow | Status: 200 | 3ms
-
-[2025-10-30 20:18:40] [INFO] → GET /user/checkAuth | IP: ::1
-
-[2025-10-30 20:18:40] [INFO] ✓ GET /user/checkAuth | Status: 200 | 1ms
-
-[2025-10-30 20:19:24] [INFO] → POST /upload/picture | IP: ::1
-
-[2025-10-30 20:19:24] [INFO] ✓ POST /upload/picture | Status: 200 | 82ms
-
-[2025-10-30 20:19:24] [INFO] → GET /article/images/1761826764231.png | IP: ::1
-
-[2025-10-30 20:19:24] [INFO] ✓ GET /article/images/1761826764231.png | Status: 200 | 2ms
-
-[2025-10-30 20:19:28] [INFO] → GET /article/images/1761826764231.png | IP: ::1
-
-[2025-10-30 20:19:28] [INFO] ✓ GET /article/images/1761826764231.png | Status: 200 | 3ms
-
-[2025-10-30 20:19:29] [INFO] → GET /favicon.ico | IP: ::1
-
-[2025-10-30 20:19:29] [INFO] ✗ GET /favicon.ico | Status: 404 | 0ms
-
-[2025-10-30 20:19:29] [WARN]   响应体: undefined
-
-[2025-10-30 20:19:49] [INFO] → GET /article/images/1761826764231.png?type=small | IP: ::1
-
-[2025-10-30 20:19:49] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:19:49] [INFO] ✓ GET /article/images/1761826764231.png?type=small | Status: 200 | 10ms
-
-[2025-10-30 20:19:49] [INFO] ✓ GET /tag | Status: 200 | 14ms
-
-[2025-10-30 20:20:17] [INFO] → POST /article | IP: ::1
-
-[2025-10-30 20:20:17] [INFO] ✓ POST /article | Status: 200 | 29ms
-
-[2025-10-30 20:20:17] [INFO] → POST /upload/picture/71 | IP: ::1
-
-[2025-10-30 20:20:17] [INFO] ✓ POST /upload/picture/71 | Status: 200 | 32ms
-
-[2025-10-30 20:20:18] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 20:20:18] [INFO] ✓ GET /user/8/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:20:18] [INFO] → PUT /article/71/view | IP: ::1
-
-[2025-10-30 20:20:18] [INFO] → POST /history | IP: ::1
-
-[2025-10-30 20:20:18] [INFO] ✓ PUT /article/71/view | Status: 200 | 18ms
-
-[2025-10-30 20:20:18] [INFO] ✓ POST /history | Status: 200 | 17ms
-
-[2025-10-30 20:20:18] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:20:18] [INFO] → GET /article/71 | IP: ::1
-
-[2025-10-30 20:20:18] [INFO] ✓ GET /user/8/like | Status: 200 | 3ms
-
-[2025-10-30 20:20:18] [INFO] ✓ GET /article/71 | Status: 200 | 8ms
-
-[2025-10-30 20:20:18] [INFO] → GET /collect/8?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:20:18] [INFO] ✓ GET /collect/8?offset=0&limit=10 | Status: 200 | 3ms
-
-[2025-10-30 20:20:20] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /tag | Status: 200 | 1ms
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 1ms
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 20ms
-
-[2025-10-30 20:20:20] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /user/7/avatar | Status: 200 | 4ms
-
-[2025-10-30 20:20:20] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /user/6/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:20:20] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /user/5/avatar | Status: 200 | 1ms
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /user/3/avatar | Status: 200 | 1ms
-
-[2025-10-30 20:20:20] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /user/2/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:20:20] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /user/4/avatar | Status: 200 | 4ms
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /user/8/like | Status: 200 | 13ms
-
-[2025-10-30 20:20:20] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 8ms
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 23ms
-
-[2025-10-30 20:20:20] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:20:20] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 10ms
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:20:20] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:20:22] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:20:22] [INFO] ✓ GET /user/8/follow | Status: 200 | 6ms
-
-[2025-10-30 20:20:22] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:20:22] [INFO] ✓ GET /user/8/follow | Status: 200 | 2ms
-
-[2025-10-30 20:20:45] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /user/8/follow | Status: 200 | 5ms
-
-[2025-10-30 20:20:45] [INFO] → GET /user/checkAuth | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /user/checkAuth | Status: 200 | 5ms
-
-[2025-10-30 20:20:45] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /user/8/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:20:45] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /tag | Status: 200 | 6ms
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 6ms
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 11ms
-
-[2025-10-30 20:20:45] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /user/7/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:20:45] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 6ms
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /user/6/avatar | Status: 200 | 5ms
-
-[2025-10-30 20:20:45] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 7ms
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /user/5/avatar | Status: 200 | 5ms
-
-[2025-10-30 20:20:45] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /user/3/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:20:45] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /user/2/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:20:45] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /user/4/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:20:45] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:20:45] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:20:45] [INFO] ✓ GET /user/8/like | Status: 200 | 6ms
-
-[2025-10-30 20:20:48] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:20:48] [INFO] ✓ GET /user/8/follow | Status: 200 | 4ms
-
-[2025-10-30 20:20:50] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:20:50] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 12ms
-
-[2025-10-30 20:20:50] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:20:50] [INFO] ✓ GET /user/8/like | Status: 200 | 3ms
-
-[2025-10-30 20:21:20] [INFO] → GET /user/checkAuth | IP: ::1
-
-[2025-10-30 20:21:20] [INFO] ✓ GET /user/checkAuth | Status: 200 | 7ms
-
-[2025-10-30 20:21:20] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 20:21:20] [INFO] ✓ GET /user/8/avatar | Status: 200 | 4ms
-
-[2025-10-30 20:21:20] [INFO] → PUT /article/70/view | IP: ::1
-
-[2025-10-30 20:21:20] [INFO] → POST /history | IP: ::1
-
-[2025-10-30 20:21:20] [INFO] ✓ PUT /article/70/view | Status: 200 | 10ms
-
-[2025-10-30 20:21:20] [INFO] ✓ POST /history | Status: 200 | 15ms
-
-[2025-10-30 20:21:20] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:21:20] [INFO] → GET /article/70 | IP: ::1
-
-[2025-10-30 20:21:20] [INFO] ✓ GET /user/8/like | Status: 200 | 47ms
-
-[2025-10-30 20:21:20] [INFO] ✓ GET /article/70 | Status: 200 | 48ms
-
-[2025-10-30 20:21:21] [INFO] → GET /collect/8?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:21:21] [INFO] ✓ GET /collect/8?offset=0&limit=10 | Status: 200 | 4ms
-
-[2025-10-30 20:21:22] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /tag | Status: 200 | 10ms
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 9ms
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 15ms
-
-[2025-10-30 20:21:22] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:21:22] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /user/7/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:21:22] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:21:22] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /user/6/avatar | Status: 200 | 5ms
-
-[2025-10-30 20:21:22] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:21:22] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /user/5/avatar | Status: 200 | 4ms
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:21:22] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /user/3/avatar | Status: 200 | 5ms
-
-[2025-10-30 20:21:22] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:21:22] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 10ms
-
-[2025-10-30 20:21:22] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /user/2/avatar | Status: 200 | 8ms
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 8ms
-
-[2025-10-30 20:21:22] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /user/4/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 12ms
-
-[2025-10-30 20:21:22] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /user/8/like | Status: 200 | 4ms
-
-[2025-10-30 20:21:22] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:21:23] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:21:23] [INFO] ✓ GET /user/8/follow | Status: 200 | 3ms
-
-[2025-10-30 20:21:25] [INFO] → GET /article?offset=0&limit=10&tagId=1&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:21:25] [INFO] ✓ GET /article?offset=0&limit=10&tagId=1&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 10ms
-
-[2025-10-30 20:21:25] [INFO] → GET /user/1/avatar | IP: ::1
-
-[2025-10-30 20:21:25] [INFO] ✓ GET /user/1/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:21:25] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:21:25] [INFO] ✓ GET /user/8/like | Status: 200 | 4ms
-
-[2025-10-30 20:21:25] [INFO] → GET /article/images/1685019719021.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:25] [INFO] → GET /article/images/1685531482816.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:25] [INFO] ✓ GET /article/images/1685019719021.png-cover?type=small | Status: 200 | 6ms
-
-[2025-10-30 20:21:25] [INFO] → GET /article/images/1685532236865.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:25] [INFO] → GET /article/images/1685542264455.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:25] [INFO] ✓ GET /article/images/1685531482816.png-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:21:25] [INFO] → GET /article/images/1685543790008.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:21:25] [INFO] ✓ GET /article/images/1685542264455.jpg-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:21:25] [INFO] ✓ GET /article/images/1685532236865.png-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:21:25] [INFO] ✓ GET /article/images/1685543790008.png-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:21:26] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:21:26] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 11ms
-
-[2025-10-30 20:21:26] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:21:26] [INFO] ✓ GET /user/8/like | Status: 200 | 3ms
-
-[2025-10-30 20:21:27] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:21:27] [INFO] ✓ GET /user/8/follow | Status: 200 | 6ms
-
-[2025-10-30 20:21:31] [INFO] → GET /user/8/profile | IP: ::1
-
-[2025-10-30 20:21:31] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:21:31] [INFO] ✓ GET /user/8/profile | Status: 200 | 1ms
-
-[2025-10-30 20:21:31] [INFO] ✓ GET /user/8/follow | Status: 200 | 1ms
-
-[2025-10-30 20:21:31] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=8&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:21:31] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=8&idList=%5B%5D&keywords= | Status: 200 | 42ms
-
-[2025-10-30 20:21:31] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:21:31] [INFO] ✓ GET /user/8/like | Status: 200 | 1ms
-
-[2025-10-30 20:21:33] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:21:33] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:21:33] [INFO] ✓ GET /tag | Status: 200 | 2ms
-
-[2025-10-30 20:21:33] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:21:33] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 2ms
-
-[2025-10-30 20:21:33] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 7ms
-
-[2025-10-30 20:21:33] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:21:33] [INFO] ✓ GET /user/8/like | Status: 200 | 1ms
-
-[2025-10-30 20:22:26] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:22:26] [INFO] ✓ GET /user/8/follow | Status: 200 | 8ms
-
-[2025-10-30 20:22:28] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:22:28] [INFO] ✓ GET /user/8/follow | Status: 200 | 5ms
-
-[2025-10-30 20:22:31] [INFO] → GET /article?offset=10&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:22:31] [INFO] ✓ GET /article?offset=10&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 10ms
-
-[2025-10-30 20:22:31] [INFO] → GET /user/1/avatar | IP: ::1
-
-[2025-10-30 20:22:31] [INFO] ✓ GET /user/1/avatar | Status: 200 | 1ms
-
-[2025-10-30 20:22:31] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:22:31] [INFO] ✓ GET /user/8/like | Status: 200 | 1ms
-
-[2025-10-30 20:22:31] [INFO] → GET /article/images/1685545493482.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:31] [INFO] → GET /article/images/1685544271887.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:31] [INFO] → GET /article/images/1685543790008.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:31] [INFO] ✓ GET /article/images/1685545493482.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:22:31] [INFO] ✓ GET /article/images/1685544271887.jpg-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:22:31] [INFO] ✓ GET /article/images/1685543790008.png-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:22:31] [INFO] → GET /article/images/1685542264455.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:31] [INFO] → GET /article/images/1685021156287.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:31] [INFO] → GET /article/images/1685532236865.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:31] [INFO] ✓ GET /article/images/1685542264455.jpg-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:22:31] [INFO] → GET /article/images/1685531482816.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:31] [INFO] ✓ GET /article/images/1685021156287.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:22:31] [INFO] ✓ GET /article/images/1685532236865.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:22:31] [INFO] ✓ GET /article/images/1685531482816.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:22:34] [INFO] → GET /user/checkAuth | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /user/checkAuth | Status: 200 | 3ms
-
-[2025-10-30 20:22:34] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /user/8/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:22:34] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /tag | Status: 200 | 2ms
-
-[2025-10-30 20:22:34] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 3ms
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 8ms
-
-[2025-10-30 20:22:34] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:22:34] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /user/7/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:22:34] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:22:34] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /user/6/avatar | Status: 200 | 7ms
-
-[2025-10-30 20:22:34] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:22:34] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /user/5/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:22:34] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 6ms
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /user/3/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:22:34] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:22:34] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /user/2/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:22:34] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /user/4/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:22:34] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:22:34] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:22:34] [INFO] ✓ GET /user/8/like | Status: 200 | 2ms
-
-[2025-10-30 20:24:27] [INFO] → GET /user/checkAuth | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /user/checkAuth | Status: 200 | 9ms
-
-[2025-10-30 20:24:27] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /user/8/avatar | Status: 200 | 5ms
-
-[2025-10-30 20:24:27] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /tag | Status: 200 | 3ms
-
-[2025-10-30 20:24:27] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 6ms
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 10ms
-
-[2025-10-30 20:24:27] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:24:27] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /user/7/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:24:27] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:24:27] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /user/6/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:24:27] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /user/5/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:24:27] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:24:27] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /user/3/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:24:27] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:24:27] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /user/2/avatar | Status: 200 | 6ms
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /user/4/avatar | Status: 200 | 1ms
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:24:27] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:24:27] [INFO] ✓ GET /user/8/like | Status: 200 | 2ms
-
-[2025-10-30 20:24:28] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:24:28] [INFO] ✓ GET /user/8/follow | Status: 200 | 3ms
-
-[2025-10-30 20:25:03] [INFO] → POST /upload/picture | IP: ::1
-
-[2025-10-30 20:25:03] [INFO] ✓ POST /upload/picture | Status: 200 | 53ms
-
-[2025-10-30 20:25:03] [INFO] → GET /article/images/1761827103239.png | IP: ::1
-
-[2025-10-30 20:25:03] [INFO] ✓ GET /article/images/1761827103239.png | Status: 200 | 2ms
-
-[2025-10-30 20:25:05] [INFO] → GET /article/images/1761827103239.png?type=small | IP: ::1
-
-[2025-10-30 20:25:05] [INFO] ✓ GET /article/images/1761827103239.png?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:25:05] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:25:05] [INFO] ✓ GET /tag | Status: 200 | 1ms
-
-[2025-10-30 20:25:15] [INFO] → POST /article | IP: ::1
-
-[2025-10-30 20:25:15] [INFO] ✓ POST /article | Status: 200 | 8ms
-
-[2025-10-30 20:25:15] [INFO] → POST /upload/picture/72 | IP: ::1
-
-[2025-10-30 20:25:15] [INFO] ✓ POST /upload/picture/72 | Status: 200 | 8ms
-
-[2025-10-30 20:25:15] [INFO] → POST /article/72/tag?hasOldTags= | IP: ::1
-
-[2025-10-30 20:25:15] [INFO] ✓ POST /article/72/tag?hasOldTags= | Status: 200 | 16ms
-
-[2025-10-30 20:25:16] [INFO] → PUT /article/72/view | IP: ::1
-
-[2025-10-30 20:25:16] [INFO] → POST /history | IP: ::1
-
-[2025-10-30 20:25:16] [INFO] ✓ PUT /article/72/view | Status: 200 | 4ms
-
-[2025-10-30 20:25:16] [INFO] ✓ POST /history | Status: 200 | 7ms
-
-[2025-10-30 20:25:16] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:25:16] [INFO] → GET /article/72 | IP: ::1
-
-[2025-10-30 20:25:16] [INFO] ✓ GET /user/8/like | Status: 200 | 1ms
-
-[2025-10-30 20:25:16] [INFO] ✓ GET /article/72 | Status: 200 | 2ms
-
-[2025-10-30 20:25:16] [INFO] → GET /collect/8?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:25:16] [INFO] ✓ GET /collect/8?offset=0&limit=10 | Status: 200 | 2ms
-
-[2025-10-30 20:25:22] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:25:22] [INFO] ✓ GET /tag | Status: 200 | 2ms
-
-[2025-10-30 20:25:22] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:25:22] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:25:22] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 2ms
-
-[2025-10-30 20:25:22] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 6ms
-
-[2025-10-30 20:25:22] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:25:22] [INFO] ✓ GET /user/8/like | Status: 200 | 1ms
-
-[2025-10-30 20:25:22] [INFO] → GET /article/images/1761827103239.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:25:22] [INFO] ✓ GET /article/images/1761827103239.png-cover?type=small | Status: 200 | 6ms
-
-[2025-10-30 20:25:31] [INFO] → GET /user/checkAuth | IP: ::1
-
-[2025-10-30 20:25:31] [INFO] ✓ GET /user/checkAuth | Status: 200 | 0ms
-
-[2025-10-30 20:25:31] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 20:25:31] [INFO] ✓ GET /user/8/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:25:31] [INFO] → PUT /article/72/view | IP: ::1
-
-[2025-10-30 20:25:31] [INFO] → POST /history | IP: ::1
-
-[2025-10-30 20:25:31] [INFO] ✓ PUT /article/72/view | Status: 200 | 3ms
-
-[2025-10-30 20:25:31] [INFO] ✓ POST /history | Status: 200 | 7ms
-
-[2025-10-30 20:25:31] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:25:31] [INFO] → GET /article/72 | IP: ::1
-
-[2025-10-30 20:25:31] [INFO] ✓ GET /user/8/like | Status: 200 | 31ms
-
-[2025-10-30 20:25:31] [INFO] ✓ GET /article/72 | Status: 200 | 6ms
-
-[2025-10-30 20:25:31] [INFO] → GET /collect/8?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:25:31] [INFO] ✓ GET /collect/8?offset=0&limit=10 | Status: 200 | 1ms
-
-[2025-10-30 20:25:31] [INFO] → GET /article/images/1761827103239.png | IP: ::1
-
-[2025-10-30 20:25:31] [INFO] ✓ GET /article/images/1761827103239.png | Status: 200 | 1ms
-
-[2025-10-30 20:25:33] [INFO] → DELETE /article/72 | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] ✓ DELETE /article/72 | Status: 200 | 13ms
-
-[2025-10-30 20:25:33] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /tag | Status: 200 | 2ms
-
-[2025-10-30 20:25:33] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 4ms
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 6ms
-
-[2025-10-30 20:25:33] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /user/7/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:25:33] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 9ms
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /user/6/avatar | Status: 200 | 7ms
-
-[2025-10-30 20:25:33] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 9ms
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /user/5/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 6ms
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /user/3/avatar | Status: 200 | 6ms
-
-[2025-10-30 20:25:33] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:25:33] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /user/2/avatar | Status: 200 | 1ms
-
-[2025-10-30 20:25:33] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:25:33] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 0ms
-
-[2025-10-30 20:25:33] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /user/4/avatar | Status: 200 | 1ms
-
-[2025-10-30 20:25:33] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 1ms
-
-[2025-10-30 20:25:34] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:25:34] [INFO] ✓ GET /user/8/like | Status: 200 | 3ms
-
-[2025-10-30 20:29:54] [INFO] → GET /user/6/follow | IP: ::1
-
-[2025-10-30 20:29:54] [INFO] ✓ GET /user/6/follow | Status: 200 | 43ms
-
-[2025-10-30 20:29:54] [INFO] → GET /user/checkAuth | IP: ::1
-
-[2025-10-30 20:29:54] [INFO] ✓ GET /user/checkAuth | Status: 200 | 8ms
-
-[2025-10-30 20:29:55] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /user/8/avatar | Status: 200 | 6ms
-
-[2025-10-30 20:29:55] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /tag | Status: 200 | 7ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 13ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 20ms
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /user/7/avatar | Status: 200 | 7ms
-
-[2025-10-30 20:29:55] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 8ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /user/6/avatar | Status: 200 | 4ms
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /user/5/avatar | Status: 200 | 4ms
-
-[2025-10-30 20:29:55] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 6ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 7ms
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /user/3/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 6ms
-
-[2025-10-30 20:29:55] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /user/2/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 7ms
-
-[2025-10-30 20:29:55] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /user/4/avatar | Status: 200 | 7ms
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 6ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 28ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /user/8/like | Status: 200 | 22ms
-
-[2025-10-30 20:29:55] [INFO] → GET /article?offset=10&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article?offset=10&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 5ms
-
-[2025-10-30 20:29:55] [INFO] → GET /user/1/avatar | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /user/1/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:29:55] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /user/8/like | Status: 200 | 2ms
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685545493482.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685544271887.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685543790008.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685542264455.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685532236865.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685531482816.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685545493482.png-cover?type=small | Status: 200 | 11ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685544271887.jpg-cover?type=small | Status: 200 | 10ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685543790008.png-cover?type=small | Status: 200 | 10ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685542264455.jpg-cover?type=small | Status: 200 | 9ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685531482816.png-cover?type=small | Status: 200 | 11ms
-
-[2025-10-30 20:29:55] [INFO] → GET /article/images/1685021156287.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685532236865.png-cover?type=small | Status: 200 | 16ms
-
-[2025-10-30 20:29:55] [INFO] ✓ GET /article/images/1685021156287.png-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:29:56] [INFO] → GET /article/images/1685020978917.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:56] [INFO] ✓ GET /article/images/1685020978917.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:29:56] [INFO] → GET /article/images/1685020211629.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:56] [INFO] ✓ GET /article/images/1685020211629.jpg-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:29:56] [INFO] → GET /article/images/1685020083363.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:29:56] [INFO] ✓ GET /article/images/1685020083363.jpg-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:29:58] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:29:58] [INFO] ✓ GET /user/8/follow | Status: 200 | 3ms
-
-[2025-10-30 20:29:59] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:29:59] [INFO] ✓ GET /user/8/follow | Status: 200 | 3ms
-
-[2025-10-30 20:30:13] [INFO] → POST /upload/picture | IP: ::1
-
-[2025-10-30 20:30:14] [INFO] ✓ POST /upload/picture | Status: 200 | 88ms
-
-[2025-10-30 20:30:14] [INFO] → GET /article/images/1761827413977.png | IP: ::1
-
-[2025-10-30 20:30:14] [INFO] ✓ GET /article/images/1761827413977.png | Status: 200 | 1ms
-
-[2025-10-30 20:30:42] [INFO] → GET /article/images/1761827413977.png?type=small | IP: ::1
-
-[2025-10-30 20:30:42] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:30:42] [INFO] ✓ GET /article/images/1761827413977.png?type=small | Status: 200 | 14ms
-
-[2025-10-30 20:30:42] [INFO] ✓ GET /tag | Status: 200 | 17ms
-
-[2025-10-30 20:30:57] [INFO] → POST /article | IP: ::1
-
-[2025-10-30 20:30:57] [INFO] ✓ POST /article | Status: 200 | 27ms
-
-[2025-10-30 20:30:57] [INFO] → POST /upload/picture/73 | IP: ::1
-
-[2025-10-30 20:30:57] [INFO] ✓ POST /upload/picture/73 | Status: 200 | 9ms
-
-[2025-10-30 20:30:57] [INFO] → POST /article/73/tag?hasOldTags= | IP: ::1
-
-[2025-10-30 20:30:57] [INFO] ✓ POST /article/73/tag?hasOldTags= | Status: 200 | 13ms
-
-[2025-10-30 20:30:57] [INFO] → PUT /article/73/view | IP: ::1
-
-[2025-10-30 20:30:57] [INFO] → POST /history | IP: ::1
-
-[2025-10-30 20:30:57] [INFO] ✓ PUT /article/73/view | Status: 200 | 5ms
-
-[2025-10-30 20:30:57] [INFO] ✓ POST /history | Status: 200 | 4ms
-
-[2025-10-30 20:30:57] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:30:57] [INFO] → GET /article/73 | IP: ::1
-
-[2025-10-30 20:30:57] [INFO] ✓ GET /user/8/like | Status: 200 | 4ms
-
-[2025-10-30 20:30:57] [INFO] ✓ GET /article/73 | Status: 200 | 34ms
-
-[2025-10-30 20:30:57] [INFO] → GET /collect/8?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:30:57] [INFO] ✓ GET /collect/8?offset=0&limit=10 | Status: 200 | 1ms
-
-[2025-10-30 20:31:03] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:31:03] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:31:03] [INFO] ✓ GET /tag | Status: 200 | 5ms
-
-[2025-10-30 20:31:03] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:31:03] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 8ms
-
-[2025-10-30 20:31:03] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 10ms
-
-[2025-10-30 20:31:03] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:31:04] [INFO] ✓ GET /user/8/like | Status: 200 | 1ms
-
-[2025-10-30 20:31:04] [INFO] → GET /article/images/1761827413977.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:31:04] [INFO] ✓ GET /article/images/1761827413977.png-cover?type=small | Status: 200 | 2ms
-
-[2025-10-30 20:31:06] [INFO] → GET /user/checkAuth | IP: ::1
-
-[2025-10-30 20:31:06] [INFO] ✓ GET /user/checkAuth | Status: 200 | 4ms
-
-[2025-10-30 20:31:06] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 20:31:06] [INFO] ✓ GET /user/8/avatar | Status: 200 | 5ms
-
-[2025-10-30 20:31:06] [INFO] → PUT /article/73/view | IP: ::1
-
-[2025-10-30 20:31:06] [INFO] → POST /history | IP: ::1
-
-[2025-10-30 20:31:06] [INFO] ✓ PUT /article/73/view | Status: 200 | 3ms
-
-[2025-10-30 20:31:06] [INFO] ✓ POST /history | Status: 200 | 3ms
-
-[2025-10-30 20:31:06] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:31:06] [INFO] ✓ GET /user/8/like | Status: 200 | 13ms
-
-[2025-10-30 20:31:06] [INFO] → GET /article/73 | IP: ::1
-
-[2025-10-30 20:31:06] [INFO] ✓ GET /article/73 | Status: 200 | 11ms
-
-[2025-10-30 20:31:06] [INFO] → GET /collect/8?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:31:06] [INFO] ✓ GET /collect/8?offset=0&limit=10 | Status: 200 | 2ms
-
-[2025-10-30 20:31:06] [INFO] → GET /article/images/1761827413977.png | IP: ::1
-
-[2025-10-30 20:31:06] [INFO] ✓ GET /article/images/1761827413977.png | Status: 200 | 1ms
-
-[2025-10-30 20:31:07] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:31:07] [INFO] ✓ GET /user/8/follow | Status: 200 | 4ms
-
-[2025-10-30 20:31:36] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /tag | Status: 200 | 10ms
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 7ms
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 12ms
-
-[2025-10-30 20:31:36] [INFO] → GET /article/images/1761827413977.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /article/images/1761827413977.png-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:31:36] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /user/7/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:31:36] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /user/6/avatar | Status: 200 | 2ms
-
-[2025-10-30 20:31:36] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /user/5/avatar | Status: 200 | 6ms
-
-[2025-10-30 20:31:36] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 4ms
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /user/3/avatar | Status: 200 | 1ms
-
-[2025-10-30 20:31:36] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:31:36] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /user/2/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:31:36] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:31:36] [INFO] ✓ GET /user/8/like | Status: 200 | 2ms
-
-[2025-10-30 20:32:26] [INFO] → GET /user/checkAuth | IP: ::1
-
-[2025-10-30 20:32:26] [INFO] ✓ GET /user/checkAuth | Status: 200 | 8ms
-
-[2025-10-30 20:32:26] [INFO] → GET /user/8/avatar | IP: ::1
-
-[2025-10-30 20:32:26] [INFO] ✓ GET /user/8/avatar | Status: 200 | 4ms
-
-[2025-10-30 20:32:26] [INFO] → PUT /article/73/view | IP: ::1
-
-[2025-10-30 20:32:26] [INFO] → POST /history | IP: ::1
-
-[2025-10-30 20:32:26] [INFO] ✓ POST /history | Status: 200 | 22ms
-
-[2025-10-30 20:32:26] [INFO] ✓ PUT /article/73/view | Status: 200 | 24ms
-
-[2025-10-30 20:32:26] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:32:26] [INFO] → GET /article/73 | IP: ::1
-
-[2025-10-30 20:32:26] [INFO] ✓ GET /user/8/like | Status: 200 | 2ms
-
-[2025-10-30 20:32:26] [INFO] ✓ GET /article/73 | Status: 200 | 2ms
-
-[2025-10-30 20:32:26] [INFO] → GET /collect/8?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:32:26] [INFO] ✓ GET /collect/8?offset=0&limit=10 | Status: 200 | 4ms
-
-[2025-10-30 20:32:26] [INFO] → GET /article/images/1761827413977.png | IP: ::1
-
-[2025-10-30 20:32:26] [INFO] ✓ GET /article/images/1761827413977.png | Status: 200 | 3ms
-
-[2025-10-30 20:32:43] [INFO] → DELETE /article/73 | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ DELETE /article/73 | Status: 200 | 22ms
-
-[2025-10-30 20:32:43] [INFO] → GET /tag | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] → GET /article/recommend?offset=0&limit=10 | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /tag | Status: 200 | 5ms
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /article/recommend?offset=0&limit=10 | Status: 200 | 3ms
-
-[2025-10-30 20:32:43] [INFO] → GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /article?offset=0&limit=10&tagId=&pageOrder=date&userId=&idList=%5B%5D&keywords= | Status: 200 | 7ms
-
-[2025-10-30 20:32:43] [INFO] → GET /user/7/avatar | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] → GET /user/6/avatar | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /user/7/avatar | Status: 200 | 4ms
-
-[2025-10-30 20:32:43] [INFO] → GET /user/5/avatar | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /user/6/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:32:43] [INFO] → GET /user/3/avatar | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /user/3/avatar | Status: 200 | 6ms
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /user/5/avatar | Status: 200 | 9ms
-
-[2025-10-30 20:32:43] [INFO] → GET /user/2/avatar | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] → GET /user/4/avatar | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /user/2/avatar | Status: 200 | 5ms
-
-[2025-10-30 20:32:43] [INFO] → GET /user/8/like | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /user/4/avatar | Status: 200 | 3ms
-
-[2025-10-30 20:32:43] [INFO] → GET /article/images/1686221837379.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /user/8/like | Status: 200 | 4ms
-
-[2025-10-30 20:32:43] [INFO] → GET /article/images/1686220507024.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] → GET /article/images/1686219335028.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /article/images/1686220507024.jpg-cover?type=small | Status: 200 | 7ms
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /article/images/1686221837379.png-cover?type=small | Status: 200 | 10ms
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /article/images/1686219335028.jpg-cover?type=small | Status: 200 | 16ms
-
-[2025-10-30 20:32:43] [INFO] → GET /article/images/1686218679815.jpg-cover?type=small | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] → GET /article/images/1685622311147.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] → GET /article/images/1685613097871.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /article/images/1686218679815.jpg-cover?type=small | Status: 200 | 16ms
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /article/images/1685622311147.png-cover?type=small | Status: 200 | 28ms
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /article/images/1685613097871.png-cover?type=small | Status: 200 | 28ms
-
-[2025-10-30 20:32:43] [INFO] → GET /article/images/1685612251452.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:32:43] [INFO] ✓ GET /article/images/1685612251452.png-cover?type=small | Status: 200 | 9ms
-
-[2025-10-30 20:32:44] [INFO] → GET /article/images/1685611740220.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:32:44] [INFO] → GET /article/images/1685546152822.png-cover?type=small | IP: ::1
-
-[2025-10-30 20:32:44] [INFO] ✓ GET /article/images/1685611740220.png-cover?type=small | Status: 200 | 3ms
-
-[2025-10-30 20:32:44] [INFO] ✓ GET /article/images/1685546152822.png-cover?type=small | Status: 200 | 5ms
-
-[2025-10-30 20:33:05] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:33:05] [INFO] ✓ GET /user/8/follow | Status: 200 | 7ms
-
-[2025-10-30 20:33:08] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:33:08] [INFO] ✓ GET /user/8/follow | Status: 200 | 4ms
-
-[2025-10-30 20:33:39] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:33:39] [INFO] ✓ GET /user/8/follow | Status: 200 | 7ms
-
-[2025-10-30 20:33:39] [INFO] → GET /user/8/follow | IP: ::1
-
-[2025-10-30 20:33:39] [INFO] ✓ GET /user/8/follow | Status: 200 | 2ms
+[2025-11-14 16:20:27] [INFO] ✓ GET /user/checkAuth | Status: 200 | 38ms
 
