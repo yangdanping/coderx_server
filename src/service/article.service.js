@@ -53,7 +53,7 @@ class ArticleService {
   };
   getArticleList = async (offset, limit, tagId = '', userId = '', order = 'date', idList = [], keywords = '') => {
     // 根据tagId查询
-    let queryByTag = `WHERE tag.id ${tagId ? `= ${tagId}` : `LIKE '%%'`}`;
+    let queryByTag = tagId ? `WHERE tag.id = ${tagId}` : `WHERE 1=1`;
     // 根据用户id查询(用于查询用户发过的文章)
     let queryByUserId = userId ? `AND a.user_id = ${userId}` : '';
     // 根据文章id查询(用于文章收藏)
@@ -184,6 +184,19 @@ class ArticleService {
     try {
       const statement = `INSERT INTO article_tag (article_id,tag_id) VALUES (?,?);`;
       const [result] = await connection.execute(statement, [articleId, tagId]);
+      return result;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  // 批量添加标签
+  batchAddTags = async (articleId, tagIds) => {
+    if (!tagIds || tagIds.length === 0) return null;
+    try {
+      // 构造批量插入的 VALUES
+      const values = tagIds.map((tagId) => `(${articleId},${tagId})`).join(',');
+      const statement = `INSERT INTO article_tag (article_id,tag_id) VALUES ${values};`;
+      const [result] = await connection.execute(statement);
       return result;
     } catch (error) {
       console.log(error);
