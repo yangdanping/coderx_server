@@ -31,15 +31,21 @@ class ArticleController {
     const [urlKey] = Object.keys(ctx.params); //从params中取出对象的key,即我们拼接的资源id,如评论就是commentId
     const dataId = ctx.params[urlKey]; //获取到对应id的值
     const tableName = urlKey.replace('Id', ''); //把Id去掉就是表名
+
     // 2.根据传递过来参数在数据库中判断是否有点赞,有则取消点赞,没有则成功点赞
-    const isliked = await userService.hasLike(tableName, dataId, userId);
-    if (!isliked) {
-      const result = await userService.changeLike(tableName, dataId, userId, isliked);
-      ctx.body = Result.success(result); //增加一条点赞记录
-    } else {
-      const result = await userService.changeLike(tableName, dataId, userId, isliked);
-      ctx.body = Result.success(result, '1'); //删除一条点赞记录
-    }
+    const isLiked = await userService.hasLike(tableName, dataId, userId);
+
+    // 3.执行点赞/取消点赞操作
+    await userService.changeLike(tableName, dataId, userId, isLiked);
+
+    // 4.获取更新后的点赞总数
+    const likeInfo = await articleService.getArticleLikedById(dataId);
+
+    // 5.统一返回格式：code=0 表示成功，data 中包含业务状态
+    ctx.body = Result.success({
+      liked: !isLiked, // 操作后的状态：true表示已点赞，false表示已取消
+      likes: likeInfo.likes || 0 // 点赞总数
+    });
   };
 
   getArticleLikedById = async (ctx, next) => {
@@ -158,30 +164,23 @@ class ArticleController {
     }
   };
   changeTag = async (ctx, next) => {
-    // 1.获取数据(获取我们之前verifytagExists整合好的tags数组和文章id)
-    const { tags } = ctx; //拿到了用户所选择的标签
+    // 1.获取数据(获取我们之前verifyTagExists整合好的tags数组和文章id)
+    const { tags } = ctx; //拿到了用户所选择的标签（已带id）
     const { articleId } = ctx.params; //拿到了被添加标签的文章
-    const { hasOldTags } = ctx.query;
-    if (hasOldTags) {
-      console.log(hasOldTags, tags, '这是修改!!,清空掉所有tags后添加');
-      await articleService.clearTag(articleId);
-    }
-    if (!tags.length && hasOldTags) {
-      console.log('新数组啥也没有,则清空后直接返回成功!!!,不再添加');
-      ctx.body = Result.success('清空标签成功'); // 若新数组啥也没有,则清空后直接返回成功
+
+    console.log(`文章 ${articleId} 更新标签:`, tags);
+
+    // 2.统一处理：先清空，再批量插入
+    await articleService.clearTag(articleId);
+
+    if (tags && tags.length > 0) {
+      // 批量插入所有标签
+      const tagIds = tags.map((tag) => tag.id);
+      const result = await articleService.batchAddTags(articleId, tagIds);
+      ctx.body = result ? Result.success(result, '标签保存成功') : Result.fail('保存标签失败!');
     } else {
-      // 2.添加所有的标签(害得做判断,若该文章已经有个标签叫JS了,则不需要再添加了)
-      for (const tag of tags) {
-        // 2.1判断标签是否已和文章有过关系了(若关系表中不存在,则添加关系)
-        const isExist = await articleService.hasTag(articleId, tag.id);
-        console.log(tag, `该标签与文章在关系表中${!isExist ? '不存在,可添加' : '存在'}`);
-        if (!isExist) {
-          const result = await articleService.addTag(articleId, tag.id);
-          ctx.body = result ? Result.success(result) : Result.fail('添加标签失败!');
-        }
-      }
-      // 3.不需要返回数据其实,总结:多对多的核心是这张关系表
-      // ctx.body = '为该文章添加标签成功!';
+      // 如果标签为空，清空后直接返回
+      ctx.body = Result.success('标签已清空');
     }
   };
   getFileInfo = async (ctx, next) => {

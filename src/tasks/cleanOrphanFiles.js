@@ -23,7 +23,7 @@ const CRON_MODE = process.env.CLEAN_CRON_MODE || 'prod';
 // SQL语句清理时间阈值配置（根据模式自动调整,超过时间后,sql将执行清理）
 const CLEANUP_THRESHOLDS = {
   test: {
-    interval: 30, // 自定义文件过期时间(秒)
+    interval: 10, // 自定义文件过期时间(秒)
     unit: 'SECOND'
   },
   prod: {
@@ -33,6 +33,7 @@ const CLEANUP_THRESHOLDS = {
 };
 
 const CRON_EXPRESSIONS = {
+  // test: `*/3 * * * * *`, // 自定义时间执行（测试用）
   test: `0 */1 * * *`, // 自定义时间执行（测试用）
   prod: '0 2 * * *' // 每天凌晨 2 点（生产用）
 };
@@ -68,7 +69,7 @@ const deletePhysicalFile = (filename, uploadDir = 'public/img') => {
       console.warn(`⚠️ 物理文件不存在: ${filePath}`);
     }
 
-    // 删除缩略图（-small版本）
+    // 删除缩略图（-small）
     const extname = path.extname(filename);
     const smallFilename = filename.replace(extname, `-small${extname}`);
     const smallFilePath = path.resolve(process.cwd(), uploadDir, smallFilename);
@@ -77,6 +78,24 @@ const deletePhysicalFile = (filename, uploadDir = 'public/img') => {
       fs.unlinkSync(smallFilePath);
       console.log(`✅ 已删除缩略图: ${smallFilename}`);
       deletedCount++;
+    }
+
+    // 删除视频封面（-poster）
+    // 针对视频文件：系统会自动生成封面图，命名规则为 "视频文件名-poster.jpg"
+    // 例如：视频 1763475692261.mp4 的封面是 1763475692261-poster.jpg
+    if (uploadDir === 'public/video') {
+      // 1. 生成封面文件名：将视频扩展名（如 .mp4）替换为 -poster.jpg
+      const posterFilename = filename.replace(extname, `-poster.jpg`);
+
+      // 2. 构建封面文件的完整路径
+      const posterFilePath = path.resolve(process.cwd(), uploadDir, posterFilename);
+
+      // 3. 检查封面文件是否存在，存在则删除
+      if (fs.existsSync(posterFilePath)) {
+        fs.unlinkSync(posterFilePath); // 删除物理文件
+        console.log(`✅ 已删除视频封面: ${posterFilename}`);
+        deletedCount++;
+      }
     }
 
     return deletedCount > 0;
@@ -237,8 +256,7 @@ const task = cron.schedule(
   async () => {
     // 依次清理各类孤儿文件
     await cleanOrphanImages();
-    // 未来添加视频清理时取消注释：
-    // await cleanOrphanVideos();
+    await cleanOrphanVideos();
   },
   {
     scheduled: false, // 默认不启动，需要手动调用 task.start()

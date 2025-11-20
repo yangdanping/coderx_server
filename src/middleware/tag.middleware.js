@@ -1,7 +1,6 @@
 const tagService = require('../service/tag.service');
-const Result = require('../app/Result');
 // ★1.判断标签是否存在中间件(这个实现思路多想几遍就想通了)
-const verifytagExists = async (ctx, next) => {
+const verifyTagExists = async (ctx, next) => {
   // 1.取出要添加的所有的标签
   const { tags } = ctx.request.body;
   // 2.判断每个标签在tag表中是否存在
@@ -26,5 +25,5 @@ const verifytagExists = async (ctx, next) => {
 };
 
 module.exports = {
-  verifytagExists
+  verifyTagExists
 };
