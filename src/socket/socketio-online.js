@@ -7,7 +7,7 @@
  * 初始化 Socket.IO 在线状态服务
  * @param {import('socket.io').Server} io - Socket.IO 服务器实例
  */
-function initSocketIOOnline(io) {
+const initSocketIOOnline = (io) => {
   // ==================== 在线用户存储结构（方案1：单连接模式） ====================
   // 使用 Map 存储在线用户
   // key: userId（用户唯一标识）
@@ -97,6 +97,6 @@ function initSocketIOOnline(io) {
       console.error(`❌ Socket 错误 (${userName}):`, error);
     });
   });
-}
+};
 
 module.exports = initSocketIOOnline;

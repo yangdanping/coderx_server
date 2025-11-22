@@ -1,7 +1,7 @@
 const commentService = require('../service/comment.service.js');
 const userService = require('../service/user.service.js');
 const Result = require('../app/Result');
-const { removeHTMLTag } = require('../utils');
+const { removeHTMLTag, getPaginationParams } = require('../utils');
 
 class CommentController {
   addComment = async (ctx, next) => {
@@ -72,7 +72,9 @@ class CommentController {
   };
   getList = async (ctx, next) => {
     // 1.获取数据(由于是get请求,所以通过query的方式把其传过来,当然可以判断一些别人有没有传,没传的话最好在这里发送错误信息)
-    const { offset, limit, articleId, userId } = ctx.query;
+    // const { offset, limit, articleId, userId } = ctx.query;
+    const { offset, limit } = getPaginationParams(ctx);
+    const { articleId, userId } = ctx.query;
     // 2.根据获取到的数据去查询出列表
     const result = await commentService.getCommentList(offset, limit, articleId, userId);
     // console.log(result);

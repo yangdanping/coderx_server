@@ -51,7 +51,7 @@ class ArticleService {
       console.log(error);
     }
   };
-  getArticleList = async (offset, limit, tagId = '', userId = '', order = 'date', idList = [], keywords = '') => {
+  getArticleList = async (offset, limit, tagId = '', userId = '', pageOrder = 'date', idList = [], keywords = '') => {
     // 根据tagId查询
     let queryByTag = tagId ? `WHERE tag.id = ${tagId}` : `WHERE 1=1`;
     // 根据用户id查询(用于查询用户发过的文章)
@@ -61,7 +61,7 @@ class ArticleService {
     // 根据文章标题查询(用于文章收藏)
     let queryByTitle = keywords ? `AND a.title LIKE '%${keywords}%'` : '';
     // 文章排序
-    let listOrder = `ORDER BY ${order === 'date' ? 'a.create_at' : 'likes+a.views+commentCount'} DESC`;
+    let listOrder = `ORDER BY ${pageOrder === 'date' ? 'a.create_at' : 'likes+a.views+commentCount'} DESC`;
     try {
       const statement = `
       SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
