@@ -1,3 +1,14 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+
+
 .DS_Store
 node_modules
 /dist
@@ -7,12 +18,6 @@ node_modules
 # local env files
 .env.local
 .env.*.local
-
-# Log files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 
 # Editor directories and files
 .idea
@@ -24,7 +29,3 @@ pnpm-debug.log*
 *.sw?
 
 
-# log
-/logs
-
-.md
