@@ -5,7 +5,7 @@ const userService = require('../service/user.service.js');
 const fileService = require('../service/file.service.js');
 const historyService = require('../service/history.service.js');
 const { IMG_PATH, VIDEO_PATH } = require('../constants/file-path');
-const { removeHTMLTag } = require('../utils');
+const { removeHTMLTag, getPaginationParams } = require('../utils');
 const Result = require('../app/Result');
 const deleteFile = require('../utils/deleteFile');
 class ArticleController {
@@ -80,10 +80,12 @@ class ArticleController {
   getList = async (ctx, next) => {
     // 1.获取文章列表的偏离量和数据长度
     console.log('getList ctx.query', ctx.query);
-    const { offset, limit, tagId, userId, order, idList, keywords } = ctx.query;
-    const userCollectedIds = JSON.parse(idList);
+    // const { offset, limit, tagId, userId, pageOrder, idList, keywords } = ctx.query;
+    const { offset, limit } = getPaginationParams(ctx);
+    const { tagId, userId, pageOrder, idList, keywords } = ctx.query;
+    const userCollectedIds = idList?.length ? JSON.parse(idList) : [];
     // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
-    const result = await articleService.getArticleList(offset, limit, tagId, userId, order, userCollectedIds, keywords);
+    const result = await articleService.getArticleList(offset, limit, tagId, userId, pageOrder, userCollectedIds, keywords);
     // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
     if (result) {
       result.forEach((article) => {
@@ -107,7 +109,7 @@ class ArticleController {
     }
   };
   getRecommendList = async (ctx, next) => {
-    const { offset, limit } = ctx.query;
+    const { offset, limit } = getPaginationParams(ctx);
     const result = await articleService.getRecommendArticleList(offset, limit);
     ctx.body = result ? Result.success(result) : Result.fail('获取推荐文章列表失败!');
   };

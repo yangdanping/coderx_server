@@ -7,13 +7,13 @@
 const http = require('http');
 const { Server } = require('socket.io');
 const dotenv = require('dotenv');
+const { redirectURL } = require('./constants/urls');
 
 // 加载环境变量
 dotenv.config();
 
 // Socket 服务器配置
 const SOCKET_PORT = process.env.SOCKET_PORT || 8001; // 独立端口，不占用 Koa 的 APP_PORT(8000)
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
 
 // 导入在线状态服务
 const initSocketIOOnline = require('./socket/socketio-online');
@@ -39,7 +39,7 @@ const io = new Server(httpServer, {
       'http://localhost:8080', // 本地开发
       'http://127.0.0.1:8080', // 本地开发（另一种写法）
       'http://192.168.3.96:8080', // 局域网 IP（根据实际 IP 调整）
-      FRONTEND_URL // 环境变量配置的源
+      redirectURL // 环境变量配置的源
     ],
     // 方案 2：允许所有源（仅用于开发，生产环境不安全！）
     // origin: true,
@@ -50,7 +50,7 @@ const io = new Server(httpServer, {
     //     'http://localhost:8080',
     //     'http://127.0.0.1:8080',
     //     /^http:\/\/192\.168\.\d+\.\d+:8080$/, // 允许所有 192.168.x.x:8080
-    //     process.env.FRONTEND_URL,
+    //     process.env.redirectURL,
     //   ];
     //   if (!origin || allowedOrigins.some(allowed =>
     //     typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
@@ -79,7 +79,7 @@ httpServer.listen(SOCKET_PORT, () => {
   console.log('='.repeat(60));
   console.log(`🚀 Socket.IO 服务器启动成功！`);
   console.log(`📡 监听端口: ${SOCKET_PORT}`);
-  console.log(`🌐 允许跨域: ${FRONTEND_URL}`);
+  console.log(`🌐 允许跨域: ${redirectURL}`);
   console.log(`✅ 在线状态服务已启动`);
   console.log(`🔗 健康检查: http://localhost:${SOCKET_PORT}/health`);
   console.log('='.repeat(60));

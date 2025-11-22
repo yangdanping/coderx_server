@@ -3,6 +3,7 @@ const app = new Koa();
 // const { config, bodyParser, useRoutes, errorHandler } = require('./app');
 const { config, bodyParser, useRoutes, errorHandler, cleanOrphanFilesTask } = require('./app');
 const loggerMiddleware = require('./middleware/logger.middleware');
+const aiService = require('./service/ai.service');
 
 app.on('error', errorHandler);
 
@@ -14,4 +15,6 @@ cleanOrphanFilesTask.start();
 app.listen(config.APP_PORT, () => {
   useRoutes.call(app);
   console.log(`服务器在端口${config.APP_PORT}启动成功~`);
+  // 启动时检查 AI 服务健康状态
+  aiService.checkHealth();
 });

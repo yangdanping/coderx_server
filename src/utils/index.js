@@ -36,36 +36,31 @@ class Utils {
   removeHTMLTag(str) {
     return str.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
   }
-  // 将下划线命名转换为驼峰命名-----------------------------
-  toCamelCase(data) {
-    if (!data) return data;
+  // 分页参数处理工具-----------------------------
+  getPaginationParams(ctx) {
+    let { pageNum, pageSize, offset, limit } = ctx.query;
 
-    // 转换单个字段名：avatar_url -> avatarUrl
-    const convertKey = (key) => {
-      return key.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
-    };
+    // 优先使用 pageNum/pageSize
+    const pNum = Number(pageNum) || 1;
+    // pageSize 默认为 10，如果传了 limit 则优先使用 limit 作为 pageSize 的候补
+    // 注意：这里要处理 limit 可能是 undefined 的情况
+    const pSize = Number(pageSize) || (limit ? Number(limit) : 10);
 
-    // 转换单个对象
-    const convertObject = (obj) => {
-      if (obj === null || typeof obj !== 'object') {
-        return obj;
-      }
+    // 如果没有传 offset，则通过 pageNum 计算
+    if (offset === undefined || offset === null) {
+      offset = (pNum - 1) * pSize;
+      limit = pSize;
+    } else {
+      // 如果传了 offset，则 limit 必须有值，否则默认为 10
+      offset = Number(offset);
+      limit = limit ? Number(limit) : 10;
+    }
 
-      if (Array.isArray(obj)) {
-        return obj.map((item) => convertObject(item));
-      }
+    // 兜底检查，防止 NaN
+    if (isNaN(offset)) offset = 0;
+    if (isNaN(limit)) limit = 10;
 
-      const newObj = {};
-      for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          const camelKey = convertKey(key);
-          newObj[camelKey] = convertObject(obj[key]);
-        }
-      }
-      return newObj;
-    };
-
-    return convertObject(data);
+    return { offset: String(offset), limit: String(limit) };
   }
 }
 

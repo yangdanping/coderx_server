@@ -5,7 +5,7 @@ const userService = require('../service/user.service');
 const articleService = require('../service/article.service');
 const fileService = require('../service/file.service');
 const avatarService = require('../service/avatar.service');
-const { removeHTMLTag } = require('../utils');
+const { removeHTMLTag, getPaginationParams } = require('../utils');
 const { PRIVATE_KEY } = require('../app/config');
 const { AVATAR_PATH } = require('../constants/file-path');
 const Result = require('../app/Result');
@@ -119,7 +119,8 @@ class UserContoller {
   // }
   getComment = async (ctx, next) => {
     const { userId } = ctx.params;
-    const { offset, limit } = ctx.query;
+    // const { offset, limit } = ctx.query;
+    const { offset, limit } = getPaginationParams(ctx);
     const userComment = await userService.getCommentById(userId, offset, limit);
     if (userComment) {
       userComment.forEach((comment) => (comment.content = removeHTMLTag(comment.content)));
@@ -130,7 +131,9 @@ class UserContoller {
   };
   getArticleByCollectId = async (ctx, next) => {
     const { userId } = ctx.params;
-    const { collectId, offset, limit } = ctx.query;
+    // const { collectId, offset, limit } = ctx.query;
+    const { collectId } = ctx.query;
+    const { offset, limit } = getPaginationParams(ctx);
     console.log(userId, collectId, offset, limit);
     const collectArticle = await userService.getArticleByCollectId(userId, collectId, offset, limit);
     if (collectArticle) {
