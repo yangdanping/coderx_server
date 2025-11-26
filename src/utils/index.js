@@ -4,19 +4,44 @@ const crypto = require('crypto');
 
 class Utils {
   // 自动加载路由工具-----------------------------
+  // 配置：选择使用哪个版本的 comment 路由
+  // COMMENT_VERSION: '1' 仅旧版, '2' 仅新版
   useRoutes() {
-    //fs模块传入__dirname读取当前index文件所在的目录,返回的数组里面含有当前所在文件夹里的所有文件
-    const routerDir = path.resolve(__dirname, '../router'); // /Users/yangdanping/Desktop/personal_project/coderx_server/src/router
+    const COMMENT_VERSION = '2';
+    const routerDir = path.resolve(__dirname, '../router');
+    const app = this; // 保存 Koa app 实例引用
+
+    // 加载单个路由文件（内部函数）
+    const loadRouter = (dir, file) => {
+      const router = require(path.resolve(dir, `./${file}`));
+      app.use(router.routes()).use(router.allowedMethods());
+      console.log(`路由文件 ${file} 已注册`);
+    };
+
     fs.readdirSync(routerDir).forEach((file) => {
-      if (file) {
-        const router = require(path.resolve(routerDir, `./${file}`));
-        console.log('useRoutes this-----------', this);
-        this.use(router.routes()).use(router.allowedMethods());
-        console.log(`路由文件${file}已注册`);
-      } else {
+      if (!file) {
         console.log(`路由文件${file}注册失败`);
+        return;
       }
+
+      // comment 路由特殊处理：根据配置选择加载哪个版本
+      if (file.startsWith('comment.router')) {
+        const isV2 = file === 'comment.router.js';
+        const isV1 = file === 'comment.router.old.js';
+        if (COMMENT_VERSION === '2' && isV2) {
+          loadRouter(routerDir, file);
+        } else if (COMMENT_VERSION === '1' && isV1) {
+          loadRouter(routerDir, file);
+        }
+        // 其他版本不加载，跳过
+        return;
+      }
+
+      // 其他路由正常加载
+      loadRouter(routerDir, file);
     });
+
+    console.log(`[Router] 当前评论系统版本: ${COMMENT_VERSION === 'both' ? 'V1 + V2' : 'V' + COMMENT_VERSION}`);
   }
   // 密码加密工具-----------------------------
   encryptPwd(password) {
@@ -35,6 +60,17 @@ class Utils {
   }
   removeHTMLTag(str) {
     return str.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
+  }
+  // 专门用于 AI 上下文的清洗工具（保留段落结构）
+  cleanTextForAI(str) {
+    if (!str) return '';
+    return str
+      .replace(/<\/(p|div|h\d|li)>/gi, '\n') // 在块级元素结束处换行
+      .replace(/<br\s*\/?>/gi, '\n') // <br> 换行
+      .replace(/<[^>]+>/g, '') // 移除所有其他标签
+      .replace(/&nbsp;/g, ' ') // 替换空格
+      .replace(/\n\s*\n/g, '\n\n') // 合并多余换行，最多保留两个
+      .trim();
   }
   // 分页参数处理工具-----------------------------
   getPaginationParams(ctx) {

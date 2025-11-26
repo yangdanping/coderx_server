@@ -4,93 +4,275 @@ const Result = require('../app/Result');
 const { removeHTMLTag, getPaginationParams } = require('../utils');
 
 class CommentController {
-  addComment = async (ctx, next) => {
-    // 1.获取数据(包括用户id,评论的文章id,评论内容content)
-    const userId = ctx.user.id; // 不需要再从前端获取用户id,因为我授权的这个人,已携带了用户信息了
-    const { articleId, content } = ctx.request.body;
-    // 2.将获取到的数据插入到数据库中
-    const result = await commentService.addComment(userId, articleId, content);
-    // 3.将插入数据库的结果处理,给用户(前端/客户端)返回真正的数据
-    ctx.body = result ? Result.success(result) : Result.fail('发表评论失败!');
-  };
-  likeComment = async (ctx, next) => {
-    // 1.获取用户id和点赞的评论id
-    const userId = ctx.user.id;
-    const [urlKey] = Object.keys(ctx.params); //从params中取出对象的key,即我们拼接的资源id,如评论就是commentId
-    const dataId = ctx.params[urlKey]; //获取到对应id的值
-    const tableName = urlKey.replace('Id', ''); //把Id去掉就是表名
-    // 2.根据传递过来参数在数据库中判断是否有点赞,有则取消点赞,没有则成功点赞
-    const isliked = await userService.hasLike(tableName, dataId, userId);
-    if (!isliked) {
-      const result = await userService.changeLike(tableName, dataId, userId, isliked);
-      ctx.body = Result.success(result); //增加一条点赞记录
-    } else {
-      const result = await userService.changeLike(tableName, dataId, userId, isliked);
-      ctx.body = Result.success(result, '1'); //删除一条点赞记录
+  /**
+   * 获取一级评论列表（分页）
+   * GET /comment?articleId=xxx&cursor=xxx&limit=5
+   */
+  getCommentList = async (ctx) => {
+    const { articleId, cursor, userId } = ctx.query;
+    const { offset, limit } = getPaginationParams(ctx);
+
+    // 情况1：获取用户的评论列表（标准分页）
+    if (userId) {
+      try {
+        const result = await commentService.getUserCommentList(userId, offset, limit);
+        result.forEach((comment) => {
+          if (!comment.status) {
+            // 清理HTML标签并截取内容长度
+            comment.content = removeHTMLTag(comment.content);
+            if (comment.content.length > 50) {
+              comment.content = comment.content.slice(0, 50);
+            }
+          } else {
+            // 被封禁的评论显示提示信息
+            comment.content = '评论已被封禁';
+          }
+        });
+        ctx.body = result ? Result.success(result) : Result.fail('获取用户评论列表失败!');
+        return;
+      } catch (error) {
+        console.error('getUserCommentList error:', error);
+        ctx.body = Result.fail('获取用户评论列表失败');
+        return;
+      }
+    }
+
+    // 情况2：获取文章的评论列表（游标分页）
+    if (!articleId) {
+      ctx.body = Result.fail('articleId is required');
+      return;
+    }
+
+    try {
+      const result = await commentService.getCommentList(articleId, cursor || null, Number(limit) || 5);
+
+      // 获取评论总数
+      const totalCount = await commentService.getTotalCount(articleId);
+
+      ctx.body = Result.success({
+        ...result,
+        totalCount
+      });
+    } catch (error) {
+      console.error('getCommentList error:', error);
+      ctx.body = Result.fail('获取评论列表失败');
     }
   };
-  reply = async (ctx, next) => {
+
+  /**
+   * 获取某条评论的回复列表（分页）
+   * GET /comment/:commentId/replies?cursor=xxx&limit=10
+   */
+  getReplies = async (ctx) => {
+    const { commentId } = ctx.params;
+    const { cursor } = ctx.query;
+    const { limit } = getPaginationParams(ctx);
+
+    try {
+      const result = await commentService.getReplies(commentId, cursor || null, Number(limit) || 10);
+
+      ctx.body = Result.success(result);
+    } catch (error) {
+      console.error('getReplies error:', error);
+      ctx.body = Result.fail('获取回复列表失败');
+    }
+  };
+
+  /**
+   * 获取评论总数
+   * GET /comment/count?articleId=xxx
+   */
+  getTotalCount = async (ctx) => {
+    const { articleId } = ctx.query;
+
+    if (!articleId) {
+      ctx.body = Result.fail('articleId is required');
+      return;
+    }
+
+    try {
+      const totalCount = await commentService.getTotalCount(articleId);
+      ctx.body = Result.success({ totalCount });
+    } catch (error) {
+      console.error('getTotalCount error:', error);
+      ctx.body = Result.fail('获取评论总数失败');
+    }
+  };
+
+  /**
+   * 新增一级评论
+   * POST /comment
+   */
+  addComment = async (ctx) => {
+    const userId = ctx.user.id;
+    const { articleId, content } = ctx.request.body;
+
+    if (!articleId || !content) {
+      ctx.body = Result.fail('articleId and content are required');
+      return;
+    }
+
+    try {
+      const comment = await commentService.addComment(userId, articleId, content);
+
+      if (comment) {
+        // 返回新评论和更新后的总数
+        const totalCount = await commentService.getTotalCount(articleId);
+        ctx.body = Result.success({
+          comment,
+          totalCount
+        });
+      } else {
+        ctx.body = Result.fail('发表评论失败');
+      }
+    } catch (error) {
+      console.error('addComment error:', error);
+      ctx.body = Result.fail('发表评论失败');
+    }
+  };
+
+  /**
+   * 回复评论
+   * POST /comment/:commentId/reply
+   */
+  addReply = async (ctx) => {
     const userId = ctx.user.id;
     const { commentId } = ctx.params;
     const { articleId, content, replyId } = ctx.request.body;
-    // 1.没有replyId,对第一层评论的回复
-    let result = null;
-    if (!replyId) {
-      result = await commentService.reply(userId, articleId, commentId, content);
-      // 2.有replyId,对回复的回复
-    } else {
-      result = await commentService.replyToComment(userId, articleId, commentId, replyId, content);
+
+    if (!articleId || !content) {
+      ctx.body = Result.fail('articleId and content are required');
+      return;
     }
-    ctx.body = result ? Result.success(result) : Result.fail('回复评论失败!');
+
+    try {
+      const reply = await commentService.addReply(userId, articleId, commentId, replyId || null, content);
+
+      if (reply) {
+        const totalCount = await commentService.getTotalCount(articleId);
+        ctx.body = Result.success({
+          reply,
+          totalCount
+        });
+      } else {
+        ctx.body = Result.fail('回复评论失败');
+      }
+    } catch (error) {
+      console.error('addReply error:', error);
+      ctx.body = Result.fail('回复评论失败');
+    }
   };
-  // async reply(ctx, next) {
-  //   // 1.获取数据(在上面基础上多个commentId,也就是说我需要知道我是对那条评论进行回复了)
-  //   const userId = ctx.user.id;
-  //   const { commentId } = ctx.params;
-  //   const { articleId, content } = ctx.request.body;
-  //   // 2.将获取到的数据插入到数据库中(注意!replyUserId也用于判断是否是对文章中某条评论的回复的回复)
-  //   const result = await commentService.reply(userId, articleId, commentId, content);
-  //   // 3.将插入数据的结果处理,给用户(前端/客户端)返回真正的数据
-  //   ctx.body = result ? Result.success(result) : Result.fail('回复评论失败!');
-  // }
-  update = async (ctx, next) => {
-    // // 1.获取数据(在上面基础上多个commentId,也就是说我需要知道我是对那条评论进行修改)
+
+  /**
+   * 点赞评论
+   * POST /comment/:commentId/like
+   */
+  likeComment = async (ctx) => {
+    const userId = ctx.user.id;
+    const { commentId } = ctx.params;
+
+    try {
+      // 检查是否已点赞
+      const isLiked = await userService.hasLike('comment', commentId, userId);
+
+      // 切换点赞状态
+      await userService.changeLike('comment', commentId, userId, isLiked);
+
+      // 获取更新后的点赞总数
+      const comment = await commentService.getCommentById(commentId);
+      const likes = comment ? comment.likes : 0;
+
+      // 返回正确格式：liked 表示操作后的状态
+      ctx.body = Result.success({
+        liked: !isLiked, // 操作后的状态：原来没点赞现在点了 = true，原来点了现在取消 = false
+        likes: likes
+      });
+    } catch (error) {
+      console.error('likeComment error:', error);
+      ctx.body = Result.fail('操作失败');
+    }
+  };
+
+  /**
+   * 获取单条评论
+   * GET /comment/:commentId
+   */
+  getCommentById = async (ctx) => {
+    const { commentId } = ctx.params;
+
+    try {
+      const comment = await commentService.getCommentById(commentId);
+
+      if (comment) {
+        ctx.body = Result.success(comment);
+      } else {
+        ctx.body = Result.fail('评论不存在');
+      }
+    } catch (error) {
+      console.error('getCommentById error:', error);
+      ctx.body = Result.fail('获取评论失败');
+    }
+  };
+
+  /**
+   * 更新评论
+   * PUT /comment/:commentId
+   */
+  updateComment = async (ctx) => {
     const { commentId } = ctx.params;
     const { content } = ctx.request.body;
-    // 2.根据获取到的数据取数据库进行更新操作
-    const result = await commentService.update(content, commentId);
-    // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
-    ctx.body = result ? Result.success(result) : Result.fail('修改评论失败!');
-  };
-  delete = async (ctx, next) => {
-    // 1.获取数据(只需评论的id即可删除)
-    const { commentId } = ctx.params;
-    // 2.根据获取到的数据去数据库进行删除操作
-    const result = await commentService.delete(commentId);
-    // 3.将删除结果处理,给用户(前端/客户端)返回真正的数据
-    ctx.body = result ? Result.success(result) : Result.fail('删除评论失败!');
-  };
-  getList = async (ctx, next) => {
-    // 1.获取数据(由于是get请求,所以通过query的方式把其传过来,当然可以判断一些别人有没有传,没传的话最好在这里发送错误信息)
-    // const { offset, limit, articleId, userId } = ctx.query;
-    const { offset, limit } = getPaginationParams(ctx);
-    const { articleId, userId } = ctx.query;
-    // 2.根据获取到的数据去查询出列表
-    const result = await commentService.getCommentList(offset, limit, articleId, userId);
-    // console.log(result);
-    result.forEach((comment) => {
-      if (!comment.status) {
-        comment.content = removeHTMLTag(comment.content);
+
+    if (!content) {
+      ctx.body = Result.fail('content is required');
+      return;
+    }
+
+    try {
+      const comment = await commentService.updateComment(commentId, content);
+
+      if (comment) {
+        ctx.body = Result.success(comment);
       } else {
-        comment.content = '评论已被封禁';
+        ctx.body = Result.fail('修改评论失败');
       }
-    });
-    ctx.body = result ? Result.success(result) : Result.fail('获取评论列表失败!');
+    } catch (error) {
+      console.error('updateComment error:', error);
+      ctx.body = Result.fail('修改评论失败');
+    }
   };
-  getCommentById = async (ctx, next) => {
+
+  /**
+   * 删除评论
+   * DELETE /comment/:commentId
+   */
+  deleteComment = async (ctx) => {
     const { commentId } = ctx.params;
-    const result = await commentService.getCommentById(commentId);
-    ctx.body = result ? Result.success(result) : Result.fail('增加文章浏览量失败!');
+
+    try {
+      // 先获取评论信息，用于返回 articleId
+      const comment = await commentService.getCommentById(commentId);
+
+      if (!comment) {
+        ctx.body = Result.fail('评论不存在');
+        return;
+      }
+
+      const result = await commentService.deleteComment(commentId);
+
+      if (result) {
+        // 返回更新后的总数
+        const totalCount = await commentService.getTotalCount(comment.articleId);
+        ctx.body = Result.success({
+          deletedComment: result,
+          totalCount
+        });
+      } else {
+        ctx.body = Result.fail('删除评论失败');
+      }
+    } catch (error) {
+      console.error('deleteComment error:', error);
+      ctx.body = Result.fail('删除评论失败');
+    }
   };
 }
 
