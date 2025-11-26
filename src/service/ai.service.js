@@ -1,6 +1,7 @@
 const { createOpenAI } = require('@ai-sdk/openai');
 const { streamText, convertToModelMessages } = require('ai');
 const { ollamaBaseURL } = require('../constants/urls');
+const Utils = require('../utils/index'); // 引入 Utils 实例
 // 创建 Ollama 的 OpenAI 兼容实例
 // 可以通过环境变量配置远程 Ollama 服务器
 // 本地: http://localhost:11434/v1
@@ -59,15 +60,8 @@ class AiService {
       let systemPrompt = '你是一个专业的编程助手，擅长解释代码、总结文章和回答技术问题。';
       // 如果有文章上下文，添加到系统提示中
       if (context) {
-        // 1. 清理 HTML 标签 (非常必要，可以节省 tokens 并减少干扰)
-        // 简单的正则去除标签，但保留段落结构
-        let cleanContext = context
-          .replace(/<\/(p|div|h\d|li)>/gi, '\n') // 在块级元素结束处换行
-          .replace(/<br\s*\/?>/gi, '\n') // <br> 换行
-          .replace(/<[^>]+>/g, '') // 移除所有其他标签
-          .replace(/&nbsp;/g, ' ') // 替换空格
-          .replace(/\n\s*\n/g, '\n\n') // 合并多余换行，最多保留两个
-          .trim();
+        // 1. 清理 HTML 标签 (使用 Utils 中保留结构的清洗方法)
+        let cleanContext = Utils.cleanTextForAI(context);
 
         // console.log('🧹 [AI Service] HTML 内容已清理, 原始长度:', context.length, '-> 清理后:', cleanContext.length);
 
