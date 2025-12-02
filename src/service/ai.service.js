@@ -103,13 +103,13 @@ class AiService {
       // ETIMEDOUT - 连接超时（网络延迟或服务器无响应）
       // ENOTFOUND - DNS 解析失败（主机名不存在）
       if (error.message.includes('ECONNREFUSED') || error.message.includes('connect')) {
-        errorMessage = `AI 服务器连接失败 (${OLLAMA_BASE_URL})。请检查：1. Ollama 是否正在运行？2. 网络连接是否正常？3. 服务器地址是否正确？`;
+        errorMessage = `AI 服务器连接失败 (${ollamaBaseURL})。请检查：1. Ollama 是否正在运行？2. 网络连接是否正常？3. 服务器地址是否正确？`;
         errorCode = 'CONNECTION_REFUSED';
       } else if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
         errorMessage = 'AI 服务器响应超时，请检查网络连接或稍后重试';
         errorCode = 'TIMEOUT';
       } else if (error.message.includes('ENOTFOUND')) {
-        errorMessage = `无法解析 AI 服务器地址 (${OLLAMA_BASE_URL})，请检查配置`;
+        errorMessage = `无法解析 AI 服务器地址 (${ollamaBaseURL})，请检查配置`;
         errorCode = 'HOST_NOT_FOUND';
       } else if (error.message.includes('model')) {
         errorMessage = `模型 "${model}" 未找到，请先下载: ollama pull ${model}`;
