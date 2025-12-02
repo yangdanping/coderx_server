@@ -69,16 +69,14 @@ class CommentService {
       if (hasMore && items.length > 0) {
         const lastItem = items[items.length - 1];
         // 把 Date 对象转成 ISO 字符串，避免 toString() 导致格式问题
-        const createAtStr = lastItem.createAt instanceof Date 
-          ? lastItem.createAt.toISOString() 
-          : lastItem.createAt;
+        const createAtStr = lastItem.createAt instanceof Date ? lastItem.createAt.toISOString() : lastItem.createAt;
         nextCursor = `${createAtStr}_${lastItem.id}`;
       }
 
       return {
         items,
         nextCursor,
-        hasMore,
+        hasMore
       };
     } catch (error) {
       console.error('getCommentList error:', error);
@@ -122,10 +120,10 @@ class CommentService {
       const [[{ total }]] = await connection.execute(countStatement, [userId]);
 
       // 处理数据格式
-      const items = comments.map(item => {
+      const items = comments.map((item) => {
         // 构建 articleUrl (假设路由结构)
         item.articleUrl = `/article/${item.articleId}`;
-        
+
         if (item.status) {
           item.content = '评论已被封禁';
         }
@@ -140,7 +138,6 @@ class CommentService {
       // 前端请求是: return myRequest.get<IResData<IComment[]>>
       // 所以 res.data 应该是 IComment[] 数组。
       // 这里的 items 就是数组。
-      
     } catch (error) {
       console.error('getUserCommentList error:', error);
       throw error;
@@ -163,7 +160,7 @@ class CommentService {
           c.create_at AS createAt,
           JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) AS author,
           (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) AS likes,
-          (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name) 
+          (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content) 
            FROM comment rc 
            LEFT JOIN user ru ON ru.id = rc.user_id 
            WHERE rc.id = c.reply_id) AS replyTo
@@ -216,7 +213,7 @@ class CommentService {
           c.create_at AS createAt,
           JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) AS author,
           (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) AS likes,
-          (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name) 
+          (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content) 
            FROM comment rc 
            LEFT JOIN user ru ON ru.id = rc.user_id 
            WHERE rc.id = c.reply_id) AS replyTo
@@ -241,17 +238,12 @@ class CommentService {
       });
 
       // 获取该评论下的总回复数
-      const [[{ replyCount }]] = await connection.execute(
-        'SELECT COUNT(*) AS replyCount FROM comment WHERE comment_id = ?',
-        [commentId]
-      );
+      const [[{ replyCount }]] = await connection.execute('SELECT COUNT(*) AS replyCount FROM comment WHERE comment_id = ?', [commentId]);
 
       let nextCursor = null;
       if (hasMore && items.length > 0) {
         const lastItem = items[items.length - 1];
-        const createAtStr = lastItem.createAt instanceof Date 
-          ? lastItem.createAt.toISOString() 
-          : lastItem.createAt;
+        const createAtStr = lastItem.createAt instanceof Date ? lastItem.createAt.toISOString() : lastItem.createAt;
         nextCursor = `${createAtStr}_${lastItem.id}`;
       }
 
@@ -259,7 +251,7 @@ class CommentService {
         items,
         nextCursor,
         hasMore,
-        replyCount,
+        replyCount
       };
     } catch (error) {
       console.error('getReplies error:', error);
@@ -351,7 +343,7 @@ class CommentService {
           c.create_at AS createAt,
           JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) AS author,
           (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) AS likes,
-          (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name) 
+          (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content) 
            FROM comment rc 
            LEFT JOIN user ru ON ru.id = rc.user_id 
            WHERE rc.id = c.reply_id) AS replyTo
@@ -416,4 +408,3 @@ class CommentService {
 }
 
 module.exports = new CommentService();
-

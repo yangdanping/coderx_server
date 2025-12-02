@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const { IMG_PATH, AVATAR_PATH, VIDEO_PATH } = require('../constants/file-path');
 
 module.exports = function deleteFile(files, delType = 'img') {
