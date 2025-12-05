@@ -262,30 +262,30 @@ class UserService {
       console.log(error);
     }
   };
-  userFeedback = async (userId, content) => {
-    try {
-      const statement = `INSERT INTO feedback (user_id,content) VALUES (?,?);`;
-      const [result] = await connection.execute(statement, [userId, content]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  getReplyByUserId = async (userId) => {
-    try {
-      const statement = `
-      SELECT f.id,u.name,f.content,a.name admin,f.reply,f.create_at createAt
-      FROM feedback f
-      LEFT JOIN user u ON u.id = f.user_id
-      LEFT JOIN admin a ON a.id = f.admin_id
-      WHERE f.user_id = ? AND f.reply IS NOT NULL
-      ORDER BY f.create_at;`;
-      const [result] = await connection.execute(statement, [userId]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  // userFeedback = async (userId, content) => {
+  //   try {
+  //     const statement = `INSERT INTO feedback (user_id,content) VALUES (?,?);`;
+  //     const [result] = await connection.execute(statement, [userId, content]);
+  //     return result;
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
+  // getReplyByUserId = async (userId) => {
+  //   try {
+  //     const statement = `
+  //     SELECT f.id,u.name,f.content,a.name admin,f.reply,f.create_at createAt
+  //     FROM feedback f
+  //     LEFT JOIN user u ON u.id = f.user_id
+  //     LEFT JOIN admin a ON a.id = f.admin_id
+  //     WHERE f.user_id = ? AND f.reply IS NOT NULL
+  //     ORDER BY f.create_at;`;
+  //     const [result] = await connection.execute(statement, [userId]);
+  //     return result;
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
   getHotUsers = async () => {
     try {
       const statement = `

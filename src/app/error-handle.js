@@ -13,7 +13,7 @@ const errorHandler = (error, ctx) => {
       msg = errorTypes.NAME_OR_PWD_IS_INCORRECT;
       break;
     case errorTypes.PWD_IS_INCORRECT:
-      code = 401; // Unauthorized(用户密码错误)
+      code = 400; // Unauthorized(用户密码错误)
       msg = errorTypes.PWD_IS_INCORRECT;
       break;
     case errorTypes.UNAUTH:
@@ -57,7 +57,7 @@ const errorHandler = (error, ctx) => {
   console.log(`error-handle返回客户端的错误信息---${msg}`); //控制台打印测试
 
   // 记录错误日志
-  errorLogger.error(`错误 [${code}] ${msg} | 路径: ${ctx.url} | 方法: ${ctx.method} | IP: ${ctx.ip} | 堆栈: ${error.stack}`);
+  errorLogger.error(`\n错误 [${code}] ${msg}\n路径: ${ctx.url}\n方法: ${ctx.method}\nIP: ${ctx.ip}\n堆栈: ${error.stack}`);
 
   ctx.status = code;
   ctx.body = Result.fail(msg, code); //返回给客户端具体的错误信息,让用户看到错误信息

@@ -6,11 +6,9 @@ class Utils {
   // 自动加载路由工具-----------------------------
   // 配置：选择使用哪个版本的 comment 路由
   // COMMENT_VERSION: '1' 仅旧版, '2' 仅新版
-  useRoutes() {
+  useRoutes = (app) => {
     const COMMENT_VERSION = '2';
     const routerDir = path.resolve(__dirname, '../router');
-    const app = this; // 保存 Koa app 实例引用
-
     // 加载单个路由文件（内部函数）
     const loadRouter = (dir, file) => {
       const router = require(path.resolve(dir, `./${file}`));
@@ -42,9 +40,9 @@ class Utils {
     });
 
     console.log(`[Router] 当前评论系统版本: ${COMMENT_VERSION === 'both' ? 'V1 + V2' : 'V' + COMMENT_VERSION}`);
-  }
+  };
   // 密码加密工具-----------------------------
-  encryptPwd(password) {
+  encryptPwd = (password) => {
     const md5 = crypto.createHash('md5'); //采用md5加密,会返回一个md5对象
     try {
       const encryptedPwd = md5.update(password).digest('hex'); //调用md5对象的update方法可传入原始密码,返回的还是对象,调用其digest方法传入'hex'拿到返回加密后16进制的结果
@@ -52,18 +50,18 @@ class Utils {
     } catch (error) {
       console.log(error);
     }
-  }
+  };
   // 发送错误信息工具-----------------------------
-  emitErrMsg(ctx, errortype) {
+  emitErrMsg = (ctx, errortype) => {
     const err = new Error(errortype); //Error对象有两个属性name和message
     return ctx.app.emit('error', err, ctx); //第一个参数表示发出去的事件是error事件,第二个参数表示你要给用户提示的错误信息
-  }
+  };
   // 移除HTML标签工具-----------------------------
-  removeHTMLTag(str) {
+  removeHTMLTag = (str) => {
     return str.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
-  }
+  };
   // 专门用于 AI 上下文的清洗工具（保留段落结构）
-  cleanTextForAI(str) {
+  cleanTextForAI = (str) => {
     if (!str) return '';
     return str
       .replace(/<\/(p|div|h\d|li)>/gi, '\n') // 在块级元素结束处换行
@@ -72,9 +70,9 @@ class Utils {
       .replace(/&nbsp;/g, ' ') // 替换空格
       .replace(/\n\s*\n/g, '\n\n') // 合并多余换行，最多保留两个
       .trim();
-  }
+  };
   // 分页参数处理工具-----------------------------
-  getPaginationParams(ctx) {
+  getPaginationParams = (ctx) => {
     let { pageNum, pageSize, offset, limit } = ctx.query;
 
     // 优先使用 pageNum/pageSize
@@ -98,15 +96,15 @@ class Utils {
     if (isNaN(limit)) limit = 10;
 
     return { offset: String(offset), limit: String(limit) };
-  }
+  };
 }
 
 module.exports = new Utils();
 
-/* 若不像useRoutes中那样做,则需在app/index中需要路由需要想下面那样一个个导入
-  // (2)用户路由的注册------------------
+/* useRoutes避免了路由需要向下面这样在app/index中一个个导入
+  // (1)用户路由的注册------------------
   app.use(userRouter.routes()); //再次强调,使用路由必须注册
   app.use(userRouter.allowedMethods()); //用于判断某个method是否支持,就不用自己设置状态码了,可判断某个请求方式有没有,若没有就返回不允许
-  // (3)授权路由的注册------------------
+  // (2)授权路由的注册------------------
   app.use(authRouter.routes());
   app.use(authRouter.allowedMethods()); */
