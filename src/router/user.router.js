@@ -17,9 +17,9 @@ userRouter.post('/register', verifyUserRegister, encryptUserPwd, userController.
 userRouter.post('/login', verifyUserLogin, userController.userLogin);
 
 // 根据用户id查看回复反馈
-userRouter.get('/feedback/:userId', verifyAuth, userController.getReplyByUserId);
+// userRouter.get('/feedback/:userId', verifyAuth, userController.getReplyByUserId);
 
-/* ★获取用户文章接口------------------------------------------- */
+/* ★获取用户文章接口(已通过文章列表筛选)------------------------------------------- */
 // userRouter.get('/:userId/article', userController.getArticle);
 
 /* ★获取用户收藏夹文章接口------------------------------------------- */
@@ -53,6 +53,6 @@ userRouter.post('/:userId/follow', verifyAuth, userController.userFollow);
 userRouter.post('/:userId/report', verifyAuth, userController.userReport);
 
 /* ★用户反馈接口------------------------------------------- */
-userRouter.post('/:userId/feedback', verifyAuth, userController.userFeedback);
+// userRouter.post('/:userId/feedback', verifyAuth, userController.userFeedback);
 
 module.exports = userRouter;

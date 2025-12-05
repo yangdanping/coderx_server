@@ -17,11 +17,11 @@ class UserContoller {
     // // 2.生成密钥和公钥,生成token,并传入携带的用户数据,授权中间件verifyAuth通过ctx.user = verifyResult获得这边传来的id,name
     const token = jwt.sign({ id, name }, PRIVATE_KEY, {
       expiresIn: 60 * 60 * 24, //设置24小时后过期
-      // expiresIn: 5,
+      // expiresIn: 10, //测试用,X秒后过期
       algorithm: 'RS256', //设置RS256非对称加密算法
       allowInsecureKeySizes: true //9版本要加上
     });
-    // 3.向客户端返回id,name,token
+    // 3.向客户端返回id,name,token(过期时间会自动添加到 Payload ,也就是jwt的第二个部分)
     // ctx.body = token ? Result.success({ id, name }, 0, token) : Result.fail('生成token失败');
     const data = { id, name, token };
     console.log('userLogin data', data);
@@ -157,25 +157,25 @@ class UserContoller {
       console.log('我举报的是评论', parseInt(userId), commentId, reportOptions);
     }
   };
-  userFeedback = async (ctx, next) => {
-    const { userId } = ctx.params;
-    const { content } = ctx.request.body;
-    const result = await userService.userFeedback(parseInt(userId), content);
-    ctx.body = result ? Result.success(result) : Result.fail('举报用户失败!');
-  };
-  getReplyByUserId = async (ctx, next) => {
-    const { userId } = ctx.params;
-    console.log('getReplyByUserId!!!!', userId);
-    // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
-    const result = await userService.getReplyByUserId(userId);
-    ctx.body = result ? Result.success(result) : Result.fail('获取反馈回复失败!');
-  };
   getHotUsers = async (ctx, next) => {
     console.log('getHotUsers!!!!');
     // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
     const result = await userService.getHotUsers();
     ctx.body = result ? Result.success(result) : Result.fail('获取反馈回复失败!');
   };
+  // userFeedback = async (ctx, next) => {
+  //   const { userId } = ctx.params;
+  //   const { content } = ctx.request.body;
+  //   const result = await userService.userFeedback(parseInt(userId), content);
+  //   ctx.body = result ? Result.success(result) : Result.fail('举报用户失败!');
+  // };
+  // getReplyByUserId = async (ctx, next) => {
+  //   const { userId } = ctx.params;
+  //   console.log('getReplyByUserId!!!!', userId);
+  //   // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
+  //   const result = await userService.getReplyByUserId(userId);
+  //   ctx.body = result ? Result.success(result) : Result.fail('获取反馈回复失败!');
+  // };
 }
 
 module.exports = new UserContoller();

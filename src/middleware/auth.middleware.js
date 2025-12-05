@@ -17,11 +17,9 @@ const verifyAuth = async (ctx, next) => {
   try {
     const verifyResult = jwt.verify(token, PUBLIC_KEY, { algorithms: ['RS256'] });
     ctx.user = verifyResult; //记得把拿到的结果(id/name/.../颁发时间/过期时间)保存到user,到时用户发布动态等要用到
-    console.log('verifyResult ctx.user======', ctx.user);
+    console.log('verifyAuth 验证授权中间件 用户信息', ctx.user);
     await next(); //验证成功,则直接调用next
   } catch (error) {
-    console.log('verifyResult error======', error);
-    console.log('verifyResult ctx======', ctx);
     return emitErrMsg(ctx, errorTypes.UNAUTH);
   }
 };
