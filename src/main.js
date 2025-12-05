@@ -1,9 +1,10 @@
 const Koa = require('koa');
 const app = new Koa();
-// const { config, bodyParser, useRoutes, errorHandler } = require('./app');
-const { config, bodyParser, useRoutes, errorHandler, cleanOrphanFilesTask } = require('./app');
+const { config, bodyParser, useRoutes, errorHandler } = require('./app');
 const loggerMiddleware = require('./middleware/logger.middleware');
 const aiService = require('./service/ai.service');
+// 定时清理任务（单独导入，避免 socket_server.js 间接加载）
+const cleanOrphanFilesTask = require('./tasks/cleanOrphanFiles');
 
 // 错误中间件
 app.on('error', errorHandler);

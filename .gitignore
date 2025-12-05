@@ -28,5 +28,5 @@ node_modules
 *.sln
 *.sw?
 
-
-*.md
+# Documentation
+*文档*/

@@ -11,13 +11,14 @@ const errorHandler = require('./error-handle');
 // 6.用从工具类导出的路由加载器
 const { useRoutes } = require('../utils');
 
-const cleanOrphanFilesTask = require('../tasks/cleanOrphanFiles');
+// 注意：cleanOrphanFilesTask 不在这里导出，避免 socket_server.js 间接加载
+// 请在 main.js 中单独 require('../tasks/cleanOrphanFiles')
+
 module.exports = {
   config,
   validator,
   connection,
   bodyParser,
   errorHandler,
-  useRoutes,
-  cleanOrphanFilesTask
+  useRoutes
 };
