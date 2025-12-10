@@ -1,6 +1,6 @@
 const errorTypes = require('../constants/error-types');
 const userService = require('../service/user.service.js');
-const { emitErrMsg, encryptPwd } = require('../utils');
+const { emitErrMsg, hashPwd, comparePwd } = require('../utils');
 
 // ★1.用户注册验证中间件---------------------------------------------------
 const verifyUserRegister = async (ctx, next) => {
@@ -24,10 +24,11 @@ const verifyUserRegister = async (ctx, next) => {
   }
 };
 
-// ★2.用户密码加密中间件---------------------------------------------------
+// ★2.用户密码加密中间件(注册时使用)---------------------------------------------------
 const encryptUserPwd = async (ctx, next) => {
   let { password } = ctx.request.body;
-  ctx.request.body.password = encryptPwd(password);
+  // 使用 Bcrypt 加密
+  ctx.request.body.password = hashPwd(password);
   await next();
 };
 
@@ -54,8 +55,10 @@ const verifyUserLogin = async (ctx, next) => {
     console.log('verifyUserLogin<存在>校验---该用户存在,可进行加密校验');
   }
 
-  // 4.判断用户输入的原始密码是否和数据库中的加密后的密码(user.password)一致(存入数据库的密码必须先加密)
-  if (encryptPwd(password) !== user.password) {
+  // 4.判断用户输入的原始密码是否和数据库中的加密后的密码(user.password)一致
+  const isMatch = comparePwd(password, user.password);
+
+  if (!isMatch) {
     return emitErrMsg(ctx, errorTypes.PWD_IS_INCORRECT);
   } else {
     ctx.user = user; //颁发令牌的前期工作,user作为令牌的payload

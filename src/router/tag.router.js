@@ -2,7 +2,6 @@ const Router = require('koa-router');
 const tagRouter = new Router({ prefix: '/tag' });
 const tagController = require('../controller/tag.controller');
 const { verifyAuth } = require('../middleware/auth.middleware');
-// const { verifyUserRegister, encryptUserPwd, verifyUserLogin } = require('../tag/user.middleware');
 
 /* ★<用户创建标签>的实现----------------------------------
 当然用户是要登陆才能创建一个新的东西,所以要验证 --> verifyAuth
