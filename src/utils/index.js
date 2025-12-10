@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
-
+const bcrypt = require('bcryptjs');
 class Utils {
   // 自动加载路由工具-----------------------------
   // 配置：选择使用哪个版本的 comment 路由
@@ -41,15 +40,27 @@ class Utils {
 
     console.log(`[Router] 当前评论系统版本: ${COMMENT_VERSION === 'both' ? 'V1 + V2' : 'V' + COMMENT_VERSION}`);
   };
-  // 密码加密工具-----------------------------
+  // 密码加密/比对工具-----------------------------
+
+  // Bcrypt 加密
+  hashPwd = (password) => {
+    const salt = bcrypt.genSaltSync(10);
+    return bcrypt.hashSync(password, salt);
+  };
+
+  /**
+   * 密码比对
+   * @param {string} inputPassword - 用户输入的明文密码
+   * @param {string} dbPassword - 数据库存储的密文
+   * @returns {boolean} isMatch
+   */
+  comparePwd = (inputPassword, dbPassword) => {
+    return bcrypt.compareSync(inputPassword, dbPassword);
+  };
+
+  // 兼容旧代码调用，直接指向 hashPwd
   encryptPwd = (password) => {
-    const md5 = crypto.createHash('md5'); //采用md5加密,会返回一个md5对象
-    try {
-      const encryptedPwd = md5.update(password).digest('hex'); //调用md5对象的update方法可传入原始密码,返回的还是对象,调用其digest方法传入'hex'拿到返回加密后16进制的结果
-      return encryptedPwd;
-    } catch (error) {
-      console.log(error);
-    }
+    return this.hashPwd(password);
   };
   // 发送错误信息工具-----------------------------
   emitErrMsg = (ctx, errortype) => {

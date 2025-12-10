@@ -5,7 +5,7 @@
  *
  * 使用方法：
  * 1. 安装 node-cron: npm install node-cron
- * 2. 在 app/index.js 中导入并启动：
+ * 2. 在 src/main.js 中导入并启动：
  *    const cleanOrphanFilesTask = require('./tasks/cleanOrphanFiles');
  *    cleanOrphanFilesTask.start();
  */
@@ -35,7 +35,7 @@ const CLEANUP_THRESHOLDS = {
 const CRON_EXPRESSIONS = {
   // test: `*/3 * * * * *`, // 自定义时间执行（测试用）
   test: `0 */1 * * *`, // 自定义时间执行（测试用）
-  prod: '0 2 * * *' // 每天凌晨 2 点（生产用）
+  prod: `0 2 * * *` // 每天凌晨 2 点（生产用）
 };
 
 // 📁 文件类型配置
@@ -277,7 +277,7 @@ const runNow = async () => {
 module.exports = {
   task,
   start: () => {
-    const modeText = CRON_MODE === 'test' ? '测试模式：每3s执行' : '生产模式：每天凌晨 2 点执行';
+    const modeText = CRON_MODE === 'test' ? '测试模式：自定义时间执行' : '生产模式：每天凌晨 2 点执行';
     console.log(`⏰ 孤儿文件清理任务已启动（${modeText}）`);
     console.log(`📅 Cron 表达式: ${cronExpression}`);
     task.start();

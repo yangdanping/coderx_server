@@ -17,7 +17,6 @@ const SOCKET_PORT = process.env.SOCKET_PORT || 8001; // 独立端口，不占用
 
 // 导入在线状态服务
 const initSocketIOOnline = require('./socket/socketio-online');
-// const initWebSocketOnline = require('./socket/websocket-online'); // WebSocket 版本（可选）
 
 // 创建独立的 HTTP 服务器（不依赖 Koa）
 const httpServer = http.createServer((req, res) => {
@@ -70,9 +69,6 @@ const io = new Server(httpServer, {
 
 // 启动在线状态服务
 initSocketIOOnline(io);
-
-// ============= 可选：启用原生 WebSocket 服务（注释掉 Socket.IO 后启用） =============
-// initWebSocketOnline(httpServer);
 
 // 启动服务器
 httpServer.listen(SOCKET_PORT, () => {
