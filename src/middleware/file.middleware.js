@@ -10,7 +10,7 @@ function setStorage(resourcePath) {
     destination: path.resolve(`${resourcePath}`), //定义文件保存路径//注意,该相对路径是相对于process.cwd的路径的
     filename: (req, file, cb) => {
       cb(null, Date.now() + path.extname(file.originalname)); //时间戳.jpg
-    }
+    },
   });
 }
 const avatarStorage = setStorage(AVATAR_PATH);
@@ -24,7 +24,7 @@ const imgHandler = multer({ storage: imgStorage }).array('img', 20); //普通图
 const videoHandler = multer({
   storage: videoStorage,
   limits: {
-    fileSize: 100 * 1024 * 1024 // 限制视频大小为 100MB
+    fileSize: 100 * 1024 * 1024, // 限制视频大小为 100MB
   },
   fileFilter: (req, file, cb) => {
     // 只允许视频格式
@@ -33,7 +33,7 @@ const videoHandler = multer({
     } else {
       cb(new Error('只能上传视频文件!'));
     }
-  }
+  },
 }).single('video'); // 一次只上传一个视频
 
 // 来对上传的图片大小进行处理,最终效果是除了上传的原图,还对应生成另外三种不同大小的图片
@@ -79,5 +79,5 @@ module.exports = {
   avatarHandler,
   imgHandler,
   imgResize,
-  videoHandler
+  videoHandler,
 };

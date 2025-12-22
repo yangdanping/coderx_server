@@ -61,5 +61,5 @@ const verifyStatus = async (ctx, next) => {
 module.exports = {
   verifyAuth,
   verifyStatus,
-  verifyPermission
+  verifyPermission,
 };

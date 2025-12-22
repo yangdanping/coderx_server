@@ -25,5 +25,5 @@ const verifyTagExists = async (ctx, next) => {
 };
 
 module.exports = {
-  verifyTagExists
+  verifyTagExists,
 };

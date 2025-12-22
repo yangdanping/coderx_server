@@ -6,5 +6,5 @@ const ollamaBaseURL = `${config.OLLAMA_HOST}:${config.OLLAMA_PORT}/v1`;
 module.exports = {
   baseURL,
   redirectURL,
-  ollamaBaseURL
+  ollamaBaseURL,
 };

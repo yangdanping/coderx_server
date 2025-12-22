@@ -212,7 +212,7 @@ class VideoService {
       return {
         success: true,
         affectedRows: videoIds.length,
-        deletedCount: deletedVideoIds.length
+        deletedCount: deletedVideoIds.length,
       };
     } catch (error) {
       await conn.rollback();

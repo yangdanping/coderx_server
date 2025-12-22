@@ -81,7 +81,7 @@ class CommentService {
       return {
         items,
         nextCursor,
-        hasMore
+        hasMore,
       };
     } catch (error) {
       console.error('getCommentList error:', error);
@@ -259,7 +259,7 @@ class CommentService {
         items,
         nextCursor,
         hasMore,
-        replyCount
+        replyCount,
       };
     } catch (error) {
       console.error('getReplies error:', error);

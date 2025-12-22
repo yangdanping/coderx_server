@@ -20,5 +20,5 @@ module.exports = {
   connection,
   bodyParser,
   errorHandler,
-  useRoutes: Utils.useRoutes
+  useRoutes: Utils.useRoutes,
 };

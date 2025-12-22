@@ -12,8 +12,8 @@ log4js.configure({
       keepFileExt: true,
       layout: {
         type: 'pattern',
-        pattern: '[%d{yyyy-MM-dd hh:mm:ss}] [%p] %m%n'
-      }
+        pattern: '[%d{yyyy-MM-dd hh:mm:ss}] [%p] %m%n',
+      },
     },
     // 请求日志
     request: {
@@ -23,8 +23,8 @@ log4js.configure({
       keepFileExt: true,
       layout: {
         type: 'pattern',
-        pattern: '[%d{yyyy-MM-dd hh:mm:ss}] [%p] %m%n'
-      }
+        pattern: '[%d{yyyy-MM-dd hh:mm:ss}] [%p] %m%n',
+      },
     },
     // 错误日志
     error: {
@@ -34,32 +34,32 @@ log4js.configure({
       keepFileExt: true,
       layout: {
         type: 'pattern',
-        pattern: '[%d{yyyy-MM-dd hh:mm:ss}] [%p] %m%n'
-      }
+        pattern: '[%d{yyyy-MM-dd hh:mm:ss}] [%p] %m%n',
+      },
     },
     // 控制台输出
     console: {
-      type: 'stdout'
-    }
+      type: 'stdout',
+    },
   },
   categories: {
     sql: {
       appenders: ['sql', 'console'], // 同时输出到文件和控制台
-      level: 'debug'
+      level: 'debug',
     },
     request: {
       appenders: ['request', 'console'],
-      level: 'info'
+      level: 'info',
     },
     error: {
       appenders: ['error', 'console'],
-      level: 'error'
+      level: 'error',
     },
     default: {
       appenders: ['console'],
-      level: 'info'
-    }
-  }
+      level: 'info',
+    },
+  },
 });
 
 // 程序退出时确保日志记录完整
@@ -71,5 +71,5 @@ module.exports = {
   sqlLogger: log4js.getLogger('sql'),
   requestLogger: log4js.getLogger('request'),
   errorLogger: log4js.getLogger('error'),
-  logger: log4js.getLogger()
+  logger: log4js.getLogger(),
 };

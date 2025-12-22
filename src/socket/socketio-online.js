@@ -45,7 +45,7 @@ const initSocketIOOnline = (io) => {
 
       // 立即向游客发送当前在线用户列表
       socket.emit('online', {
-        userList: Array.from(onlineUsers.values())
+        userList: Array.from(onlineUsers.values()),
       });
 
       // 游客断开连接时不需要广播（因为他们不在列表中）
@@ -65,7 +65,7 @@ const initSocketIOOnline = (io) => {
         userId: userId,
         avatarUrl: avatarUrl || '', // 存储头像 URL
         status: 'online',
-        connectedAt: new Date().toISOString()
+        connectedAt: new Date().toISOString(),
       });
 
       console.log(`📊 当前在线用户数: ${onlineUsers.size}`);
@@ -73,7 +73,7 @@ const initSocketIOOnline = (io) => {
       // 广播最新在线用户列表给所有客户端（包括游客）
       // io.emit() 发送给所有连接的客户端
       io.emit('online', {
-        userList: Array.from(onlineUsers.values()) // 将 Map 转为数组
+        userList: Array.from(onlineUsers.values()), // 将 Map 转为数组
       });
 
       // 监听客户端断开连接
@@ -87,7 +87,7 @@ const initSocketIOOnline = (io) => {
 
         // 再次广播最新在线用户列表
         io.emit('online', {
-          userList: Array.from(onlineUsers.values())
+          userList: Array.from(onlineUsers.values()),
         });
       });
     }

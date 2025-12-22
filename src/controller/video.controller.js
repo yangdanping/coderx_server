@@ -38,7 +38,7 @@ class VideoController {
       console.log(`🎬 [视频 ${videoId}] 准备生成封面:`, {
         videoPath,
         posterFilename,
-        outputFolder
+        outputFolder,
       });
 
       // 确保视频文件存在
@@ -63,7 +63,7 @@ class VideoController {
         id: videoId, // 视频ID，用于关联到文章
         url: videoUrl,
         poster: posterUrl, // 返回封面URL（可能稍后才能访问）
-        filename: filename // 视频文件名
+        filename: filename, // 视频文件名
       });
     } catch (error) {
       console.error('saveVideoInfo error:', error);
@@ -88,7 +88,7 @@ class VideoController {
           timestamps: ['00:00:01'], // 提取第1秒的帧
           filename: posterFilename,
           folder: outputFolder,
-          size: '640x?' // 宽度640，高度自适应
+          size: '640x?', // 宽度640，高度自适应
         })
         .on('start', (commandLine) => {
           console.log(`🎯 [视频 ${videoId}] FFmpeg 命令:`, commandLine);

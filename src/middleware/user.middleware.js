@@ -69,5 +69,5 @@ const verifyUserLogin = async (ctx, next) => {
 module.exports = {
   verifyUserRegister,
   encryptUserPwd,
-  verifyUserLogin
+  verifyUserLogin,
 };

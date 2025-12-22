@@ -25,30 +25,30 @@ const CRON_MODE = process.env.CLEAN_CRON_MODE || 'prod';
 const CLEANUP_THRESHOLDS = {
   test: {
     interval: 10, // 自定义文件过期时间(秒)
-    unit: 'SECOND'
+    unit: 'SECOND',
   },
   prod: {
     interval: 24, // 自定义文件过期时间(小时)
-    unit: 'HOUR'
-  }
+    unit: 'HOUR',
+  },
 };
 
 const CRON_EXPRESSIONS = {
   // test: `*/3 * * * * *`, // 自定义时间执行（测试用）
   test: `0 */1 * * *`, // 自定义时间执行（测试用）
-  prod: `0 2 * * *` // 每天凌晨 2 点（生产用）
+  prod: `0 2 * * *`, // 每天凌晨 2 点（生产用）
 };
 
 // 📁 文件类型配置
 const FILE_TYPE_CONFIG = {
   image: {
     name: '图片',
-    uploadDir: 'public/img'
+    uploadDir: 'public/img',
   },
   video: {
     name: '视频',
-    uploadDir: 'public/video'
-  }
+    uploadDir: 'public/video',
+  },
 };
 
 /**
@@ -151,7 +151,7 @@ const cleanOrphanFiles = async (fileType, method = 'cron') => {
           AND f.create_at < DATE_SUB(NOW(), INTERVAL ? ${threshold.unit})
         ORDER BY f.create_at ASC
         `,
-        [fileType, threshold.interval]
+        [fileType, threshold.interval],
       );
     } else if (fileType === 'video') {
       // 视频孤儿：未关联文章
@@ -170,7 +170,7 @@ const cleanOrphanFiles = async (fileType, method = 'cron') => {
           AND f.create_at < DATE_SUB(NOW(), INTERVAL ? ${threshold.unit})
         ORDER BY f.create_at ASC
         `,
-        [fileType, threshold.interval]
+        [fileType, threshold.interval],
       );
     } else {
       throw new Error(`不支持的文件类型: ${fileType}`);
@@ -260,8 +260,8 @@ const task = cron.schedule(
   },
   {
     scheduled: false, // 默认不启动，需要手动调用 task.start()
-    timezone: 'Asia/Shanghai' // 时区
-  }
+    timezone: 'Asia/Shanghai', // 时区
+  },
 );
 
 /**
@@ -289,7 +289,7 @@ module.exports = {
   runNow, // 导出手动触发函数
   cleanOrphanImages, // 导出图片清理函数
   cleanOrphanVideos, // 导出视频清理函数
-  cleanOrphanFiles // 导出通用清理函数
+  cleanOrphanFiles, // 导出通用清理函数
 };
 
 // 如果直接运行此文件，立即执行清理（用于测试）

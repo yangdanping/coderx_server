@@ -6,16 +6,16 @@ module.exports = {
       script: './src/main.js',
       cwd: '/root/coderx_server',
       env: {
-        NODE_ENV: 'production'
-      }
+        NODE_ENV: 'production',
+      },
     },
     {
       name: 'coderx_socket_server',
       script: './src/socket_server.js',
       cwd: '/root/coderx_server',
       env: {
-        NODE_ENV: 'production'
-      }
-    }
-  ]
+        NODE_ENV: 'production',
+      },
+    },
+  ],
 };

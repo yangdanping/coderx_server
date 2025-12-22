@@ -9,7 +9,7 @@ const connections = mysql.createPool({
   database: config.MYSQL_DATABASE,
   user: config.MYSQL_USER,
   password: config.MYSQL_PASSWORD,
-  connectionLimit: 10
+  connectionLimit: 10,
 });
 
 // 2.使用连接池
