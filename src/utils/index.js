@@ -1,11 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+
 class Utils {
   // 自动加载路由工具-----------------------------
   // 配置：选择使用哪个版本的 comment 路由
   // COMMENT_VERSION: '1' 仅旧版, '2' 仅新版
-  useRoutes = (app) => {
+  static useRoutes = (app) => {
     const COMMENT_VERSION = '2';
     const routerDir = path.resolve(__dirname, '../router');
     // 加载单个路由文件（内部函数）
@@ -40,10 +41,11 @@ class Utils {
 
     console.log(`[Router] 当前评论系统版本: ${COMMENT_VERSION === 'both' ? 'V1 + V2' : 'V' + COMMENT_VERSION}`);
   };
+
   // 密码加密/比对工具-----------------------------
 
   // Bcrypt 加密
-  hashPwd = (password) => {
+  static hashPwd = (password) => {
     const salt = bcrypt.genSaltSync(10);
     return bcrypt.hashSync(password, salt);
   };
@@ -54,25 +56,28 @@ class Utils {
    * @param {string} dbPassword - 数据库存储的密文
    * @returns {boolean} isMatch
    */
-  comparePwd = (inputPassword, dbPassword) => {
+  static comparePwd = (inputPassword, dbPassword) => {
     return bcrypt.compareSync(inputPassword, dbPassword);
   };
 
   // 兼容旧代码调用，直接指向 hashPwd
-  encryptPwd = (password) => {
+  static encryptPwd = (password) => {
     return this.hashPwd(password);
   };
+
   // 发送错误信息工具-----------------------------
-  emitErrMsg = (ctx, errortype) => {
-    const err = new Error(errortype); //Error对象有两个属性name和message
-    return ctx.app.emit('error', err, ctx); //第一个参数表示发出去的事件是error事件,第二个参数表示你要给用户提示的错误信息
+  static emitErrMsg = (ctx, errortype) => {
+    const err = new Error(errortype); // Error对象有两个属性name和message
+    return ctx.app.emit('error', err, ctx); // 第一个参数表示发出去的事件是error事件,第二个参数表示你要给用户提示的错误信息
   };
+
   // 移除HTML标签工具-----------------------------
-  removeHTMLTag = (str) => {
+  static removeHTMLTag = (str) => {
     return str.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
   };
+
   // 专门用于 AI 上下文的清洗工具（保留段落结构）
-  cleanTextForAI = (str) => {
+  static cleanTextForAI = (str) => {
     if (!str) return '';
     return str
       .replace(/<\/(p|div|h\d|li)>/gi, '\n') // 在块级元素结束处换行
@@ -82,8 +87,9 @@ class Utils {
       .replace(/\n\s*\n/g, '\n\n') // 合并多余换行，最多保留两个
       .trim();
   };
+
   // 分页参数处理工具-----------------------------
-  getPaginationParams = (ctx) => {
+  static getPaginationParams = (ctx) => {
     let { pageNum, pageSize, offset, limit } = ctx.query;
 
     // 优先使用 pageNum/pageSize
@@ -108,9 +114,21 @@ class Utils {
 
     return { offset: String(offset), limit: String(limit) };
   };
-}
 
-module.exports = new Utils();
+  // SQL IN 子句构造工具-----------------------------
+  /**
+   * 构造 SQL 的 IN 子句占位符
+   * @param {string} column 字段名
+   * @param {Array} list 数组
+   * @param {string} prefix 前缀 (AND/OR)
+   * @returns {string} 构造好的 SQL 片段，例如 "AND id IN (?,?,?)"
+   */
+  static formatInClause = (column, list, prefix = 'AND') => {
+    if (!Array.isArray(list) || list.length === 0) return '';
+    const placeholders = list.map(() => '?').join(',');
+    return `${prefix} ${column} IN (${placeholders})`;
+  };
+}
 
 /* useRoutes避免了路由需要向下面这样在app/index中一个个导入
   // (1)用户路由的注册------------------
@@ -119,3 +137,4 @@ module.exports = new Utils();
   // (2)授权路由的注册------------------
   app.use(authRouter.routes());
   app.use(authRouter.allowedMethods()); */
+module.exports = Utils;

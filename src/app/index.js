@@ -9,7 +9,7 @@ const bodyParser = require('koa-bodyparser');
 // 5.用于给app.on处理错误的中间件
 const errorHandler = require('./error-handle');
 // 6.用从工具类导出的路由加载器
-const { useRoutes } = require('../utils');
+const Utils = require('../utils');
 
 // 注意：cleanOrphanFilesTask 不在这里导出，避免 socket_server.js 间接加载
 // 请在 main.js 中单独 require('../tasks/cleanOrphanFiles')
@@ -20,5 +20,5 @@ module.exports = {
   connection,
   bodyParser,
   errorHandler,
-  useRoutes
+  useRoutes: Utils.useRoutes
 };

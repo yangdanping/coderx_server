@@ -5,7 +5,7 @@ const userService = require('../service/user.service');
 const articleService = require('../service/article.service');
 const fileService = require('../service/file.service');
 const avatarService = require('../service/avatar.service');
-const { removeHTMLTag, getPaginationParams } = require('../utils');
+const Utils = require('../utils');
 const { PRIVATE_KEY } = require('../app/config');
 const { AVATAR_PATH } = require('../constants/file-path');
 const Result = require('../app/Result');
@@ -110,7 +110,7 @@ class UserContoller {
   //   const { offset, limit } = ctx.query;
   //   const userArticle = await articleService.getArticleList(offset, limit, '', userId);
   //   if (userArticle) {
-  //     userArticle.forEach((article) => (article.content = removeHTMLTag(article.content)));
+  //     userArticle.forEach((article) => (article.content = Utils.removeHTMLTag(article.content)));
   //     console.log('获取用户发表过的文章成功');
   //     ctx.body = Result.success(userArticle);
   //   } else {
@@ -120,10 +120,10 @@ class UserContoller {
   getComment = async (ctx, next) => {
     const { userId } = ctx.params;
     // const { offset, limit } = ctx.query;
-    const { offset, limit } = getPaginationParams(ctx);
+    const { offset, limit } = Utils.getPaginationParams(ctx);
     const userComment = await userService.getCommentById(userId, offset, limit);
     if (userComment) {
-      userComment.forEach((comment) => (comment.content = removeHTMLTag(comment.content)));
+      userComment.forEach((comment) => (comment.content = Utils.removeHTMLTag(comment.content)));
       ctx.body = Result.success(userComment);
     } else {
       ctx.body = Result.fail('获取用户发表过的评论失败');
@@ -133,11 +133,11 @@ class UserContoller {
     const { userId } = ctx.params;
     // const { collectId, offset, limit } = ctx.query;
     const { collectId } = ctx.query;
-    const { offset, limit } = getPaginationParams(ctx);
+    const { offset, limit } = Utils.getPaginationParams(ctx);
     console.log(userId, collectId, offset, limit);
     const collectArticle = await userService.getArticleByCollectId(userId, collectId, offset, limit);
     if (collectArticle) {
-      collectArticle.forEach((article) => (article.content = removeHTMLTag(article.content)));
+      collectArticle.forEach((article) => (article.content = Utils.removeHTMLTag(article.content)));
       console.log('获取该收藏夹下的文章成功');
       ctx.body = Result.success(collectArticle);
     } else {

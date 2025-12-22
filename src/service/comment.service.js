@@ -9,6 +9,11 @@ class CommentService {
    * @param {number} limit 每页数量
    * @param {number} replyPreviewLimit 每条评论预览的回复数量
    */
+  /**
+   * 重构说明：
+   * 1. 将 LIMIT 的硬拼接改为占位符 ?，彻底消除注入风险。
+   * 2. 统一使用参数化查询处理所有动态条件。
+   */
   getCommentList = async (articleId, cursor, limit, replyPreviewLimit = 2) => {
     try {
       // 解析游标
@@ -24,9 +29,9 @@ class CommentService {
 
       // 确保 limit 是整数
       const limitNum = parseInt(limit, 10) + 1; // 多查一条用于判断 hasMore
+      params.push(limitNum);
 
       // 查询一级评论（comment_id IS NULL）
-      // 注意：LIMIT 直接拼接到 SQL 中，因为 MySQL2 prepared statement 对 LIMIT 参数支持有问题
       const statement = `
         SELECT 
           c.id,
@@ -43,7 +48,7 @@ class CommentService {
           AND c.comment_id IS NULL
           ${cursorCondition}
         ORDER BY c.create_at DESC, c.id DESC
-        LIMIT ${limitNum}
+        LIMIT ?
       `;
 
       const [comments] = await connection.execute(statement, params);
@@ -145,7 +150,8 @@ class CommentService {
   };
 
   /**
-   * 获取回复预览（用于一级评论下的前N条回复）
+   * 重构说明：
+   * 1. 将 LIMIT 的硬拼接改为占位符 ?。
    */
   getReplyPreview = async (commentId, limit) => {
     try {
@@ -169,10 +175,10 @@ class CommentService {
         LEFT JOIN profile p ON u.id = p.user_id
         WHERE c.comment_id = ?
         ORDER BY c.create_at ASC
-        LIMIT ${limitNum}
+        LIMIT ?
       `;
 
-      const [replies] = await connection.execute(statement, [commentId]);
+      const [replies] = await connection.execute(statement, [commentId, limitNum]);
 
       replies.forEach((reply) => {
         if (reply.status) {
@@ -188,7 +194,8 @@ class CommentService {
   };
 
   /**
-   * 获取某条评论的全部回复（分页）
+   * 重构说明：
+   * 1. 将 LIMIT 的硬拼接改为占位符 ?。
    */
   getReplies = async (commentId, cursor, limit) => {
     try {
@@ -202,6 +209,7 @@ class CommentService {
       }
 
       const limitNum = parseInt(limit, 10) + 1; // 多查一条用于判断 hasMore
+      params.push(limitNum);
 
       const statement = `
         SELECT 
@@ -223,7 +231,7 @@ class CommentService {
         WHERE c.comment_id = ?
           ${cursorCondition}
         ORDER BY c.create_at ASC, c.id ASC
-        LIMIT ${limitNum}
+        LIMIT ?
       `;
 
       const [replies] = await connection.execute(statement, params);

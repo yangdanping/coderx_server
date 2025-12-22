@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const authService = require('../service/auth.service');
 const errorTypes = require('../constants/error-types');
-const { emitErrMsg } = require('../utils');
+const Utils = require('../utils');
 const { PUBLIC_KEY } = require('../app/config');
 const Result = require('../app/Result');
 
@@ -9,7 +9,7 @@ const Result = require('../app/Result');
 很重要!很常用!加了该中间件的接口每次请求都会验证是否有token/token是否过期 */
 const verifyAuth = async (ctx, next) => {
   const authorization = ctx.headers.authorization;
-  if (!authorization) return emitErrMsg(ctx, errorTypes.UNAUTH); //若header中没有携带token信息,则报错无效的token
+  if (!authorization) return Utils.emitErrMsg(ctx, errorTypes.UNAUTH); //若header中没有携带token信息,则报错无效的token
   const token = authorization.replace('Bearer ', '');
   // console.log('拿到了token', token);
   // 2.验证token(记得导入之前设置好的公钥,拿到的结果是之前颁发token时携带的数据(id/name/颁发时间/过期时间))
@@ -20,7 +20,7 @@ const verifyAuth = async (ctx, next) => {
     console.log('verifyAuth 验证授权中间件 用户信息', ctx.user);
     await next(); //验证成功,则直接调用next
   } catch (error) {
-    return emitErrMsg(ctx, errorTypes.UNAUTH);
+    return Utils.emitErrMsg(ctx, errorTypes.UNAUTH);
   }
 };
 
@@ -46,7 +46,7 @@ const verifyPermission = async (ctx, next) => {
     const isPermission = await authService.checkPermission(tableName, dataId, userId);
     if (!isPermission) throw new Error(); //抛出异常后直接到catch
   } catch (error) {
-    return emitErrMsg(ctx, errorTypes.UNPERMISSION);
+    return Utils.emitErrMsg(ctx, errorTypes.UNPERMISSION);
   }
   await next(); //验证成功,则直接调用next
 };

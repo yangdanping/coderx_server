@@ -1,6 +1,6 @@
 const errorTypes = require('../constants/error-types');
 const userService = require('../service/user.service.js');
-const { emitErrMsg, hashPwd, comparePwd } = require('../utils');
+const Utils = require('../utils');
 
 // ★1.用户注册验证中间件---------------------------------------------------
 const verifyUserRegister = async (ctx, next) => {
@@ -9,7 +9,7 @@ const verifyUserRegister = async (ctx, next) => {
   // 2.判断用户名/密码不能为空(null/undefined/空字符串取反都是true,都会进到这里面来)
   if (!name || !password) {
     console.log(`verifyUserRegister<用户名/密码>校验---用户名${name ? name : '为空'},用户密码${password ? password : '为空'}`);
-    return emitErrMsg(ctx, errorTypes.NAME_OR_PWD_IS_INCORRECT); // emit错误信息,在另外一个地方通过ctx.app.on拿到这个错误信息,而且return后,后续的代码都不会执行了
+    return Utils.emitErrMsg(ctx, errorTypes.NAME_OR_PWD_IS_INCORRECT); // emit错误信息,在另外一个地方通过ctx.app.on拿到这个错误信息,而且return后,后续的代码都不会执行了
   } else {
     console.log('verifyUserRegister<用户名/密码>校验---用户名/密码不为空,可进行用户<存在>校验');
   }
@@ -17,7 +17,7 @@ const verifyUserRegister = async (ctx, next) => {
   const user = await userService.getUserByName(name); //若没查到,则user为undefined
   if (user) {
     console.log(`verifyUserSignin<存在>校验---根据用户名查找到同名用户`);
-    return emitErrMsg(ctx, errorTypes.USERNAME_EXISTS);
+    return Utils.emitErrMsg(ctx, errorTypes.USERNAME_EXISTS);
   } else {
     console.log('verifyUserSignin<存在>校验---该用户是新用户,可进行注册');
     await next();
@@ -28,7 +28,7 @@ const verifyUserRegister = async (ctx, next) => {
 const encryptUserPwd = async (ctx, next) => {
   let { password } = ctx.request.body;
   // 使用 Bcrypt 加密
-  ctx.request.body.password = hashPwd(password);
+  ctx.request.body.password = Utils.hashPwd(password);
   await next();
 };
 
@@ -41,7 +41,7 @@ const verifyUserLogin = async (ctx, next) => {
   // 2.判断用户名/密码是否为空,一旦为空,后面的校验也就不用再进行,直接退出函数
   if (!name || !password) {
     console.log(`verifyUserLogin<用户名/密码>校验---用户名${name ? name : '为空'},用户密码${password ? password : '为空'}`);
-    return emitErrMsg(ctx, errorTypes.NAME_OR_PWD_IS_INCORRECT);
+    return Utils.emitErrMsg(ctx, errorTypes.NAME_OR_PWD_IS_INCORRECT);
   } else {
     console.log('verifyUserLogin<用户名/密码>校验---用户名/密码不为空,可进行用户<存在>校验');
   }
@@ -50,16 +50,16 @@ const verifyUserLogin = async (ctx, next) => {
   console.log(user);
   if (!user) {
     console.log('verifyUserLogin<存在>校验---该用户不存在,登陆失败');
-    return emitErrMsg(ctx, errorTypes.USER_DOES_NOT_EXISTS);
+    return Utils.emitErrMsg(ctx, errorTypes.USER_DOES_NOT_EXISTS);
   } else {
     console.log('verifyUserLogin<存在>校验---该用户存在,可进行加密校验');
   }
 
   // 4.判断用户输入的原始密码是否和数据库中的加密后的密码(user.password)一致
-  const isMatch = comparePwd(password, user.password);
+  const isMatch = Utils.comparePwd(password, user.password);
 
   if (!isMatch) {
-    return emitErrMsg(ctx, errorTypes.PWD_IS_INCORRECT);
+    return Utils.emitErrMsg(ctx, errorTypes.PWD_IS_INCORRECT);
   } else {
     ctx.user = user; //颁发令牌的前期工作,user作为令牌的payload
     await next();

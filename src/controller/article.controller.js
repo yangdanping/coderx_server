@@ -5,7 +5,7 @@ const userService = require('../service/user.service.js');
 const fileService = require('../service/file.service.js');
 const historyService = require('../service/history.service.js');
 const { IMG_PATH, VIDEO_PATH } = require('../constants/file-path');
-const { removeHTMLTag, getPaginationParams } = require('../utils');
+const Utils = require('../utils');
 const Result = require('../app/Result');
 const deleteFile = require('../utils/deleteFile');
 class ArticleController {
@@ -81,7 +81,7 @@ class ArticleController {
     // 1.获取文章列表的偏离量和数据长度
     console.log('getList ctx.query', ctx.query);
     // const { offset, limit, tagId, userId, pageOrder, idList, keywords } = ctx.query;
-    const { offset, limit } = getPaginationParams(ctx);
+    const { offset, limit } = Utils.getPaginationParams(ctx);
     const { tagId, userId, pageOrder, idList, keywords } = ctx.query;
     const userCollectedIds = idList?.length ? JSON.parse(idList) : [];
     // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
@@ -91,7 +91,7 @@ class ArticleController {
       result.forEach((article) => {
         if (!article.status) {
           // 清理HTML标签并截取内容长度
-          article.content = removeHTMLTag(article.content);
+          article.content = Utils.removeHTMLTag(article.content);
           if (article.content.length > 50) {
             article.content = article.content.slice(0, 50);
           }
@@ -100,16 +100,15 @@ class ArticleController {
           article.title = article.content = '文章已被封禁';
         }
       });
-      const isQuery = tagId || userId || keywords;
-      // 如果是有查询条件,则查询条件的结果长度就是总条数,否则查询总条数
-      let total = isQuery ? result.length : await articleService.getTotal();
+      // 统一使用带条件的 getTotal 查询总数（支持搜索分页）
+      let total = await articleService.getTotal(tagId, userId, userCollectedIds, keywords);
       ctx.body = result ? Result.success({ result, total }) : Result.fail('获取文章列表数据失败!');
     } else {
       ctx.body = Result.fail('获取文章列表失败!');
     }
   };
   getRecommendList = async (ctx, next) => {
-    const { offset, limit } = getPaginationParams(ctx);
+    const { offset, limit } = Utils.getPaginationParams(ctx);
     const result = await articleService.getRecommendArticleList(offset, limit);
     ctx.body = result ? Result.success(result) : Result.fail('获取推荐文章列表失败!');
   };

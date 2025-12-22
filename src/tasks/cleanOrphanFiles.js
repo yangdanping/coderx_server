@@ -14,6 +14,7 @@ const cron = require('node-cron');
 const connection = require('../app/database');
 const fs = require('fs');
 const path = require('path');
+const Utils = require('../utils');
 
 // 配置：通过环境变量控制执行频率
 // 测试模式：export CLEAN_CRON_MODE=test  （每3s执行，3秒后清理）
@@ -199,8 +200,7 @@ const cleanOrphanFiles = async (fileType, method = 'cron') => {
 
     // 4. 删除数据库记录（使用参数化查询防止 SQL 注入）
     const fileIds = orphanFiles.map((file) => file.id);
-    const placeholders = fileIds.map(() => '?').join(',');
-    const [deleteResult] = await conn.execute(`DELETE FROM file WHERE id IN (${placeholders})`, fileIds);
+    const [deleteResult] = await conn.execute(`DELETE FROM file WHERE ${Utils.formatInClause('id', fileIds, '')}`, fileIds);
 
     // 5. 记录清理日志（可选，需要先创建 cleanup_log 表）
     // try {
