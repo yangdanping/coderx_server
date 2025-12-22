@@ -1,7 +1,7 @@
 const commentService = require('../service/comment.service.js');
 const userService = require('../service/user.service.js');
 const Result = require('../app/Result');
-const { removeHTMLTag, getPaginationParams } = require('../utils');
+const Utils = require('../utils');
 
 class CommentController {
   /**
@@ -10,7 +10,7 @@ class CommentController {
    */
   getCommentList = async (ctx) => {
     const { articleId, cursor, userId } = ctx.query;
-    const { offset, limit } = getPaginationParams(ctx);
+    const { offset, limit } = Utils.getPaginationParams(ctx);
 
     // 情况1：获取用户的评论列表（标准分页）
     if (userId) {
@@ -19,7 +19,7 @@ class CommentController {
         result.forEach((comment) => {
           if (!comment.status) {
             // 清理HTML标签并截取内容长度
-            comment.content = removeHTMLTag(comment.content);
+            comment.content = Utils.removeHTMLTag(comment.content);
             if (comment.content.length > 50) {
               comment.content = comment.content.slice(0, 50);
             }
@@ -66,7 +66,7 @@ class CommentController {
   getReplies = async (ctx) => {
     const { commentId } = ctx.params;
     const { cursor } = ctx.query;
-    const { limit } = getPaginationParams(ctx);
+    const { limit } = Utils.getPaginationParams(ctx);
 
     try {
       const result = await commentService.getReplies(commentId, cursor || null, Number(limit) || 10);

@@ -88,21 +88,94 @@ class UserService {
       console.log(error);
     }
   };
+  /**
+   * 重构说明：
+   * 1. 采用更安全的方式处理动态列更新。
+   * 2. 虽然列名通常由后端控制，但使用参数化查询处理所有值。
+   */
   updateProfileById = async (userId, profile) => {
     try {
-      let updateValue = [];
-      Object.keys(profile).forEach((key) => updateValue.push(profile[key]));
-      const updateItem = Object.keys(profile).join(' = ?,').concat(' = ?');
+      const keys = Object.keys(profile);
+      if (keys.length === 0) return null;
+
+      const updateItem = keys.map((key) => `${key} = ?`).join(', ');
+      const updateValues = Object.values(profile);
       const statement = `UPDATE profile SET ${updateItem} WHERE user_id = ?;`;
-      console.log(statement);
-      console.log([...updateValue, userId]);
-      const [result] = await connection.execute(statement, [...updateValue, userId]);
+
+      const [result] = await connection.execute(statement, [...updateValues, userId]);
       return result;
     } catch (error) {
       console.log(error);
     }
   };
+
+  // getCommentById = async (userId, offset, limit) => {
+  //   try {
+  //     const statement = `
+  //     SELECT c.id, a.title,c.content, c.comment_id commentId, c.create_at createAt,
+  //     JSON_OBJECT('id', u.id, 'name', u.name,'avatarUrl',p.avatar_url) user,
+  //     COUNT(cl.user_id) likes
+  //     FROM comment c
+  //     LEFT JOIN article a ON c.article_id = a.id
+  //     LEFT JOIN user u ON u.id = c.user_id
+  //     LEFT JOIN profile p ON u.id = p.user_id
+  //     LEFT JOIN comment_like cl ON c.id = cl.comment_id
+  //     WHERE u.id LIKE '%${userId}%'
+  //     GROUP BY c.id
+  //     ORDER BY c.update_at DESC;
+  //     LIMIT ?,?;
+  //     `;
+  //     // const statement = `
+  //     // SELECT a.id id,a.title title,c.content content,c.create_at createAt
+  //     // FROM comment c
+  //     // LEFT JOIN article a
+  //     // ON c.article_id = a.id
+  //     // WHERE c.user_id = ?
+  //     // LIMIT ?,?;
+  //     // `;
+  //     const [result] = await connection.execute(statement, [userId, offset, limit]);
+  //     return result;
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
+
+  /**
+   * 重构说明：
+   * 1. 修复 LIKE 子句中的 SQL 注入风险，改用 ? 占位符。
+   * 2. 移除 SQL 语句中多余的分号。
+   */
+  getCommentById = async (userId, offset, limit) => {
+    try {
+      const statement = `
+      SELECT c.id, a.title,c.content, c.comment_id commentId, c.create_at createAt,
+      JSON_OBJECT('id', u.id, 'name', u.name,'avatarUrl',p.avatar_url) user,
+      COUNT(cl.user_id) likes
+      FROM comment c
+      LEFT JOIN article a ON c.article_id = a.id
+      LEFT JOIN user u ON u.id = c.user_id
+      LEFT JOIN profile p ON u.id = p.user_id
+      LEFT JOIN comment_like cl ON c.id = cl.comment_id
+      WHERE u.id = ?
+      GROUP BY c.id
+      ORDER BY c.update_at DESC
+      LIMIT ?,?;
+      `;
+      const [result] = await connection.execute(statement, [userId, offset, limit]);
+      return result;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  /**
+   * 重构说明：
+   * 1. 增加表名白名单校验。
+   */
   hasLike = async (tableName, dataId, userId) => {
+    const whiteList = ['article', 'comment', 'video'];
+    if (!whiteList.includes(tableName)) return false;
+
     try {
       const statement = `SELECT * FROM ${tableName}_like WHERE ${tableName}_id = ? AND user_id = ?;`;
       const [result] = await connection.execute(statement, [dataId, userId]);
@@ -111,7 +184,15 @@ class UserService {
       console.log(error);
     }
   };
+
+  /**
+   * 重构说明：
+   * 1. 增加表名白名单校验。
+   */
   changeLike = async (tableName, dataId, userId, isLike) => {
+    const whiteList = ['article', 'comment', 'video'];
+    if (!whiteList.includes(tableName)) return null;
+
     try {
       const statement = !isLike
         ? `INSERT INTO ${tableName}_like (${tableName}_id,user_id) VALUES (?,?);`
@@ -122,6 +203,7 @@ class UserService {
       console.log(error);
     }
   };
+
   getLikedById = async (userId) => {
     try {
       const statement = `
@@ -142,6 +224,7 @@ class UserService {
       console.log(error);
     }
   };
+
   hasFollowed = async (userId, followerId) => {
     try {
       const statement = `SELECT * FROM user_follow WHERE user_id = ? AND follower_id= ?;`;
@@ -151,6 +234,7 @@ class UserService {
       console.log(error);
     }
   };
+
   follow = async (userId, followerId) => {
     try {
       const statement = `INSERT INTO user_follow (user_id,follower_id) VALUES (?,?);`;
@@ -160,6 +244,7 @@ class UserService {
       console.log(error);
     }
   };
+
   unfollow = async (userId, followerId) => {
     try {
       const statement = `DELETE FROM user_follow WHERE user_id = ? AND follower_id = ?;`;
@@ -169,6 +254,7 @@ class UserService {
       console.log(error);
     }
   };
+
   getFollowInfo = async (userId) => {
     try {
       const statement = `
@@ -190,20 +276,7 @@ class UserService {
       console.log(error);
     }
   };
-  // async getArticleById(userId, offset, limit) {
-  //   try {
-  //     const statement = `
-  //     SELECT a.id id,a.title title,a.content content,a.create_at createAt
-  //     FROM article a
-  //     WHERE a.user_id = ?
-  //     LIMIT ?,?;
-  //     `;
-  //     const [result] = await connection.execute(statement, [userId, offset, limit]);
-  //     return result;
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // }
+
   getArticleByCollectId = async (userId, collectId, offset, limit) => {
     try {
       const statement = `
@@ -215,36 +288,6 @@ class UserService {
       LIMIT ?,?;
       `;
       const [result] = await connection.execute(statement, [userId, collectId, offset, limit]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  getCommentById = async (userId, offset, limit) => {
-    try {
-      const statement = `
-      SELECT c.id, a.title,c.content, c.comment_id commentId, c.create_at createAt,
-      JSON_OBJECT('id', u.id, 'name', u.name,'avatarUrl',p.avatar_url) user,
-      COUNT(cl.user_id) likes
-      FROM comment c
-      LEFT JOIN article a ON c.article_id = a.id
-      LEFT JOIN user u ON u.id = c.user_id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN comment_like cl ON c.id = cl.comment_id
-      WHERE u.id LIKE '%${userId}%'
-      GROUP BY c.id
-      ORDER BY c.update_at DESC;
-      LIMIT ?,?;
-      `;
-      // const statement = `
-      // SELECT a.id id,a.title title,c.content content,c.create_at createAt
-      // FROM comment c
-      // LEFT JOIN article a
-      // ON c.article_id = a.id
-      // WHERE c.user_id = ?
-      // LIMIT ?,?;
-      // `;
-      const [result] = await connection.execute(statement, [userId, offset, limit]);
       return result;
     } catch (error) {
       console.log(error);

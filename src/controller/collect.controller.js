@@ -1,7 +1,7 @@
 const collectService = require('../service/collect.service.js');
 const userService = require('../service/user.service.js');
 const Result = require('../app/Result');
-const { getPaginationParams } = require('../utils');
+const Utils = require('../utils');
 
 class collectController {
   addCollect = async (ctx, next) => {
@@ -13,7 +13,7 @@ class collectController {
   getList = async (ctx, next) => {
     const { userId } = ctx.params;
     // const { offset, limit } = ctx.query;
-    const { offset, limit } = getPaginationParams(ctx);
+    const { offset, limit } = Utils.getPaginationParams(ctx);
     const result = await collectService.getCollectList(userId, offset, limit);
     ctx.body = result ? Result.success(result) : Result.fail('获取收藏夹列表失败!');
   };

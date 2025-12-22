@@ -1,5 +1,5 @@
 const errorTypes = require('../constants/error-types');
-const { emitErrMsg } = require('../utils');
+const Utils = require('../utils');
 const collectService = require('../service/collect.service.js');
 
 const verifycollectExists = async (ctx, next) => {
@@ -8,7 +8,7 @@ const verifycollectExists = async (ctx, next) => {
   const { name } = ctx.request.body;
   const tagResult = await collectService.getCollectByName(userId, name);
   if (tagResult && tagResult.name.toLowerCase() === name.toLowerCase()) {
-    emitErrMsg(ctx, errorTypes.NAME_EXISTS);
+    Utils.emitErrMsg(ctx, errorTypes.NAME_EXISTS);
   } else {
     await next();
   }

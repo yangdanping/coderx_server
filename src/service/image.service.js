@@ -1,4 +1,5 @@
 const { connection } = require('../app');
+const Utils = require('../utils');
 
 /**
  * 图片服务层
@@ -98,8 +99,8 @@ class ImageService {
 
       // 4. 关联新的图片到该文章
       if (imageIds.length > 0) {
-        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE id IN (${imageIds.join(',')}) AND file_type = 'image';`;
-        const [result4] = await conn.execute(updateArticleStatement, [articleId]);
+        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE ${Utils.formatInClause('id', imageIds, '')} AND file_type = 'image';`;
+        const [result4] = await conn.execute(updateArticleStatement, [articleId, ...imageIds]);
         console.log(`✅ 步骤4 - 关联新图片: ${result4.affectedRows} 条记录`);
       }
 
@@ -143,12 +144,16 @@ class ImageService {
    * 根据ID删除图片（包含元数据）
    * @param {Array<number>} imageIds - 图片ID数组
    * @returns {Promise} 删除结果
+   *
+   * 重构说明：
+   * 1. 采用 ? 占位符处理 IN 子句。
    */
   deleteImages = async (imageIds) => {
+    if (!imageIds || imageIds.length === 0) return null;
     try {
       // 由于外键级联删除，只需删除 file 表记录，image_meta 会自动删除
-      const statement = `DELETE FROM file WHERE id IN (${imageIds.join(',')}) AND file_type = 'image';`;
-      const [result] = await connection.execute(statement);
+      const statement = `DELETE FROM file WHERE ${Utils.formatInClause('id', imageIds, '')} AND file_type = 'image';`;
+      const [result] = await connection.execute(statement, imageIds);
       return result;
     } catch (error) {
       console.error('deleteImages error:', error);
@@ -160,11 +165,15 @@ class ImageService {
    * 根据ID查询图片文件名（用于删除物理文件）
    * @param {Array<number>} imageIds - 图片ID数组
    * @returns {Promise<Array>} 图片信息数组
+   *
+   * 重构说明：
+   * 1. 采用 ? 占位符处理 IN 子句。
    */
   findImagesByIds = async (imageIds) => {
+    if (!imageIds || imageIds.length === 0) return [];
     try {
-      const statement = `SELECT f.filename FROM file f WHERE f.id IN (${imageIds.join(',')}) AND f.file_type = 'image';`;
-      const [result] = await connection.execute(statement);
+      const statement = `SELECT f.filename FROM file f WHERE ${Utils.formatInClause('f.id', imageIds, '')} AND f.file_type = 'image';`;
+      const [result] = await connection.execute(statement, imageIds);
       return result;
     } catch (error) {
       console.error('findImagesByIds error:', error);

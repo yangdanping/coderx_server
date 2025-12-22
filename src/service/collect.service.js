@@ -1,4 +1,5 @@
 const { connection } = require('../app');
+const Utils = require('../utils');
 
 class CollectService {
   addCollect = async (userId, name) => {
@@ -58,9 +59,10 @@ class CollectService {
   };
 
   removeCollectArticle = async (idList) => {
+    if (!idList || idList.length === 0) return null;
     try {
-      const statement = `DELETE FROM article_collect WHERE article_id IN (${idList.join(',')});`;
-      const [result] = await connection.execute(statement, [idList]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
+      const statement = `DELETE FROM article_collect WHERE ${Utils.formatInClause('article_id', idList, '')};`;
+      const [result] = await connection.execute(statement, idList);
       return result;
     } catch (error) {
       console.log(error);

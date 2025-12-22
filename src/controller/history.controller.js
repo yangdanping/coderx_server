@@ -1,5 +1,5 @@
 const historyService = require('../service/history.service');
-const { removeHTMLTag } = require('../utils');
+const Utils = require('../utils');
 const Result = require('../app/Result');
 
 class HistoryController {
@@ -31,7 +31,7 @@ class HistoryController {
         historyList.forEach((item) => {
           if (!item.status) {
             // 清理HTML标签并截取内容长度
-            item.content = removeHTMLTag(item.content);
+            item.content = Utils.removeHTMLTag(item.content);
             if (item.content.length > 50) {
               item.content = item.content.slice(0, 50);
             }

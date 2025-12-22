@@ -1,4 +1,5 @@
 const { connection } = require('../app');
+const Utils = require('../utils');
 
 /**
  * 视频服务层
@@ -194,8 +195,8 @@ class VideoService {
 
       // 3. 关联新的视频到该文章
       if (videoIds.length > 0) {
-        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE id IN (${videoIds.join(',')}) AND file_type = 'video';`;
-        const [result3] = await conn.execute(updateArticleStatement, [articleId]);
+        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE ${Utils.formatInClause('id', videoIds, '')} AND file_type = 'video';`;
+        const [result3] = await conn.execute(updateArticleStatement, [articleId, ...videoIds]);
         console.log(`✅ 步骤3 - 关联新视频: ${result3.affectedRows} 条记录`);
       }
 
@@ -226,12 +227,16 @@ class VideoService {
    * 根据ID删除视频（包含元数据和封面）
    * @param {Array<number>} videoIds - 视频ID数组
    * @returns {Promise} 删除结果
+   *
+   * 重构说明：
+   * 1. 采用 ? 占位符处理 IN 子句。
    */
   deleteVideos = async (videoIds) => {
+    if (!videoIds || videoIds.length === 0) return null;
     try {
       // 由于外键级联删除，只需删除 file 表记录，video_meta 会自动删除
-      const statement = `DELETE FROM file WHERE id IN (${videoIds.join(',')}) AND file_type = 'video';`;
-      const [result] = await connection.execute(statement);
+      const statement = `DELETE FROM file WHERE ${Utils.formatInClause('id', videoIds, '')} AND file_type = 'video';`;
+      const [result] = await connection.execute(statement, videoIds);
       return result;
     } catch (error) {
       console.error('deleteVideos error:', error);
@@ -243,16 +248,20 @@ class VideoService {
    * 根据ID查询视频信息（用于删除物理文件）
    * @param {Array<number>} videoIds - 视频ID数组
    * @returns {Promise<Array>} 视频信息数组（包含poster）
+   *
+   * 重构说明：
+   * 1. 采用 ? 占位符处理 IN 子句。
    */
   findVideosByIds = async (videoIds) => {
+    if (!videoIds || videoIds.length === 0) return [];
     try {
       const statement = `
         SELECT f.filename, vm.poster 
         FROM file f
         LEFT JOIN video_meta vm ON f.id = vm.file_id
-        WHERE f.id IN (${videoIds.join(',')}) AND f.file_type = 'video';
+        WHERE ${Utils.formatInClause('f.id', videoIds, '')} AND f.file_type = 'video';
       `;
-      const [result] = await connection.execute(statement);
+      const [result] = await connection.execute(statement, videoIds);
       return result;
     } catch (error) {
       console.error('findVideosByIds error:', error);
