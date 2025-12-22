@@ -255,7 +255,7 @@ class ArticleService {
 
       console.log(`删除文章 ${articleId}:`, {
         图片数量: imagesToDelete.length,
-        视频数量: videosToDelete.length
+        视频数量: videosToDelete.length,
       });
 
       // 3. 先删除 file 表中的所有关联记录（包括图片和视频）

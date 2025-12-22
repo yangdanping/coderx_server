@@ -15,5 +15,5 @@ const verifycollectExists = async (ctx, next) => {
 };
 
 module.exports = {
-  verifycollectExists
+  verifycollectExists,
 };

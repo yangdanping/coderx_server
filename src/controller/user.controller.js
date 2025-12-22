@@ -19,7 +19,7 @@ class UserContoller {
       expiresIn: 60 * 60 * 24, //设置24小时后过期
       // expiresIn: 10, //测试用,X秒后过期
       algorithm: 'RS256', //设置RS256非对称加密算法
-      allowInsecureKeySizes: true //9版本要加上
+      allowInsecureKeySizes: true, //9版本要加上
     });
     // 3.向客户端返回id,name,token(过期时间会自动添加到 Payload ,也就是jwt的第二个部分)
     // ctx.body = token ? Result.success({ id, name }, 0, token) : Result.fail('生成token失败');

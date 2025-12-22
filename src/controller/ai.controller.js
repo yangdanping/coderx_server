@@ -13,7 +13,7 @@ class AiController {
         models,
         status: isHealthy ? 'online' : 'offline',
         message: isHealthy ? 'AI service is running' : 'AI service is not available',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     } catch (error) {
       ctx.status = 503;
@@ -21,7 +21,7 @@ class AiController {
         models: [],
         status: 'offline',
         message: error.message,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   };
@@ -75,7 +75,7 @@ class AiController {
           success: false,
           message: error.message,
           code: error.code || 'AI_SERVICE_ERROR',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       } else {
         // 如果已经开始流式传输，尝试结束响应

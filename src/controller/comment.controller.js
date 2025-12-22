@@ -51,7 +51,7 @@ class CommentController {
 
       ctx.body = Result.success({
         ...result,
-        totalCount
+        totalCount,
       });
     } catch (error) {
       console.error('getCommentList error:', error);
@@ -120,7 +120,7 @@ class CommentController {
         const totalCount = await commentService.getTotalCount(articleId);
         ctx.body = Result.success({
           comment,
-          totalCount
+          totalCount,
         });
       } else {
         ctx.body = Result.fail('发表评论失败');
@@ -152,7 +152,7 @@ class CommentController {
         const totalCount = await commentService.getTotalCount(articleId);
         ctx.body = Result.success({
           reply,
-          totalCount
+          totalCount,
         });
       } else {
         ctx.body = Result.fail('回复评论失败');
@@ -185,7 +185,7 @@ class CommentController {
       // 返回正确格式：liked 表示操作后的状态
       ctx.body = Result.success({
         liked: !isLiked, // 操作后的状态：原来没点赞现在点了 = true，原来点了现在取消 = false
-        likes: likes
+        likes: likes,
       });
     } catch (error) {
       console.error('likeComment error:', error);
@@ -264,7 +264,7 @@ class CommentController {
         const totalCount = await commentService.getTotalCount(comment.articleId);
         ctx.body = Result.success({
           deletedComment: result,
-          totalCount
+          totalCount,
         });
       } else {
         ctx.body = Result.fail('删除评论失败');

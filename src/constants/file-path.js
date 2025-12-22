@@ -5,5 +5,5 @@ const VIDEO_PATH = './public/video';
 module.exports = {
   AVATAR_PATH,
   IMG_PATH,
-  VIDEO_PATH
+  VIDEO_PATH,
 };

@@ -44,7 +44,7 @@ class ArticleController {
     // 5.统一返回格式：code=0 表示成功，data 中包含业务状态
     ctx.body = Result.success({
       liked: !isLiked, // 操作后的状态：true表示已点赞，false表示已取消
-      likes: likeInfo.likes || 0 // 点赞总数
+      likes: likeInfo.likes || 0, // 点赞总数
     });
   };
 
@@ -244,7 +244,7 @@ class ArticleController {
         '.ogg': 'video/ogg',
         '.jpg': 'image/jpeg',
         '.jpeg': 'image/jpeg',
-        '.png': 'image/png'
+        '.png': 'image/png',
       };
 
       const contentType = mimeTypes[ext] || 'application/octet-stream';

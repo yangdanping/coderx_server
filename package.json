@@ -7,7 +7,8 @@
     "serve": "nodemon ./src/main.js",
     "socket": "nodemon ./src/socket_server.js",
     "dev": "concurrently \"npm run serve\" \"npm run socket\"",
-    "p": "prettier --write ."
+    "prettier": "prettier --write .",
+    "update:prettier": "git fetch https://github.com/yangdanping/prettier_config_repo.git main && git checkout FETCH_HEAD -- .prettierrc .prettierignore"
   },
   "keywords": [],
   "author": "",

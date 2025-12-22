@@ -45,7 +45,7 @@ class HistoryController {
           result: historyList,
           total: total,
           pageNum: Math.floor(offset / limit) + 1,
-          pageSize: parseInt(limit)
+          pageSize: parseInt(limit),
         });
       } else {
         ctx.body = Result.fail('获取浏览历史失败');

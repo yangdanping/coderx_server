@@ -129,7 +129,7 @@ class ImageService {
         success: true,
         affectedRows: imageIds.length,
         deletedCount: deletedImageIds.length,
-        coverSet: !!coverImageId
+        coverSet: !!coverImageId,
       };
     } catch (error) {
       await conn.rollback();

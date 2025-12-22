@@ -27,7 +27,7 @@ class ImageController {
         if (result) {
           const obj = {
             result,
-            url: `${baseURL}/article/images/${filename}`
+            url: `${baseURL}/article/images/${filename}`,
           };
           savedImgs.push(obj);
         } else {

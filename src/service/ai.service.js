@@ -8,7 +8,7 @@ const Utils = require('../utils');
 // 远程(win本): http://192.168.3.10:11434/v1
 const ollama = createOpenAI({
   baseURL: ollamaBaseURL,
-  apiKey: 'ollama' // Ollama 不需要真实的 API key，但 SDK 要求提供
+  apiKey: 'ollama', // Ollama 不需要真实的 API key，但 SDK 要求提供
 });
 
 console.log(`Ollama 服务地址: ${ollamaBaseURL}`);
@@ -21,7 +21,7 @@ class AiService {
       const baseUrl = ollamaBaseURL.replace('/v1', '');
       const res = await fetch(`${baseUrl}/api/tags`, {
         method: 'GET',
-        signal: AbortSignal.timeout(5000) // 设定5秒超时
+        signal: AbortSignal.timeout(5000), // 设定5秒超时
       });
 
       if (!res.ok) {
@@ -34,7 +34,7 @@ class AiService {
         .toSorted((a, b) => new Date(a.modified_at) - new Date(b.modified_at))
         .map(({ model }) => ({
           name: model.split(':')[0],
-          value: model
+          value: model,
         }));
       console.log(`✅ [Health Check] Ollama is running, models: ${JSON.stringify(models)}`);
       return [true, models];
@@ -82,7 +82,7 @@ class AiService {
         system: systemPrompt,
         messages: convertToModelMessages(managedMessages),
         // 可选：设置更大的上下文窗口（需要 Ollama 支持）
-        maxTokens: 4096 // 最大输出 tokens
+        maxTokens: 4096, // 最大输出 tokens
       });
 
       const endTime = Date.now();
