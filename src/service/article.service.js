@@ -298,6 +298,15 @@ class ArticleService {
       console.log(error);
     }
   };
+  clearTag = async (articleId) => {
+    try {
+      const statement = `DELETE FROM article_tag WHERE article_id = ?;`;
+      const [result] = await connection.execute(statement, [articleId]);
+      return result;
+    } catch (error) {
+      console.log(error);
+    }
+  };
   // // 批量添加标签
   // batchAddTags = async (articleId, tagIds) => {
   //   if (!tagIds || tagIds.length === 0) return null;
