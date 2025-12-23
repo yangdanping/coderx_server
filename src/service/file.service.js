@@ -1,5 +1,6 @@
 const { connection } = require('../app');
-const Utils = require('../utils');
+const { baseURL } = require('../constants/urls');
+const SqlUtils = require('../utils/SqlUtils');
 
 /**
  * 文件服务层（通用）
@@ -34,7 +35,7 @@ class FileService {
   findFileById = async (fileIds) => {
     if (!fileIds || fileIds.length === 0) return [];
     try {
-      const statement = `SELECT f.filename, f.file_type FROM file f WHERE ${Utils.formatInClause('f.id', fileIds, '')};`;
+      const statement = `SELECT f.filename, f.file_type FROM file f WHERE ${SqlUtils.queryIn('f.id', fileIds)};`;
       const [result] = await connection.execute(statement, fileIds);
       return result;
     } catch (error) {
@@ -54,7 +55,7 @@ class FileService {
   delete = async (fileIds) => {
     if (!fileIds || fileIds.length === 0) return null;
     try {
-      const statement = `DELETE FROM file f WHERE ${Utils.formatInClause('f.id', fileIds, '')};`;
+      const statement = `DELETE FROM file f WHERE ${SqlUtils.queryIn('f.id', fileIds)};`;
       const [result] = await connection.execute(statement, fileIds);
       return result;
     } catch (error) {

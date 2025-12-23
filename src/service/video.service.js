@@ -195,7 +195,7 @@ class VideoService {
 
       // 3. 关联新的视频到该文章
       if (videoIds.length > 0) {
-        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE ${Utils.formatInClause('id', videoIds, '')} AND file_type = 'video';`;
+        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE ${SqlUtils.queryIn('id', videoIds)} AND file_type = 'video';`;
         const [result3] = await conn.execute(updateArticleStatement, [articleId, ...videoIds]);
         console.log(`✅ 步骤3 - 关联新视频: ${result3.affectedRows} 条记录`);
       }
@@ -235,7 +235,7 @@ class VideoService {
     if (!videoIds || videoIds.length === 0) return null;
     try {
       // 由于外键级联删除，只需删除 file 表记录，video_meta 会自动删除
-      const statement = `DELETE FROM file WHERE ${Utils.formatInClause('id', videoIds, '')} AND file_type = 'video';`;
+      const statement = `DELETE FROM file WHERE ${SqlUtils.queryIn('id', videoIds)} AND file_type = 'video';`;
       const [result] = await connection.execute(statement, videoIds);
       return result;
     } catch (error) {
@@ -259,7 +259,7 @@ class VideoService {
         SELECT f.filename, vm.poster 
         FROM file f
         LEFT JOIN video_meta vm ON f.id = vm.file_id
-        WHERE ${Utils.formatInClause('f.id', videoIds, '')} AND f.file_type = 'video';
+        WHERE ${SqlUtils.queryIn('f.id', videoIds)} AND f.file_type = 'video';
       `;
       const [result] = await connection.execute(statement, videoIds);
       return result;

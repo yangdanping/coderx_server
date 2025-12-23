@@ -1,5 +1,7 @@
 const { connection } = require('../app');
+const { baseURL, redirectURL } = require('../constants/urls');
 const Utils = require('../utils');
+const SqlUtils = require('../utils/SqlUtils');
 
 /**
  * 图片服务层
@@ -99,7 +101,7 @@ class ImageService {
 
       // 4. 关联新的图片到该文章
       if (imageIds.length > 0) {
-        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE ${Utils.formatInClause('id', imageIds, '')} AND file_type = 'image';`;
+        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE ${SqlUtils.queryIn('id', imageIds)} AND file_type = 'image';`;
         const [result4] = await conn.execute(updateArticleStatement, [articleId, ...imageIds]);
         console.log(`✅ 步骤4 - 关联新图片: ${result4.affectedRows} 条记录`);
       }
@@ -152,7 +154,7 @@ class ImageService {
     if (!imageIds || imageIds.length === 0) return null;
     try {
       // 由于外键级联删除，只需删除 file 表记录，image_meta 会自动删除
-      const statement = `DELETE FROM file WHERE ${Utils.formatInClause('id', imageIds, '')} AND file_type = 'image';`;
+      const statement = `DELETE FROM file WHERE ${SqlUtils.queryIn('id', imageIds)} AND file_type = 'image';`;
       const [result] = await connection.execute(statement, imageIds);
       return result;
     } catch (error) {
@@ -172,7 +174,7 @@ class ImageService {
   findImagesByIds = async (imageIds) => {
     if (!imageIds || imageIds.length === 0) return [];
     try {
-      const statement = `SELECT f.filename FROM file f WHERE ${Utils.formatInClause('f.id', imageIds, '')} AND f.file_type = 'image';`;
+      const statement = `SELECT f.filename FROM file f WHERE ${SqlUtils.queryIn('f.id', imageIds)} AND f.file_type = 'image';`;
       const [result] = await connection.execute(statement, imageIds);
       return result;
     } catch (error) {

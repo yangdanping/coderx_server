@@ -1,6 +1,7 @@
 const { connection } = require('../app');
 const { baseURL, redirectURL } = require('../constants/urls');
 const Utils = require('../utils');
+const SqlUtils = require('../utils/SqlUtils');
 
 class ArticleService {
   addArticle = async (userId, title, content) => {
@@ -52,74 +53,23 @@ class ArticleService {
       console.log(error);
     }
   };
-  // getArticleList = async (offset, limit, tagId = '', userId = '', pageOrder = 'date', idList = [], keywords = '') => {
-  //   // 根据tagId查询
-  //   let queryByTag = tagId ? `WHERE tag.id = ${tagId}` : `WHERE 1=1`;
-  //   // 根据用户id查询(用于查询用户发过的文章)
-  //   let queryByUserId = userId ? `AND a.user_id = ${userId}` : '';
-  //   // 根据文章id查询(用于文章收藏)
-  //   let queryByCollectId = idList.length ? `AND a.id IN (${idList.join(',')})` : '';
-  //   // 根据文章标题查询(用于文章收藏)
-  //   let queryByTitle = keywords ? `AND a.title LIKE '%${keywords}%'` : '';
-  //   // 文章排序
-  //   let listOrder = `ORDER BY ${pageOrder === 'date' ? 'a.create_at' : 'likes+a.views+commentCount'} DESC`;
-  //   try {
-  //     const statement = `
-  //     SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-  //     JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-  //     (SELECT COUNT(al.user_id) FROM article
-  //     LEFT JOIN article_like al ON article.id = al.article_id
-  //     WHERE article.id = a.id) likes,
-  //     (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-  //     IF(COUNT(tag.id),(
-  //     SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-  //     LEFT JOIN article_tag ag ON article.id = ag.article_id
-  //     LEFT JOIN tag ON tag.id = ag.tag_id
-  //     WHERE article.id =a.id
-  //     ),NULL) tags,
-  //     (SELECT CONCAT('${baseURL}/article/images/',f.filename,'?type=small')
-  //      FROM file f
-  //      LEFT JOIN image_meta im ON f.id = im.file_id
-  //      WHERE f.article_id = a.id AND f.file_type = 'image' AND im.is_cover = TRUE
-  //      LIMIT 1) cover,
-  //     CONCAT('${redirectURL}/article/',a.id) articleUrl
-  //     FROM article a
-  //     LEFT JOIN user u ON a.user_id = u.id
-  //     LEFT JOIN profile p ON u.id = p.user_id
-  //     LEFT JOIN article_tag ag ON a.id = ag.article_id
-  //     LEFT JOIN tag ON tag.id = ag.tag_id
-  //     ${queryByTag}
-  //     ${queryByUserId}
-  //     ${queryByCollectId}
-  //     ${queryByTitle}
-  //     GROUP BY a.id
-  //     ${listOrder}
-  //     LIMIT ?,?;`;
-  //     const [result] = await connection.execute(statement, [offset, limit]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
-  //     return result; //result就是我们真实查询结果,由于查询单个取第一个结果即可
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // };
-
   /**
    * 重构说明：
    * 1. 采用与 getTotal 相同的占位符策略，彻底消除字符串拼接带来的注入风险。
-   * 2. 动态维护 values 数组，并将 offset 和 limit 追加到末尾。
+   * 2. 动态维护 queryParams 数组，并将 offset 和 limit 追加到末尾。
    */
   getArticleList = async (offset, limit, tagId = '', userId = '', pageOrder = 'date', idList = [], keywords = '') => {
     let queryByTag = tagId ? `WHERE tag.id = ?` : `WHERE 1=1`;
     let queryByUserId = userId ? `AND a.user_id = ?` : '';
-    let queryByCollectId = Utils.formatInClause('a.id', idList);
+    let queryByCollectId = SqlUtils.queryIn('a.id', idList, 'AND');
     let queryByTitle = keywords ? `AND a.title LIKE ?` : '';
     let listOrder = `ORDER BY ${pageOrder === 'date' ? 'a.create_at' : 'likes+a.views+commentCount'} DESC`;
 
-    const values = [];
-    if (tagId) values.push(tagId);
-    if (userId) values.push(userId);
-    if (idList.length) values.push(...idList);
-    if (keywords) values.push(`%${keywords}%`);
-    values.push(offset, limit);
+    const queryParams = [];
+    if (tagId) queryParams.push(tagId);
+    if (userId) queryParams.push(userId);
+    if (idList.length) queryParams.push(...idList);
+    if (keywords) queryParams.push(`%${keywords}%`);
 
     try {
       const statement = `
@@ -153,54 +103,23 @@ class ArticleService {
       GROUP BY a.id
       ${listOrder}
       LIMIT ?,?;`;
-      const [result] = await connection.execute(statement, values);
+      const [result] = await connection.execute(statement, queryParams.concat(offset, limit));
       return result;
     } catch (error) {
       console.log(error);
     }
   };
-  // getTotal = async (tagId = '', userId = '', idList = [], keywords = '') => {
-  //   // 构建与 getArticleList 相同的查询条件
-  //   let queryByTag = tagId ? `WHERE tag.id = ${tagId}` : `WHERE 1=1`;
-  //   let queryByUserId = userId ? `AND a.user_id = ${userId}` : '';
-  //   let queryByCollectId = idList.length ? `AND a.id IN (${idList.join(',')})` : '';
-  //   let queryByTitle = keywords ? `AND a.title LIKE '%${keywords}%'` : '';
-
-  //   try {
-  //     const statement = `
-  //       SELECT COUNT(DISTINCT a.id) total
-  //       FROM article a
-  //       LEFT JOIN article_tag ag ON a.id = ag.article_id
-  //       LEFT JOIN tag ON tag.id = ag.tag_id
-  //       ${queryByTag}
-  //       ${queryByUserId}
-  //       ${queryByCollectId}
-  //       ${queryByTitle};`;
-  //     const [result] = await connection.execute(statement);
-  //     const { total } = result[0];
-  //     return total;
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // };
-
-  /**
-   * 重构说明：
-   * 1. 废弃直接字符串拼接 `${}`，改用占位符 `?` 以防止 SQL 注入。
-   * 2. 动态构建 values 数组，并在 connection.execute 时作为第二个参数传入。
-   * 3. 对于 IN 子句，使用 .map(() => '?') 动态生成对应数量的占位符。
-   */
   getTotal = async (tagId = '', userId = '', idList = [], keywords = '') => {
     let queryByTag = tagId ? `WHERE tag.id = ?` : `WHERE 1=1`;
     let queryByUserId = userId ? `AND a.user_id = ?` : '';
-    let queryByCollectId = Utils.formatInClause('a.id', idList);
+    let queryByCollectId = SqlUtils.queryIn('a.id', idList, 'AND');
     let queryByTitle = keywords ? `AND a.title LIKE ?` : '';
 
-    const values = [];
-    if (tagId) values.push(tagId);
-    if (userId) values.push(userId);
-    if (idList.length) values.push(...idList);
-    if (keywords) values.push(`%${keywords}%`);
+    const queryParams = [];
+    if (tagId) queryParams.push(tagId);
+    if (userId) queryParams.push(userId);
+    if (idList.length) queryParams.push(...idList);
+    if (keywords) queryParams.push(`%${keywords}%`);
 
     try {
       const statement = `
@@ -212,7 +131,7 @@ class ArticleService {
         ${queryByUserId}
         ${queryByCollectId}
         ${queryByTitle};`;
-      const [result] = await connection.execute(statement, values);
+      const [result] = await connection.execute(statement, queryParams);
       const { total } = result[0];
       return total;
     } catch (error) {
@@ -307,20 +226,6 @@ class ArticleService {
       console.log(error);
     }
   };
-  // // 批量添加标签
-  // batchAddTags = async (articleId, tagIds) => {
-  //   if (!tagIds || tagIds.length === 0) return null;
-  //   try {
-  //     // 构造批量插入的 VALUES
-  //     const values = tagIds.map((tagId) => `(${articleId},${tagId})`).join(',');
-  //     const statement = `INSERT INTO article_tag (article_id,tag_id) VALUES ${values};`;
-  //     const [result] = await connection.execute(statement);
-  //     return result;
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // };
-
   /**
    * 重构说明：
    * 1. 批量插入使用 (?, ?) 占位符。
@@ -329,13 +234,13 @@ class ArticleService {
   batchAddTags = async (articleId, tagIds) => {
     if (!tagIds || tagIds.length === 0) return null;
     try {
-      const placeholders = tagIds.map(() => '(?, ?)').join(',');
-      const values = [];
+      const placeholders = tagIds.map(() => '(?, ?)').join(','); // 最终形成 (?, ?), (?, ?),...
+      const queryParams = [];
       tagIds.forEach((tagId) => {
-        values.push(articleId, tagId);
+        queryParams.push(articleId, tagId);
       });
       const statement = `INSERT INTO article_tag (article_id,tag_id) VALUES ${placeholders};`;
-      const [result] = await connection.execute(statement, values);
+      const [result] = await connection.execute(statement, queryParams);
       return result;
     } catch (error) {
       console.log(error);

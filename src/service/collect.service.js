@@ -1,5 +1,5 @@
 const { connection } = require('../app');
-const Utils = require('../utils');
+const SqlUtils = require('../utils/SqlUtils');
 
 class CollectService {
   addCollect = async (userId, name) => {
@@ -61,7 +61,7 @@ class CollectService {
   removeCollectArticle = async (idList) => {
     if (!idList || idList.length === 0) return null;
     try {
-      const statement = `DELETE FROM article_collect WHERE ${Utils.formatInClause('article_id', idList, '')};`;
+      const statement = `DELETE FROM article_collect WHERE ${SqlUtils.queryIn('article_id', idList)};`;
       const [result] = await connection.execute(statement, idList);
       return result;
     } catch (error) {
