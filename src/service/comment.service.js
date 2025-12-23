@@ -1,5 +1,6 @@
 const { connection } = require('../app');
 const { baseURL, redirectURL } = require('../constants/urls');
+const SqlUtils = require('../utils/SqlUtils');
 
 class CommentService {
   /**
@@ -16,30 +17,21 @@ class CommentService {
    */
   getCommentList = async (articleId, cursor, limit, replyPreviewLimit = 2) => {
     try {
-      // 解析游标
-      let cursorCondition = '';
-      const params = [articleId];
-
-      if (cursor) {
-        // 游标格式: "timestamp_id" 例如 "2024-01-01T00:00:00.000Z_123"
-        const [cursorTime, cursorId] = cursor.split('_');
-        cursorCondition = `AND (c.create_at < ? OR (c.create_at = ? AND c.id < ?))`;
-        params.push(cursorTime, cursorTime, cursorId);
-      }
+      const queryParams = [articleId];
+      const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildCursorCondition(cursor, 'DESC');
+      queryParams.push(...cursorParams);
       /* 
       为什么要多查一条 (limit + 1)？
-目的：为了高效地判断“是否还有下一页” (hasMore)。
-原理：如果不这样做，通常需要额外执行一条 COUNT 查询来计算剩余总数，这会增加数据库负担。
-逻辑：
-假设前端请求 10 条数据 (limit = 10)。
-我们向数据库请求 11 条 (limit + 1)。
-如果数据库真的返回了 11 条，说明后面肯定还有数据（hasMore = true），我们只把前 10 条返回给前端。
-如果数据库返回 10 条或更少，说明已经到底了（hasMore = false）。
+      目的：为了高效地判断“是否还有下一页” (hasMore)。
+      原理：如果不这样做，通常需要额外执行一条 COUNT 查询来计算剩余总数，这会增加数据库负担。
+      逻辑：
+      假设前端请求 10 条数据 (limit = 10)。
+      我们向数据库请求 11 条 (limit + 1)。
+      如果数据库真的返回了 11 条，说明后面肯定还有数据（hasMore = true），我们只把前 10 条返回给前端。
+      如果数据库返回 10 条或更少，说明已经到底了（hasMore = false）。
       */
-      // console.log('getCommentList 处理 limit-----', limit);
-      const limitForHasMore = String(parseInt(limit) + 1); // 多查一条用于判断 hasMore (peek check)
-      // console.log('getCommentList 处理 limitForHasMore-----', limitForHasMore);
-      params.push(limitForHasMore);
+      const limitForHasMore = String(parseInt(limit) + 1);
+      queryParams.push(limitForHasMore);
 
       // 查询一级评论（comment_id IS NULL）
       const statement = `
@@ -60,7 +52,7 @@ class CommentService {
         ORDER BY c.create_at DESC, c.id DESC
         LIMIT ?
       `;
-      const [comments] = await connection.execute(statement, params);
+      const [comments] = await connection.execute(statement, queryParams);
 
       // 判断是否有更多
       const hasMore = comments.length > limit;
@@ -75,16 +67,13 @@ class CommentService {
 
       // 为每条一级评论获取前 N 条回复预览
       for (const comment of items) {
-        comment.replies = await this.getReplyPreview(comment.id, replyPreviewLimit);
+        comment.replies = await this.getReplyPreview(comment.id, String(replyPreviewLimit));
       }
 
       // 计算下一页游标
       let nextCursor = null;
       if (hasMore && items.length > 0) {
-        const lastItem = items[items.length - 1];
-        // 把 Date 对象转成 ISO 字符串，避免 toString() 导致格式问题
-        const createAtStr = lastItem.createAt instanceof Date ? lastItem.createAt.toISOString() : lastItem.createAt;
-        nextCursor = `${createAtStr}_${lastItem.id}`;
+        nextCursor = SqlUtils.buildNextCursor(items[items.length - 1]);
       }
 
       return {
@@ -164,7 +153,6 @@ class CommentService {
    */
   getReplyPreview = async (commentId, limit) => {
     try {
-      const limitNum = parseInt(limit);
       const statement = `
         SELECT 
           c.id,
@@ -187,7 +175,7 @@ class CommentService {
         LIMIT ?
       `;
 
-      const [replies] = await connection.execute(statement, [commentId, limitNum]);
+      const [replies] = await connection.execute(statement, [commentId, limit]);
 
       replies.forEach((reply) => {
         if (reply.status) {
@@ -208,17 +196,12 @@ class CommentService {
    */
   getReplies = async (commentId, cursor, limit) => {
     try {
-      let cursorCondition = '';
-      const params = [commentId];
+      const queryParams = [commentId];
+      const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildCursorCondition(cursor, 'ASC');
+      queryParams.push(...cursorParams);
 
-      if (cursor) {
-        const [cursorTime, cursorId] = cursor.split('_');
-        cursorCondition = `AND (c.create_at > ? OR (c.create_at = ? AND c.id > ?))`;
-        params.push(cursorTime, cursorTime, cursorId);
-      }
-
-      const limitForHasMore = parseInt(limit) + 1; // 多查一条用于判断 hasMore
-      params.push(limitForHasMore);
+      const limitForHasMore = String(parseInt(limit) + 1);
+      queryParams.push(limitForHasMore);
 
       const statement = `
         SELECT 
@@ -243,7 +226,7 @@ class CommentService {
         LIMIT ?
       `;
 
-      const [replies] = await connection.execute(statement, params);
+      const [replies] = await connection.execute(statement, queryParams);
 
       const hasMore = replies.length > limit;
       const items = hasMore ? replies.slice(0, limit) : replies;
@@ -259,9 +242,7 @@ class CommentService {
 
       let nextCursor = null;
       if (hasMore && items.length > 0) {
-        const lastItem = items[items.length - 1];
-        const createAtStr = lastItem.createAt instanceof Date ? lastItem.createAt.toISOString() : lastItem.createAt;
-        nextCursor = `${createAtStr}_${lastItem.id}`;
+        nextCursor = SqlUtils.buildNextCursor(items[items.length - 1]);
       }
 
       return {
@@ -320,19 +301,19 @@ class CommentService {
   addReply = async (userId, articleId, commentId, replyId, content) => {
     try {
       let statement;
-      let params;
+      let queryParams;
 
       if (replyId) {
         // 回复的回复
         statement = `INSERT INTO comment (user_id, article_id, comment_id, reply_id, content) VALUES (?, ?, ?, ?, ?)`;
-        params = [userId, articleId, commentId, replyId, content];
+        queryParams = [userId, articleId, commentId, replyId, content];
       } else {
         // 回复一级评论
         statement = `INSERT INTO comment (user_id, article_id, comment_id, content) VALUES (?, ?, ?, ?)`;
-        params = [userId, articleId, commentId, content];
+        queryParams = [userId, articleId, commentId, content];
       }
 
-      const [result] = await connection.execute(statement, params);
+      const [result] = await connection.execute(statement, queryParams);
 
       if (result.insertId) {
         return await this.getCommentById(result.insertId);

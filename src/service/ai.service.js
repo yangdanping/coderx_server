@@ -80,7 +80,8 @@ class AiService {
       const result = await streamText({
         model: ollama.chat(model), // 明确使用 chat 方法
         system: systemPrompt,
-        messages: convertToModelMessages(managedMessages),
+        // v6 中 convertToModelMessages 返回 Promise，需要 await
+        messages: await convertToModelMessages(managedMessages),
         // 可选：设置更大的上下文窗口（需要 Ollama 支持）
         maxTokens: 4096, // 最大输出 tokens
       });

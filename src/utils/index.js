@@ -114,20 +114,6 @@ class Utils {
 
     return { offset: String(offset), limit: String(limit) };
   };
-
-  // SQL IN 子句构造工具-----------------------------
-  /**
-   * 构造 SQL 的 IN 子句占位符
-   * @param {string} column 字段名
-   * @param {Array} list 数组
-   * @param {string} prefix 前缀 (AND/OR)
-   * @returns {string} 构造好的 SQL 片段，例如 "AND id IN (?,?,?)"
-   */
-  static formatInClause = (column, list, prefix = 'AND') => {
-    if (!Array.isArray(list) || list.length === 0) return '';
-    const placeholders = list.map(() => '?').join(',');
-    return `${prefix} ${column} IN (${placeholders})`;
-  };
 }
 
 /* useRoutes避免了路由需要向下面这样在app/index中一个个导入
