@@ -16,7 +16,7 @@ class UserContoller {
     const { id, name } = ctx.user;
     // // 2.生成密钥和公钥,生成token,并传入携带的用户数据,授权中间件verifyAuth通过ctx.user = verifyResult获得这边传来的id,name
     const token = jwt.sign({ id, name }, PRIVATE_KEY, {
-      expiresIn: 60 * 60 * 24, //设置24小时后过期
+      expiresIn: 60 * 60 * 24 * 7, //设置7天后过期
       // expiresIn: 10, //测试用,X秒后过期
       algorithm: 'RS256', //设置RS256非对称加密算法
       allowInsecureKeySizes: true, //9版本要加上
