@@ -1,5 +1,4 @@
 const collectService = require('../service/collect.service.js');
-const userService = require('../service/user.service.js');
 const Result = require('../app/Result');
 const Utils = require('../utils');
 
