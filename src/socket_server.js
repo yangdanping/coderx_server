@@ -38,6 +38,8 @@ const io = new Server(httpServer, {
       'http://localhost:8080', // 本地开发
       'http://127.0.0.1:8080', // 本地开发（另一种写法）
       'http://192.168.3.96:8080', // 局域网 IP（根据实际 IP 调整）
+      'https://coderx.my', // Vercel 生产环境
+      'https://api.ydp321.asia', // Cloudflare 代理域名
       redirectURL, // 环境变量配置的源
     ],
     // 方案 2：允许所有源（仅用于开发，生产环境不安全！）
