@@ -16,6 +16,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.1",
     "@ai-sdk/openai-compatible": "^2.0.1",
+    "@koa/cors": "^5.0.0",
     "@koa/multer": "^4.0.0",
     "ai": "^6.0.3",
     "bcryptjs": "^3.0.3",
