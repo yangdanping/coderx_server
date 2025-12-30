@@ -20,7 +20,9 @@ app.use(
         'http://localhost:8080',
         'http://127.0.0.1:8080',
         'http://192.168.3.96:8080',
+        'http://95.40.29.75:8080',
         'https://coderx.my', // Vercel 生产环境
+        'https://coderx-ai.vercel.app', // Vercel 生产环境
         'https://api.ydp321.asia', // Cloudflare 代理域名
       ];
       const requestOrigin = ctx.headers.origin;
