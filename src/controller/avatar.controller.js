@@ -1,8 +1,8 @@
-const avatarService = require('../service/avatar.service');
-const userService = require('../service/user.service');
-const Result = require('../app/Result');
-const { baseURL } = require('../constants/urls');
-const deleteFile = require('../utils/deleteFile');
+const avatarService = require('@/service/avatar.service');
+const userService = require('@/service/user.service');
+const Result = require('@/app/Result');
+const { baseURL } = require('@/constants/urls');
+const deleteFile = require('@/utils/deleteFile');
 
 /**
  * 头像控制器

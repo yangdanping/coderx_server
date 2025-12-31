@@ -1,8 +1,8 @@
 const Router = require('koa-router');
 const articleRouter = new Router({ prefix: '/article' });
-const articleController = require('../controller/article.controller');
-const { verifyAuth, verifyStatus, verifyPermission } = require('../middleware/auth.middleware');
-const { verifyTagExists } = require('../middleware/tag.middleware.js');
+const articleController = require('@/controller/article.controller');
+const { verifyAuth, verifyStatus, verifyPermission } = require('@/middleware/auth.middleware');
+const { verifyTagExists } = require('@/middleware/tag.middleware.js');
 
 /* ★获取文章列表接口---------------------------------- */
 articleRouter.get('/', articleController.getList);

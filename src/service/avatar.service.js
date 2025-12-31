@@ -1,4 +1,4 @@
-const { connection } = require('../app');
+const connection = require('@/app/database');
 
 /**
  * 头像服务层

@@ -1,14 +1,14 @@
 // controller层一般处理路由中具体的逻辑--------------------
 const fs = require('fs'); //fs模块用于读取文件信息,如获取到用户头像信息后找到图像资源返回给前端
 const jwt = require('jsonwebtoken');
-const userService = require('../service/user.service');
-const articleService = require('../service/article.service');
-const fileService = require('../service/file.service');
-const avatarService = require('../service/avatar.service');
-const Utils = require('../utils');
-const { PRIVATE_KEY } = require('../app/config');
-const { AVATAR_PATH } = require('../constants/file-path');
-const Result = require('../app/Result');
+const userService = require('@/service/user.service');
+const articleService = require('@/service/article.service');
+const fileService = require('@/service/file.service');
+const avatarService = require('@/service/avatar.service');
+const Utils = require('@/utils');
+const { PRIVATE_KEY } = require('@/app/config');
+const { AVATAR_PATH } = require('@/constants/filePaths');
+const Result = require('@/app/Result');
 
 class UserContoller {
   userLogin = async (ctx, next) => {

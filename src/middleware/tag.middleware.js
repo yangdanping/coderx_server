@@ -1,4 +1,4 @@
-const tagService = require('../service/tag.service');
+const tagService = require('@/service/tag.service');
 // ★1.判断标签是否存在中间件(这个实现思路多想几遍就想通了)
 const verifyTagExists = async (ctx, next) => {
   // 1.取出要添加的所有的标签

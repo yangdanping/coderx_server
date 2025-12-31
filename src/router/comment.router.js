@@ -1,7 +1,7 @@
 const Router = require('koa-router');
 const commentRouter = new Router({ prefix: '/comment' });
-const commentController = require('../controller/comment.controller');
-const { verifyAuth, verifyStatus, verifyPermission } = require('../middleware/auth.middleware');
+const commentController = require('@/controller/comment.controller');
+const { verifyAuth, verifyStatus, verifyPermission } = require('@/middleware/auth.middleware');
 
 /**
  * 评论系统路由

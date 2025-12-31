@@ -4,13 +4,19 @@
  * 优势：可以独立启动、重启、部署，不影响主应用
  */
 
+require('module-alias/register'); // 注册路径别名 @ -> src
 const http = require('http');
 const { Server } = require('socket.io');
 const dotenv = require('dotenv');
-const { redirectURL } = require('./constants/urls');
+const path = require('path');
 
 // 加载环境变量
-dotenv.config();
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+console.log(`Socket Server 正在加载环境变量: ${envFile}`);
+
+const { redirectURL } = require('@/constants/urls');
+const { ALLOWED_ORIGINS } = require('@/constants/cors');
 
 // Socket 服务器配置
 const SOCKET_PORT = process.env.SOCKET_PORT || 8001; // 独立端口，不占用 Koa 的 APP_PORT(8000)
@@ -34,16 +40,7 @@ const httpServer = http.createServer((req, res) => {
 const io = new Server(httpServer, {
   cors: {
     // 方案 1：允许多个源（开发环境推荐）
-    origin: [
-      'http://localhost:8080', // 本地开发
-      'http://127.0.0.1:8080', // 本地开发（另一种写法）
-      'http://192.168.3.96:8080', // 局域网 IP（根据实际 IP 调整）
-      'http://95.40.29.75:8080', // 局域网 IP（根据实际 IP 调整）
-      'https://coderx.my', // Vercel 生产环境
-      'https://coderx-ai.vercel.app', // Vercel 生产环境
-      'https://api.ydp321.asia', // Cloudflare 代理域名
-      redirectURL, // 环境变量配置的源
-    ],
+    origin: ALLOWED_ORIGINS,
     // 方案 2：允许所有源（仅用于开发，生产环境不安全！）
     // origin: true,
     // 方案 3：动态验证源（最安全，推荐用于生产环境）

@@ -1,6 +1,6 @@
-const errorTypes = require('../constants/error-types');
-const Utils = require('../utils');
-const collectService = require('../service/collect.service.js');
+const errorTypes = require('@/constants/errorTypes');
+const Utils = require('@/utils');
+const collectService = require('@/service/collect.service.js');
 
 const verifycollectExists = async (ctx, next) => {
   const userId = ctx.user.id;

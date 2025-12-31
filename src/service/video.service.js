@@ -1,5 +1,5 @@
-const { connection } = require('../app');
-const Utils = require('../utils');
+const connection = require('@/app/database');
+const Utils = require('@/utils');
 
 /**
  * 视频服务层

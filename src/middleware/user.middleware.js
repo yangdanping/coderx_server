@@ -1,6 +1,6 @@
-const errorTypes = require('../constants/error-types');
-const userService = require('../service/user.service.js');
-const Utils = require('../utils');
+const errorTypes = require('@/constants/errorTypes');
+const userService = require('@/service/user.service.js');
+const Utils = require('@/utils');
 
 // ★1.用户注册验证中间件---------------------------------------------------
 const verifyUserRegister = async (ctx, next) => {

@@ -1,4 +1,4 @@
-const { requestLogger } = require('../app/logger');
+const { requestLogger } = require('@/app/logger');
 
 const loggerMiddleware = async (ctx, next) => {
   const startTime = Date.now();

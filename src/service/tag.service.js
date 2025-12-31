@@ -1,4 +1,4 @@
-const { connection } = require('../app');
+const connection = require('@/app/database');
 
 class TagService {
   addTag = async (name) => {

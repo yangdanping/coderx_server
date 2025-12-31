@@ -4,11 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "serve": "nodemon ./src/main.js",
-    "socket": "nodemon ./src/socket_server.js",
+    "serve": "cross-env NODE_ENV=development nodemon ./src/main.js",
+    "socket": "cross-env NODE_ENV=development nodemon ./src/socket_server.js",
     "dev": "concurrently \"npm run serve\" \"npm run socket\"",
     "prettier": "prettier --write .",
-    "update:prettier": "git fetch https://github.com/yangdanping/prettier_config_repo.git main && git checkout FETCH_HEAD -- .prettierrc .prettierignore"
+    "update:prettier": "git fetch https://github.com/yangdanping/prettier_config_repo.git main && git checkout FETCH_HEAD -- .prettierrc .prettierignore",
+    "start": "cross-env NODE_ENV=production node ./src/main.js",
+    "start:socket": "cross-env NODE_ENV=production node ./src/socket_server.js"
   },
   "keywords": [],
   "author": "",
@@ -29,14 +31,19 @@
     "koa-bodyparser": "^4.4.1",
     "koa-router": "^14.0.0",
     "log4js": "^6.9.1",
+    "module-alias": "^2.2.3",
     "multer": "^2.0.2",
     "mysql2": "^3.16.0",
     "node-cron": "^4.2.1",
     "socket.io": "^4.8.3",
     "validator": "^13.15.26"
   },
+  "_moduleAliases": {
+    "@": "src"
+  },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "prettier": "^3.7.4"
   }
 }

@@ -1,4 +1,4 @@
-const { connection } = require('../app');
+const connection = require('@/app/database');
 
 class AuthService {
   /* 根据表名/内容id/用户id从数据库中查询该用户是否具备更新/删除<某表>的权限

@@ -1,6 +1,6 @@
-const historyService = require('../service/history.service');
-const Utils = require('../utils');
-const Result = require('../app/Result');
+const historyService = require('@/service/history.service');
+const Utils = require('@/utils');
+const Result = require('@/app/Result');
 
 class HistoryController {
   // 添加浏览记录

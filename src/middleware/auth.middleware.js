@@ -1,9 +1,9 @@
 const jwt = require('jsonwebtoken');
-const authService = require('../service/auth.service');
-const errorTypes = require('../constants/error-types');
-const Utils = require('../utils');
-const { PUBLIC_KEY } = require('../app/config');
-const Result = require('../app/Result');
+const authService = require('@/service/auth.service');
+const errorTypes = require('@/constants/errorTypes');
+const Utils = require('@/utils');
+const { PUBLIC_KEY } = require('@/app/config');
+const Result = require('@/app/Result');
 
 /* ★1.验证授权中间件------------------------------------------
 很重要!很常用!加了该中间件的接口每次请求都会验证是否有token/token是否过期 */

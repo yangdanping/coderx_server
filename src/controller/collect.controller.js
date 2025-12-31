@@ -1,6 +1,6 @@
-const collectService = require('../service/collect.service.js');
-const Result = require('../app/Result');
-const Utils = require('../utils');
+const collectService = require('@/service/collect.service.js');
+const Result = require('@/app/Result');
+const Utils = require('@/utils');
 
 class collectController {
   addCollect = async (ctx, next) => {

@@ -1,5 +1,5 @@
-const { connection } = require('../app');
-const { baseURL, redirectURL } = require('../constants/urls');
+const connection = require('@/app/database');
+const { baseURL, redirectURL } = require('@/constants/urls');
 
 class HistoryService {
   // 添加浏览记录
