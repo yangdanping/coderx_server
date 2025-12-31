@@ -1,7 +1,7 @@
 const { createOpenAI } = require('@ai-sdk/openai');
 const { streamText, convertToModelMessages } = require('ai');
-const { ollamaBaseURL } = require('../constants/urls');
-const Utils = require('../utils');
+const { ollamaBaseURL } = require('@/constants/urls');
+const Utils = require('@/utils');
 // 创建 Ollama 的 OpenAI 兼容实例
 // 可以通过环境变量配置远程 Ollama 服务器
 // 本地: http://localhost:11434/v1

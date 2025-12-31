@@ -1,4 +1,4 @@
-const aiService = require('../service/ai.service');
+const aiService = require('@/service/ai.service');
 
 class AiController {
   /**

@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { IMG_PATH, AVATAR_PATH, VIDEO_PATH } = require('../constants/file-path');
+const { IMG_PATH, AVATAR_PATH, VIDEO_PATH } = require('@/constants/filePaths');
 
 module.exports = function deleteFile(files, delType = 'img') {
   // 根据类型确定删除路径

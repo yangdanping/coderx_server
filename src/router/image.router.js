@@ -1,8 +1,8 @@
 const Router = require('koa-router');
 const imageRouter = new Router({ prefix: '/img' });
-const { verifyAuth } = require('../middleware/auth.middleware');
-const { imgHandler, imgResize } = require('../middleware/file.middleware');
-const imageController = require('../controller/image.controller');
+const { verifyAuth } = require('@/middleware/auth.middleware');
+const { imgHandler, imgResize } = require('@/middleware/file.middleware');
+const imageController = require('@/controller/image.controller');
 
 /**
  * 图片上传路由模块

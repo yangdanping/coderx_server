@@ -1,9 +1,9 @@
 const Router = require('koa-router');
 const userRouter = new Router({ prefix: '/user' });
-const userController = require('../controller/user.controller');
-const { verifyUserRegister, encryptUserPwd, verifyUserLogin } = require('../middleware/user.middleware');
-const { verifyAuth } = require('../middleware/auth.middleware');
-const Result = require('../app/Result');
+const userController = require('@/controller/user.controller');
+const { verifyUserRegister, encryptUserPwd, verifyUserLogin } = require('@/middleware/user.middleware');
+const { verifyAuth } = require('@/middleware/auth.middleware');
+const Result = require('@/app/Result');
 
 /* ★检查授权用户接口------------------------------------------- */
 userRouter.get('/checkAuth', verifyAuth, (ctx) => (ctx.body = Result.success()));

@@ -1,6 +1,6 @@
-const videoService = require('../service/video.service');
-const Result = require('../app/Result');
-const { baseURL } = require('../constants/urls');
+const videoService = require('@/service/video.service');
+const Result = require('@/app/Result');
+const { baseURL } = require('@/constants/urls');
 const path = require('path');
 const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');

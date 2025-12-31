@@ -1,7 +1,7 @@
-const { connection } = require('../app');
-const { baseURL, redirectURL } = require('../constants/urls');
-const Utils = require('../utils');
-const SqlUtils = require('../utils/SqlUtils');
+const connection = require('@/app/database');
+const { baseURL, redirectURL } = require('@/constants/urls');
+const Utils = require('@/utils');
+const SqlUtils = require('@/utils/SqlUtils');
 
 class ArticleService {
   addArticle = async (userId, title, content) => {

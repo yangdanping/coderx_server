@@ -14,7 +14,18 @@ const connections = mysql.createPool({
 
 // 2.使用连接池
 connections.getConnection((err, con) => {
-  con.connect((err) => (err ? console.log('数据库连接失败', err) : console.log(`${config.MYSQL_DATABASE}数据库连接成功!`)));
+  if (err) {
+    console.error('❌ 数据库连接池创建失败:', err.message);
+    return;
+  }
+  con.connect((err) => {
+    if (err) {
+      console.error('❌ 数据库连接失败:', err.message);
+    } else {
+      console.log(`✅ ${config.MYSQL_DATABASE} 数据库连接成功!`);
+      con.release(); // 连接成功后释放连接
+    }
+  });
 });
 
 // 3.通过promise方式操作数据库，并包装日志功能

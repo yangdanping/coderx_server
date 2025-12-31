@@ -1,7 +1,7 @@
-const commentService = require('../service/comment.service.old.js');
-const userService = require('../service/user.service.js');
-const Result = require('../app/Result');
-const Utils = require('../utils');
+const commentService = require('@/service/comment.service.old.js');
+const userService = require('@/service/user.service.js');
+const Result = require('@/app/Result');
+const Utils = require('@/utils');
 
 class CommentController {
   addCommentOld = async (ctx, next) => {

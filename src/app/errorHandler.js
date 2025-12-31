@@ -1,4 +1,4 @@
-const errorTypes = require('../constants/error-types');
+const errorTypes = require('@/constants/errorTypes');
 const Result = require('./Result');
 const { errorLogger } = require('./logger');
 // 只有发生了错误才会来到这,比如user.middleware传过来的错误信息(error.message)进一步细化并传给用户

@@ -1,7 +1,7 @@
 const Router = require('koa-router');
 const historyRouter = new Router({ prefix: '/history' });
-const historyController = require('../controller/history.controller');
-const { verifyAuth } = require('../middleware/auth.middleware');
+const historyController = require('@/controller/history.controller');
+const { verifyAuth } = require('@/middleware/auth.middleware');
 
 /* ★添加浏览记录接口 */
 historyRouter.post('/', verifyAuth, historyController.addHistory);

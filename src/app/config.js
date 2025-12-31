@@ -1,7 +1,12 @@
 const dotenv = require('dotenv');
 const fs = require('fs');
 const path = require('path');
-dotenv.config(); // 调用dotenv的config,.env文件中的所有值就被放入到process.env中了
+
+// 根据 NODE_ENV 环境变量，动态选择加载 .env.production 或 .env.development 配置文件
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+
+console.log(`正在加载环境变量: ${envFile}`);
 
 const PRIVATE_KEY = fs.readFileSync(path.resolve(__dirname, './keys/private.key'));
 const PUBLIC_KEY = fs.readFileSync(path.resolve(__dirname, './keys/public.key'));

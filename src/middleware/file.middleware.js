@@ -1,7 +1,7 @@
 const multer = require('@koa/multer'); //解析form-data数据的第三方依赖库
 const { Jimp } = require('jimp');
 const path = require('path');
-const { AVATAR_PATH, IMG_PATH, VIDEO_PATH } = require('../constants/file-path');
+const { AVATAR_PATH, IMG_PATH, VIDEO_PATH } = require('@/constants/filePaths');
 // // 要实现用户上传头像,则先做解析form-data的准备工作--------------
 
 function setStorage(resourcePath) {

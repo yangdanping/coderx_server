@@ -1,6 +1,6 @@
-const { connection } = require('../app');
-const { baseURL, redirectURL } = require('../constants/urls');
-const SqlUtils = require('../utils/SqlUtils');
+const connection = require('@/app/database');
+const { baseURL, redirectURL } = require('@/constants/urls');
+const SqlUtils = require('@/utils/SqlUtils');
 
 class CommentService {
   /**

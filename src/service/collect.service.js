@@ -1,5 +1,5 @@
-const { connection } = require('../app');
-const SqlUtils = require('../utils/SqlUtils');
+const connection = require('@/app/database');
+const SqlUtils = require('@/utils/SqlUtils');
 
 class CollectService {
   addCollect = async (userId, name) => {

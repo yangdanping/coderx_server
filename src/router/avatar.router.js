@@ -1,8 +1,8 @@
 const Router = require('koa-router');
 const avatarRouter = new Router({ prefix: '/avatar' });
-const { verifyAuth } = require('../middleware/auth.middleware');
-const { avatarHandler } = require('../middleware/file.middleware');
-const avatarController = require('../controller/avatar.controller');
+const { verifyAuth } = require('@/middleware/auth.middleware');
+const { avatarHandler } = require('@/middleware/file.middleware');
+const avatarController = require('@/controller/avatar.controller');
 
 /**
  * 头像上传路由模块

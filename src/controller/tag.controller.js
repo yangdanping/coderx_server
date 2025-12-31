@@ -1,5 +1,5 @@
-const tagService = require('../service/tag.service');
-const Result = require('../app/Result');
+const tagService = require('@/service/tag.service');
+const Result = require('@/app/Result');
 class TagController {
   addTag = async (ctx, next) => {
     const { name } = ctx.request.body;

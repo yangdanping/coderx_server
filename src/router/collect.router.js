@@ -1,8 +1,8 @@
 const Router = require('koa-router');
 const collectRouter = new Router({ prefix: '/collect' });
-const collectController = require('../controller/collect.controller.js');
-const { verifyAuth, verifyPermission } = require('../middleware/auth.middleware');
-const { verifycollectExists } = require('../middleware/collect.middleware.js');
+const collectController = require('@/controller/collect.controller.js');
+const { verifyAuth, verifyPermission } = require('@/middleware/auth.middleware');
+const { verifycollectExists } = require('@/middleware/collect.middleware.js');
 
 /* ★<用户增加收藏夹>的实现---------------------------------- */
 collectRouter.post('/', verifyAuth, verifycollectExists, collectController.addCollect);

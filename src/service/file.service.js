@@ -1,6 +1,6 @@
-const { connection } = require('../app');
-const { baseURL } = require('../constants/urls');
-const SqlUtils = require('../utils/SqlUtils');
+const connection = require('@/app/database');
+const { baseURL } = require('@/constants/urls');
+const SqlUtils = require('@/utils/SqlUtils');
 
 /**
  * 文件服务层（通用）

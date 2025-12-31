@@ -1,7 +1,7 @@
 const Router = require('koa-router');
 const commentRouter = new Router({ prefix: '/comment' });
-const commentController = require('../controller/comment.controller.old.js');
-const { verifyAuth, verifyStatus, verifyPermission } = require('../middleware/auth.middleware');
+const commentController = require('@/controller/comment.controller.old.js');
+const { verifyAuth, verifyStatus, verifyPermission } = require('@/middleware/auth.middleware');
 
 /* ★<获取评论列表>的实现----------------------------------
 设置为不登录的用户也能看评论列表 */

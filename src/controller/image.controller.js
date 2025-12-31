@@ -1,7 +1,7 @@
-const imageService = require('../service/image.service');
-const Result = require('../app/Result');
-const { baseURL } = require('../constants/urls');
-const deleteFile = require('../utils/deleteFile');
+const imageService = require('@/service/image.service');
+const Result = require('@/app/Result');
+const { baseURL } = require('@/constants/urls');
+const deleteFile = require('@/utils/deleteFile');
 
 /**
  * 图片控制器

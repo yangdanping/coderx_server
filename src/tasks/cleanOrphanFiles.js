@@ -11,10 +11,10 @@
  */
 
 const cron = require('node-cron');
-const connection = require('../app/database');
+const connection = require('@/app/database');
 const fs = require('fs');
 const path = require('path');
-const SqlUtils = require('../utils/SqlUtils');
+const SqlUtils = require('@/utils/SqlUtils');
 
 // 配置：通过环境变量控制执行频率
 // 测试模式：export CLEAN_CRON_MODE=test  （每3s执行，3秒后清理）

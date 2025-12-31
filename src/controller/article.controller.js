@@ -1,13 +1,13 @@
 const fs = require('fs'); //fs模块用于读取文件信息,如获取到用户头像信息后找到图像资源返回给前端
 const path = require('path');
-const articleService = require('../service/article.service.js');
-const userService = require('../service/user.service.js');
-const fileService = require('../service/file.service.js');
-const historyService = require('../service/history.service.js');
-const { IMG_PATH, VIDEO_PATH } = require('../constants/file-path');
-const Utils = require('../utils');
-const Result = require('../app/Result');
-const deleteFile = require('../utils/deleteFile');
+const articleService = require('@/service/article.service.js');
+const userService = require('@/service/user.service.js');
+const fileService = require('@/service/file.service.js');
+const historyService = require('@/service/history.service.js');
+const { IMG_PATH, VIDEO_PATH } = require('@/constants/filePaths');
+const Utils = require('@/utils');
+const Result = require('@/app/Result');
+const deleteFile = require('@/utils/deleteFile');
 class ArticleController {
   addArticle = async (ctx, next) => {
     // 1.获取用户id(从验证token的结果中拿到)文章数据
