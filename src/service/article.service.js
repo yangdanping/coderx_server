@@ -1,31 +1,43 @@
 const connection = require('@/app/database');
 const { baseURL, redirectURL } = require('@/constants/urls');
-const Utils = require('@/utils');
 const SqlUtils = require('@/utils/SqlUtils');
+const BusinessError = require('@/errors/BusinessError');
 
 class ArticleService {
+  /**
+   * 新增文章
+   * 重构说明：移除 try-catch，让数据库错误自然抛出，由全局中间件统一处理
+   */
   addArticle = async (userId, title, content) => {
-    try {
-      const statement = 'INSERT INTO article (user_id,title, content) VALUES (?,?,?);';
-      const [result] = await connection.execute(statement, [userId, title, content]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = 'INSERT INTO article (user_id,title, content) VALUES (?,?,?);';
+    const [result] = await connection.execute(statement, [userId, title, content]);
+    return result;
   };
+
+  /**
+   * 增加浏览量
+   *
+   * 🧪 测试开关：切换下面两行 SQL 来验证全局错误中间件
+   * - 正确 SQL：UPDATE article SET views = views + 1 WHERE id = ?
+   * - 错误 SQL：故意拼错表名 "articl"（少个 e），触发数据库错误
+   */
   addView = async (articleId) => {
-    try {
-      const statement = 'UPDATE article set views = views + 1 WHERE id = ?;';
-      const [result] = await connection.execute(statement, [articleId]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    // ✅ 正确的 SQL（生产环境使用）
+    const statement = 'UPDATE article SET views = views + 1 WHERE id = ?;';
+
+    // ❌ 错误的 SQL（测试用：表名拼错，会触发 ER_NO_SUCH_TABLE 错误）
+    // const statement = 'UPDATE articl SET views = views + 1 WHERE id = ?;';
+
+    const [result] = await connection.execute(statement, [articleId]);
+    return result;
   };
+
+  /**
+   * 根据 ID 获取文章详情
+   * 重构说明：查询结果为空时抛出 BusinessError，便于 Controller 统一处理
+   */
   getArticleById = async (articleId) => {
-    try {
-      // const statement = 'SELECT * FROM article WHERE id = ?;';
-      const statement = `
+    const statement = `
       SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
       JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url) author,
       (SELECT COUNT(al.user_id) FROM article
@@ -47,11 +59,13 @@ class ArticleService {
       LEFT JOIN tag ON tag.id = ag.tag_id
       WHERE a.id = ?
       GROUP BY a.id;`;
-      const [result] = await connection.execute(statement, [articleId]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
-      return result[0]; //result就是我们真实查询结果,由于查询单个取第一个结果即可
-    } catch (error) {
-      console.log(error);
+    const [result] = await connection.execute(statement, [articleId]);
+
+    // 🔑 关键改动：查询结果为空时抛出业务异常
+    if (!result[0]) {
+      throw new BusinessError('文章不存在', 404);
     }
+    return result[0];
   };
   /**
    * 重构说明：
@@ -71,8 +85,7 @@ class ArticleService {
     if (idList.length) queryParams.push(...idList);
     if (keywords) queryParams.push(`%${keywords}%`);
 
-    try {
-      const statement = `
+    const statement = `
       SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
       JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
       (SELECT COUNT(al.user_id) FROM article
@@ -103,11 +116,8 @@ class ArticleService {
       GROUP BY a.id
       ${listOrder}
       LIMIT ?,?;`;
-      const [result] = await connection.execute(statement, queryParams.concat(offset, limit));
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const [result] = await connection.execute(statement, queryParams.concat(offset, limit));
+    return result;
   };
   getTotal = async (tagId = '', userId = '', idList = [], keywords = '') => {
     let queryByTag = tagId ? `WHERE tag.id = ?` : `WHERE 1=1`;
@@ -121,31 +131,23 @@ class ArticleService {
     if (idList.length) queryParams.push(...idList);
     if (keywords) queryParams.push(`%${keywords}%`);
 
-    try {
-      const statement = `
-        SELECT COUNT(DISTINCT a.id) total 
-        FROM article a
-        LEFT JOIN article_tag ag ON a.id = ag.article_id
-        LEFT JOIN tag ON tag.id = ag.tag_id
-        ${queryByTag}
-        ${queryByUserId}
-        ${queryByCollectId}
-        ${queryByTitle};`;
-      const [result] = await connection.execute(statement, queryParams);
-      const { total } = result[0];
-      return total;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `
+      SELECT COUNT(DISTINCT a.id) total 
+      FROM article a
+      LEFT JOIN article_tag ag ON a.id = ag.article_id
+      LEFT JOIN tag ON tag.id = ag.tag_id
+      ${queryByTag}
+      ${queryByUserId}
+      ${queryByCollectId}
+      ${queryByTitle};`;
+    const [result] = await connection.execute(statement, queryParams);
+    const { total } = result[0];
+    return total;
   };
   update = async (title, content, articleId) => {
-    try {
-      const statement = `UPDATE article SET title = ?,content = ? WHERE id = ?;`;
-      const [result] = await connection.execute(statement, [title, content, articleId]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `UPDATE article SET title = ?,content = ? WHERE id = ?;`;
+    const [result] = await connection.execute(statement, [title, content, articleId]);
+    return result;
   };
   delete = async (articleId) => {
     // 获取独立连接以支持事务
@@ -200,31 +202,19 @@ class ArticleService {
     }
   };
   hasTag = async (articleId, tagId) => {
-    try {
-      const statement = `SELECT * FROM article_tag WHERE article_id = ? AND tag_id = ?;`;
-      const [result] = await connection.execute(statement, [articleId, tagId]);
-      return result[0] ? true : false;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `SELECT * FROM article_tag WHERE article_id = ? AND tag_id = ?;`;
+    const [result] = await connection.execute(statement, [articleId, tagId]);
+    return !!result[0];
   };
   addTag = async (articleId, tagId) => {
-    try {
-      const statement = `INSERT INTO article_tag (article_id,tag_id) VALUES (?,?);`;
-      const [result] = await connection.execute(statement, [articleId, tagId]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `INSERT INTO article_tag (article_id,tag_id) VALUES (?,?);`;
+    const [result] = await connection.execute(statement, [articleId, tagId]);
+    return result;
   };
   clearTag = async (articleId) => {
-    try {
-      const statement = `DELETE FROM article_tag WHERE article_id = ?;`;
-      const [result] = await connection.execute(statement, [articleId]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `DELETE FROM article_tag WHERE article_id = ?;`;
+    const [result] = await connection.execute(statement, [articleId]);
+    return result;
   };
   /**
    * 重构说明：
@@ -233,18 +223,14 @@ class ArticleService {
    */
   batchAddTags = async (articleId, tagIds) => {
     if (!tagIds || tagIds.length === 0) return null;
-    try {
-      const placeholders = tagIds.map(() => '(?, ?)').join(','); // 最终形成 (?, ?), (?, ?),...
-      const queryParams = [];
-      tagIds.forEach((tagId) => {
-        queryParams.push(articleId, tagId);
-      });
-      const statement = `INSERT INTO article_tag (article_id,tag_id) VALUES ${placeholders};`;
-      const [result] = await connection.execute(statement, queryParams);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const placeholders = tagIds.map(() => '(?, ?)').join(',');
+    const queryParams = [];
+    tagIds.forEach((tagId) => {
+      queryParams.push(articleId, tagId);
+    });
+    const statement = `INSERT INTO article_tag (article_id,tag_id) VALUES ${placeholders};`;
+    const [result] = await connection.execute(statement, queryParams);
+    return result;
   };
 
   // getArticlesByKeyWords = async (keywords) => {
@@ -266,48 +252,32 @@ class ArticleService {
    * 1. 使用 ? 占位符处理 LIKE 查询。
    */
   getArticlesByKeyWords = async (keywords) => {
-    try {
-      const statement = `
+    const statement = `
       SELECT a.id,a.title,
       CONCAT('${redirectURL}/article/',a.id) articleUrl
       FROM article a where title LIKE ? LIMIT 0,10`;
-      const [result] = await connection.execute(statement, [`%${keywords}%`]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const [result] = await connection.execute(statement, [`%${keywords}%`]);
+    return result;
   };
   findFileById = async (articleId) => {
-    try {
-      const statement = `SELECT f.filename FROM file f WHERE f.article_id = ?;`;
-      const [result] = await connection.execute(statement, [articleId]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `SELECT f.filename FROM file f WHERE f.article_id = ?;`;
+    const [result] = await connection.execute(statement, [articleId]);
+    return result;
   };
   getArticleLikedById = async (articleId) => {
-    try {
-      const statement = `SELECT COUNT(al.user_id) likes FROM article a
+    const statement = `SELECT COUNT(al.user_id) likes FROM article a
       LEFT JOIN article_like al ON a.id = al.article_id
       WHERE a.id = ?;`;
-      const [result] = await connection.execute(statement, [articleId]);
-      return result[0];
-    } catch (error) {
-      console.log(error);
-    }
+    const [result] = await connection.execute(statement, [articleId]);
+    return result[0];
   };
   getRecommendArticleList = async (offset, limit) => {
-    try {
-      const statement = `SELECT a.id,a.title, CONCAT('${redirectURL}/article/',a.id) articleUrl,a.views
+    const statement = `SELECT a.id,a.title, CONCAT('${redirectURL}/article/',a.id) articleUrl,a.views
       FROM article a
       ORDER BY a.views DESC
       LIMIT ?,?;`;
-      const [result] = await connection.execute(statement, [offset, limit]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const [result] = await connection.execute(statement, [offset, limit]);
+    return result;
   };
 }
 
