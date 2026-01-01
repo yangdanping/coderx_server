@@ -9,21 +9,27 @@ const Utils = require('@/utils');
 const Result = require('@/app/Result');
 const deleteFile = require('@/utils/deleteFile');
 class ArticleController {
+  /**
+   * 发布文章
+   * 重构说明：
+   * - 移除 result ? ... : ... 判断
+   * - Service 层如果出错会抛异常，由全局中间件捕获并返回 Result.fail()
+   * - Controller 只关心"正常路径"，代码更简洁
+   */
   addArticle = async (ctx, next) => {
-    // 1.获取用户id(从验证token的结果中拿到)文章数据
     const userId = ctx.user.id;
     const { title, content } = ctx.request.body;
-    // 2.根据传递过来参数在数据库中插入文章
     const result = await articleService.addArticle(userId, title, content);
-    // 3.将插入数据库的结果处理,给用户(前端/客户端)返回真正的数据
-    ctx.body = result ? Result.success(result) : Result.fail('发布文章失败!');
+    ctx.body = Result.success(result);
   };
+
+  /**
+   * 增加浏览量
+   */
   viewArticle = async (ctx, next) => {
-    // 1.获取文章id
     const { articleId } = ctx.params;
-    // 2.根据传递过来参数在数据库中增加文章浏览量
     const result = await articleService.addView(articleId);
-    ctx.body = result ? Result.success(result) : Result.fail('增加文章浏览量失败!');
+    ctx.body = Result.success(result);
   };
   likeArticle = async (ctx, next) => {
     // 1.获取用户id和点赞的评论id
@@ -51,16 +57,24 @@ class ArticleController {
   getArticleLikedById = async (ctx, next) => {
     const { articleId } = ctx.params;
     const result = await articleService.getArticleLikedById(articleId);
-    ctx.body = result ? Result.success(result) : Result.fail('增加文章浏览量失败!');
+    ctx.body = Result.success(result);
   };
+
+  /**
+   * 获取文章详情
+   * 重构说明：
+   * - 移除 result ? ... : ... 判断
+   * - Service 层查不到文章时会抛出 BusinessError('文章不存在', 404)
+   * - 封禁文章的处理逻辑保持不变（这是业务逻辑，不是错误）
+   */
   getDetail = async (ctx, next) => {
-    // 1.获取文章id
     const { articleId } = ctx.params;
     console.log(articleId);
-    // 2.根据传递过来文章id在数据库中查询单个文章
+
+    // Service 层如果查不到会抛出 BusinessError，不会走到下面的代码
     const result = await articleService.getArticleById(articleId);
 
-    // 3.如果用户已登录，添加浏览记录
+    // 如果用户已登录，添加浏览记录
     if (ctx.user && ctx.user.id) {
       try {
         await historyService.addHistory(ctx.user.id, articleId);
@@ -69,118 +83,98 @@ class ArticleController {
       }
     }
 
-    // 封面已通过 SQL 查询单独获取，images 数组按创建时间排序
-    // 不需要额外的封面置顶逻辑
+    // 封禁文章的处理（这是正常业务逻辑，不是错误）
     if (result.status === 1) {
       result.title = result.content = '文章已被封禁';
     }
-    // 4.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
-    ctx.body = result ? Result.success(result) : Result.fail('获取该文章数据失败!');
+
+    ctx.body = Result.success(result);
   };
+  /**
+   * 获取文章列表
+   */
   getList = async (ctx, next) => {
-    // 1.获取文章列表的偏离量和数据长度
     console.log('getList ctx.query', ctx.query);
-    // const { offset, limit, tagId, userId, pageOrder, idList, keywords } = ctx.query;
     const { offset, limit } = Utils.getPaginationParams(ctx);
     const { tagId, userId, pageOrder, idList, keywords } = ctx.query;
     const userCollectedIds = idList?.length ? JSON.parse(idList) : [];
-    // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
+
     const result = await articleService.getArticleList(offset, limit, tagId, userId, pageOrder, userCollectedIds, keywords);
-    // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
-    if (result) {
-      result.forEach((article) => {
-        if (!article.status) {
-          // 清理HTML标签并截取内容长度
-          article.content = Utils.removeHTMLTag(article.content);
-          if (article.content.length > 50) {
-            article.content = article.content.slice(0, 50);
-          }
-        } else {
-          // 被封禁的文章显示提示信息
-          article.title = article.content = '文章已被封禁';
+
+    // 处理文章内容（清理HTML标签、截取长度、封禁提示）
+    result.forEach((article) => {
+      if (!article.status) {
+        article.content = Utils.removeHTMLTag(article.content);
+        if (article.content.length > 50) {
+          article.content = article.content.slice(0, 50);
         }
-      });
-      // 统一使用带条件的 getTotal 查询总数（支持搜索分页）
-      let total = await articleService.getTotal(tagId, userId, userCollectedIds, keywords);
-      ctx.body = result ? Result.success({ result, total }) : Result.fail('获取文章列表数据失败!');
-    } else {
-      ctx.body = Result.fail('获取文章列表失败!');
-    }
+      } else {
+        article.title = article.content = '文章已被封禁';
+      }
+    });
+
+    const total = await articleService.getTotal(tagId, userId, userCollectedIds, keywords);
+    ctx.body = Result.success({ result, total });
   };
   getRecommendList = async (ctx, next) => {
     const { offset, limit } = Utils.getPaginationParams(ctx);
     const result = await articleService.getRecommendArticleList(offset, limit);
-    ctx.body = result ? Result.success(result) : Result.fail('获取推荐文章列表失败!');
+    ctx.body = Result.success(result);
   };
   update = async (ctx, next) => {
-    // 1.获取用户修改的文章内容或者标题
     const { title, content } = ctx.request.body;
-    const { articleId } = ctx.params; //articleId来自路径
-    // 2.根据传递过来文章标题和内容,在数据库中做修改
+    const { articleId } = ctx.params;
     const result = await articleService.update(title, content, articleId);
-    // 3.将修改数据库的结果处理,给用户(前端/客户端)返回真正的数据
-    ctx.body = result ? Result.success(result) : Result.fail('修改文章失败!');
+    ctx.body = Result.success(result);
   };
+  /**
+   * 删除文章
+   * 重构说明：移除手动 try-catch，Service 层异常由全局中间件捕获
+   */
   delete = async (ctx, next) => {
-    try {
-      // 1. 获取文章ID
-      const { articleId } = ctx.params;
+    const { articleId } = ctx.params;
+    const { result, imagesToDelete, videosToDelete } = await articleService.delete(articleId);
 
-      // 2. 删除文章（事务处理，包括查询文件列表和删除数据库记录）
-      const { result, imagesToDelete, videosToDelete } = await articleService.delete(articleId);
+    ctx.body = Result.success(result);
 
-      // 3. 返回成功响应
-      ctx.body = Result.success(result);
+    // 事务成功后，异步删除磁盘文件（不阻塞响应）
+    Promise.resolve().then(() => {
+      try {
+        let deletedCount = 0;
 
-      // 4. 事务成功后，异步删除磁盘文件（不阻塞响应）
-      Promise.resolve().then(() => {
-        try {
-          let deletedCount = 0;
-
-          // 删除图片文件
-          if (imagesToDelete && imagesToDelete.length > 0) {
-            deleteFile(imagesToDelete, 'img');
-            deletedCount += imagesToDelete.length;
-            console.log(`✅ 成功删除文章 ${articleId} 的 ${imagesToDelete.length} 个图片文件`);
-          }
-
-          // 删除视频文件和封面
-          if (videosToDelete && videosToDelete.length > 0) {
-            deleteFile(videosToDelete, 'video');
-            deletedCount += videosToDelete.length;
-            console.log(`✅ 成功删除文章 ${articleId} 的 ${videosToDelete.length} 个视频文件（含封面）`);
-          }
-
-          if (deletedCount > 0) {
-            console.log(`📁 文章 ${articleId} 共删除 ${deletedCount} 个文件`);
-          }
-        } catch (fileError) {
-          console.error('❌ 删除磁盘文件失败（不影响业务）:', fileError);
-          // TODO: 可以将失败的文件记录到待清理队列，由定时任务处理
+        if (imagesToDelete && imagesToDelete.length > 0) {
+          deleteFile(imagesToDelete, 'img');
+          deletedCount += imagesToDelete.length;
+          console.log(`✅ 成功删除文章 ${articleId} 的 ${imagesToDelete.length} 个图片文件`);
         }
-      });
-    } catch (error) {
-      console.error('删除文章失败:', error);
-      ctx.body = Result.fail('删除文章失败!');
-    }
+
+        if (videosToDelete && videosToDelete.length > 0) {
+          deleteFile(videosToDelete, 'video');
+          deletedCount += videosToDelete.length;
+          console.log(`✅ 成功删除文章 ${articleId} 的 ${videosToDelete.length} 个视频文件（含封面）`);
+        }
+
+        if (deletedCount > 0) {
+          console.log(`📁 文章 ${articleId} 共删除 ${deletedCount} 个文件`);
+        }
+      } catch (fileError) {
+        console.error('❌ 删除磁盘文件失败（不影响业务）:', fileError);
+      }
+    });
   };
   changeTag = async (ctx, next) => {
-    // 1.获取数据(获取我们之前verifyTagExists整合好的tags数组和文章id)
-    const { tags } = ctx; //拿到了用户所选择的标签（已带id）
-    const { articleId } = ctx.params; //拿到了被添加标签的文章
+    const { tags } = ctx;
+    const { articleId } = ctx.params;
 
     console.log(`文章 ${articleId} 更新标签:`, tags);
 
-    // 2.统一处理：先清空，再批量插入
     await articleService.clearTag(articleId);
 
     if (tags && tags.length > 0) {
-      // 批量插入所有标签
       const tagIds = tags.map((tag) => tag.id);
       const result = await articleService.batchAddTags(articleId, tagIds);
-      ctx.body = result ? Result.success(result, '标签保存成功') : Result.fail('保存标签失败!');
+      ctx.body = Result.success(result, '标签保存成功');
     } else {
-      // 如果标签为空，清空后直接返回
       ctx.body = Result.success('标签已清空');
     }
   };
@@ -208,9 +202,9 @@ class ArticleController {
     }
   };
   search = async (ctx, next) => {
-    const { keywords } = ctx.query; //拿到了关键字
+    const { keywords } = ctx.query;
     const result = await articleService.getArticlesByKeyWords(keywords);
-    ctx.body = result ? Result.success(result) : Result.fail('查询文章失败!');
+    ctx.body = Result.success(result);
   };
 
   /**

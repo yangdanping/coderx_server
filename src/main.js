@@ -2,16 +2,20 @@ const Koa = require('koa');
 require('module-alias/register'); // 注册路径别名 @ -> src
 const cors = require('@koa/cors');
 const app = new Koa();
-const { config, bodyParser, errorHandler } = require('./app');
-const Utils = require('./utils');
-const loggerMiddleware = require('./middleware/logger.middleware');
-const aiService = require('./service/ai.service');
-const { ALLOWED_ORIGINS } = require('./constants/cors');
+const { config, bodyParser, errorHandler } = require('@/app');
+const Utils = require('@/utils');
+const loggerMiddleware = require('@/middleware/logger.middleware');
+const errorMiddleware = require('@/middleware/error.middleware'); // 全局异常捕获中间件
+const aiService = require('@/service/ai.service');
+const { ALLOWED_ORIGINS } = require('@/constants/cors');
 // 定时清理任务（单独导入，避免 socket_server.js 间接加载）
-const cleanOrphanFilesTask = require('./tasks/cleanOrphanFiles');
+const cleanOrphanFilesTask = require('@/tasks/cleanOrphanFiles');
 
-// 错误处理中间件
+// 错误处理中间件（用于处理 ctx.app.emit('error') 触发的错误，如认证失败）
 app.on('error', errorHandler);
+
+// 🚀 全局异常捕获中间件（必须是第一个中间件，用于捕获所有 async 函数中的异常）
+app.use(errorMiddleware);
 
 // CORS 中间件（必须在最前面，所有路由之前）
 app.use(
