@@ -109,10 +109,10 @@ class ImageController {
       const result = await imageService.updateImageArticle(articleId, uploadedIds, coverImageId);
       console.log('✅ updateFile - 更新成功:', result);
 
-      ctx.body = result ? Result.success(result) : Result.fail('上传文章配图失败!');
+      ctx.body = Result.success(result);
     } catch (error) {
       console.error('❌ updateFile - 更新失败:', error);
-      ctx.body = Result.fail('上传文章配图失败: ' + error.message);
+      throw error; // 让全局中间件捕捉
     }
   };
 
@@ -124,23 +124,18 @@ class ImageController {
     const { uploaded } = ctx.request.body;
     const uploadedId = uploaded.map((img) => img.id);
 
-    try {
-      // 查询图片信息
-      const files = await imageService.findImagesByIds(uploadedId);
+    // 查询图片信息
+    const files = await imageService.findImagesByIds(uploadedId);
 
-      // 删除物理文件
-      if (files.length) {
-        deleteFile(files);
-      }
-
-      // 删除数据库记录（会自动删除 image_meta 记录，因为有外键级联）
-      await imageService.deleteImages(uploadedId);
-
-      ctx.body = files.length ? Result.success(`已删除${files.length}张图片成功`) : Result.fail('删除图片失败');
-    } catch (error) {
-      console.error('deleteFile error:', error);
-      ctx.body = Result.fail('删除图片失败: ' + error.message);
+    // 删除物理文件
+    if (files.length) {
+      deleteFile(files);
     }
+
+    // 删除数据库记录（会自动删除 image_meta 记录，因为有外键级联）
+    await imageService.deleteImages(uploadedId);
+
+    ctx.body = Result.success(`已删除${files.length}张图片成功`);
   };
 }
 
