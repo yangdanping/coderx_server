@@ -2,35 +2,22 @@ const connection = require('@/app/database');
 
 class TagService {
   addTag = async (name) => {
-    try {
-      const statement = `INSERT INTO tag (name) VALUES (?);`;
-      const [result] = await connection.execute(statement, [name]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `INSERT INTO tag (name) VALUES (?);`;
+    const [result] = await connection.execute(statement, [name]);
+    return result;
   };
 
   getTagByName = async (name) => {
-    try {
-      const statement = `SELECT * FROM tag WHERE name = ?;`;
-      const [result] = await connection.execute(statement, [name]);
-      return result[0]; //直接把查到的记录返回,不存在时返回的是undefined
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `SELECT * FROM tag WHERE name = ?;`;
+    const [result] = await connection.execute(statement, [name]);
+    return result[0];
   };
 
   getTagList = async (offset, limit) => {
     console.log('getTagList offset, limit', offset, limit);
-
-    try {
-      const statement = `SELECT * FROM tag LIMIT ?,?;`;
-      const [result] = await connection.execute(statement, [offset, limit]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `SELECT * FROM tag LIMIT ?,?;`;
+    const [result] = await connection.execute(statement, [offset, limit]);
+    return result;
   };
 }
 

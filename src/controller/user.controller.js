@@ -28,38 +28,28 @@ class UserContoller {
     ctx.body = token ? Result.success(data) : Result.fail('生成token失败'); // 将token放入data中
   };
   addUser = async (ctx, next) => {
-    // 1.获取用户请求传递的参数
-    const user = ctx.request.body; //注意!request是koa自定义的重新封装后的对象
-    // 2.根据传递过来参数在数据库中创建用户(要对JSON数据进行解析,要用koa-bodyparser,在app/config.js中注册)
+    const user = ctx.request.body;
     console.log('addUser', user);
     const result = await userService.addUser(user);
-    // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
-    ctx.body = result ? Result.success(result) : Result.fail('创建用户失败');
+    ctx.body = Result.success(result);
   };
   getProfile = async (ctx, next) => {
-    // 1.拿到路径中拼接的用户id
     const { userId } = ctx.params;
-    // 2.根据id将用户表左连接用户信息表查找用户
     const userInfo = await userService.getProfileById(userId);
-    // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
-    ctx.body = userInfo ? Result.success(userInfo) : Result.fail('获取用户信息失败');
+    ctx.body = Result.success(userInfo);
   };
+
   updateProfile = async (ctx, next) => {
-    // 1.拿到验证中间件中获取到的id和前端传来的用户信息
     const { id } = ctx.user;
     const profile = ctx.request.body;
-    // 2.根据id将用户表左连接用户信息表查找用户
     const result = await userService.updateProfileById(id, profile);
-    // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
-    ctx.body = result ? Result.success(result) : Result.fail('修改用户信息失败!');
+    ctx.body = Result.success(result);
   };
+
   getLiked = async (ctx, next) => {
-    // 1.拿到路径中拼接的用户id
     const { userId } = ctx.params;
-    // 2.根据id将用户表左连接用户信息表查找用户
     const likedInfo = await userService.getLikedById(userId);
-    // 3.将查询数据库的结果处理,给用户(前端/客户端)返回真正的数据
-    ctx.body = likedInfo ? Result.success(likedInfo) : Result.fail('获取点赞信息失败');
+    ctx.body = Result.success(likedInfo);
   };
   getAvatar = async (ctx, next) => {
     // 1.拿到路径中拼接的用户id(注意!用户上传图片的服务器地址要保存到用户信息表中)
@@ -99,69 +89,47 @@ class UserContoller {
     }
   };
   getFollow = async (ctx, next) => {
-    // 1.获取关注者id与被关注者id
     const { userId } = ctx.params;
-    // 2.根据被关注者id去数据库查询关注者,以及被关注者自己关注的人
     const result = await userService.getFollowInfo(userId);
-    ctx.body = result ? Result.success(result) : Result.fail('获取用户关注信息失败');
+    ctx.body = Result.success(result);
   };
-  // async getArticle(ctx, next) {
-  //   const { userId } = ctx.params;
-  //   const { offset, limit } = ctx.query;
-  //   const userArticle = await articleService.getArticleList(offset, limit, '', userId);
-  //   if (userArticle) {
-  //     userArticle.forEach((article) => (article.content = Utils.removeHTMLTag(article.content)));
-  //     console.log('获取用户发表过的文章成功');
-  //     ctx.body = Result.success(userArticle);
-  //   } else {
-  //     ctx.body = Result.fail('获取用户发表过的文章失败');
-  //   }
-  // }
+
   getComment = async (ctx, next) => {
     const { userId } = ctx.params;
-    // const { offset, limit } = ctx.query;
     const { offset, limit } = Utils.getPaginationParams(ctx);
     const userComment = await userService.getCommentById(userId, offset, limit);
-    if (userComment) {
-      userComment.forEach((comment) => (comment.content = Utils.removeHTMLTag(comment.content)));
-      ctx.body = Result.success(userComment);
-    } else {
-      ctx.body = Result.fail('获取用户发表过的评论失败');
-    }
+    userComment.forEach((comment) => (comment.content = Utils.removeHTMLTag(comment.content)));
+    ctx.body = Result.success(userComment);
   };
+
   getArticleByCollectId = async (ctx, next) => {
     const { userId } = ctx.params;
-    // const { collectId, offset, limit } = ctx.query;
     const { collectId } = ctx.query;
     const { offset, limit } = Utils.getPaginationParams(ctx);
     console.log(userId, collectId, offset, limit);
     const collectArticle = await userService.getArticleByCollectId(userId, collectId, offset, limit);
-    if (collectArticle) {
-      collectArticle.forEach((article) => (article.content = Utils.removeHTMLTag(article.content)));
-      console.log('获取该收藏夹下的文章成功');
-      ctx.body = Result.success(collectArticle);
-    } else {
-      ctx.body = Result.fail('获取用户发表过的文章失败');
-    }
+    collectArticle.forEach((article) => (article.content = Utils.removeHTMLTag(article.content)));
+    console.log('获取该收藏夹下的文章成功');
+    ctx.body = Result.success(collectArticle);
   };
   userReport = async (ctx, next) => {
     const { userId } = ctx.params;
     const { reportOptions, articleId, commentId } = ctx.request.body;
     if (!commentId) {
       const result = await userService.userReport(parseInt(userId), reportOptions.join(' '), articleId);
-      ctx.body = result ? Result.success(result) : Result.fail('举报用户失败!');
       console.log('我举报的是文章', parseInt(userId), articleId, reportOptions);
+      ctx.body = Result.success(result);
     } else {
       const result = await userService.userReport(parseInt(userId), reportOptions.join(' '), null, commentId);
-      ctx.body = result ? Result.success(result) : Result.fail('举报用户失败!');
       console.log('我举报的是评论', parseInt(userId), commentId, reportOptions);
+      ctx.body = Result.success(result);
     }
   };
+
   getHotUsers = async (ctx, next) => {
     console.log('getHotUsers!!!!');
-    // 2.根据传递过来偏离量和数据长度在数据库中查询文章列表
     const result = await userService.getHotUsers();
-    ctx.body = result ? Result.success(result) : Result.fail('获取反馈回复失败!');
+    ctx.body = Result.success(result);
   };
   // userFeedback = async (ctx, next) => {
   //   const { userId } = ctx.params;

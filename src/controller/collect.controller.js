@@ -7,38 +7,37 @@ class collectController {
     const userId = ctx.user.id;
     const { name } = ctx.request.body;
     const result = await collectService.addCollect(userId, name);
-    ctx.body = result ? Result.success(result) : Result.fail('增加收藏夹失败!');
+    ctx.body = Result.success(result);
   };
+
   getList = async (ctx, next) => {
     const { userId } = ctx.params;
-    // const { offset, limit } = ctx.query;
     const { offset, limit } = Utils.getPaginationParams(ctx);
     const result = await collectService.getCollectList(userId, offset, limit);
-    ctx.body = result ? Result.success(result) : Result.fail('获取收藏夹列表失败!');
+    ctx.body = Result.success(result);
   };
+
   collectArticle = async (ctx, next) => {
     const { articleId } = ctx.request.body;
     const { collectId } = ctx.params;
     const isCollect = await collectService.hasCollect(articleId, Math.round(collectId));
     console.log(isCollect);
-    if (!isCollect) {
-      const result = await collectService.changeCollect(articleId, Math.round(collectId), isCollect);
-      ctx.body = Result.success(result); //增加一条收藏记录
-    } else {
-      const result = await collectService.changeCollect(articleId, collectId, isCollect);
-      ctx.body = Result.success(result, 1); //减少一条收藏记录
-    }
+
+    const result = await collectService.changeCollect(articleId, isCollect ? collectId : Math.round(collectId), isCollect);
+
+    ctx.body = Result.success(result, isCollect ? 1 : 0);
   };
+
   removeCollectArticle = async (ctx, next) => {
     const { idList } = ctx.query;
     const { collectId } = ctx.params;
     const userCollectedIds = JSON.parse(idList);
     console.log('userCollectedIds', userCollectedIds);
-    const result = await collectService.removeCollectArticle(userCollectedIds);
-    if (result) {
-      const newCollectIds = await collectService.getCollectArticle(collectId);
-      ctx.body = newCollectIds ? Result.success(newCollectIds) : Result.fail('移除失败!'); //返回移除后的文章
-    }
+
+    await collectService.removeCollectArticle(userCollectedIds);
+    const newCollectIds = await collectService.getCollectArticle(collectId);
+
+    ctx.body = Result.success(newCollectIds);
   };
 }
 

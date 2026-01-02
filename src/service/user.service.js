@@ -2,13 +2,9 @@ const connection = require('@/app/database');
 
 class UserService {
   getUserByName = async (name) => {
-    try {
-      const statement = 'SELECT * FROM user WHERE name = ?;';
-      const [result] = await connection.execute(statement, [name]); //拿到的元数据是数组,解构取得查询数据库结果,也是个数组
-      return result[0]; //result就是我们真实查询结果,由于查询单个取第一个结果即可
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = 'SELECT * FROM user WHERE name = ?;';
+    const [result] = await connection.execute(statement, [name]);
+    return result[0];
   };
   addUser = async (user) => {
     // 获取独立连接以支持事务
@@ -59,54 +55,37 @@ class UserService {
     // }
   };
   updateAvatarUrl = async (avatarUrl, userId) => {
-    try {
-      const statement = `UPDATE profile SET avatar_url = ? WHERE user_id = ?;`;
-      const [result] = await connection.execute(statement, [avatarUrl, userId]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `UPDATE profile SET avatar_url = ? WHERE user_id = ?;`;
+    const [result] = await connection.execute(statement, [avatarUrl, userId]);
+    return result;
   };
   getProfileById = async (userId) => {
-    try {
-      const statement = `
-      SELECT u.id,u.name,u.status,p.avatar_url avatarUrl,p.age,p.sex,p.email,
-      p.career,p.address,
-      (SELECT COUNT(*)
-      FROM article a
-      WHERE a.user_id = u.id) articleCount,
-      (SELECT COUNT(*)
-      FROM comment c
-      WHERE c.user_id = u.id) commentCount
-      FROM user u
-      LEFT JOIN profile p
-      ON u.id = p.user_id
-      WHERE u.id = ?;`;
-      const [result] = await connection.execute(statement, [userId]);
-      return result[0];
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `
+    SELECT u.id,u.name,u.status,p.avatar_url avatarUrl,p.age,p.sex,p.email,
+    p.career,p.address,
+    (SELECT COUNT(*)
+    FROM article a
+    WHERE a.user_id = u.id) articleCount,
+    (SELECT COUNT(*)
+    FROM comment c
+    WHERE c.user_id = u.id) commentCount
+    FROM user u
+    LEFT JOIN profile p
+    ON u.id = p.user_id
+    WHERE u.id = ?;`;
+    const [result] = await connection.execute(statement, [userId]);
+    return result[0];
   };
-  /**
-   * 重构说明：
-   * 1. 采用更安全的方式处理动态列更新。
-   * 2. 虽然列名通常由后端控制，但使用参数化查询处理所有值。
-   */
   updateProfileById = async (userId, profile) => {
-    try {
-      const keys = Object.keys(profile);
-      if (keys.length === 0) return null;
+    const keys = Object.keys(profile);
+    if (keys.length === 0) return null;
 
-      const updateItem = keys.map((key) => `${key} = ?`).join(', ');
-      const updateValues = Object.values(profile);
-      const statement = `UPDATE profile SET ${updateItem} WHERE user_id = ?;`;
+    const updateItem = keys.map((key) => `${key} = ?`).join(', ');
+    const updateValues = Object.values(profile);
+    const statement = `UPDATE profile SET ${updateItem} WHERE user_id = ?;`;
 
-      const [result] = await connection.execute(statement, [...updateValues, userId]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const [result] = await connection.execute(statement, [...updateValues, userId]);
+    return result;
   };
 
   // getCommentById = async (userId, offset, limit) => {
@@ -140,68 +119,43 @@ class UserService {
   //   }
   // };
 
-  /**
-   * 重构说明：
-   * 1. 修复 LIKE 子句中的 SQL 注入风险，改用 ? 占位符。
-   * 2. 移除 SQL 语句中多余的分号。
-   */
   getCommentById = async (userId, offset, limit) => {
-    try {
-      const statement = `
-      SELECT c.id, a.title,c.content, c.comment_id commentId, c.create_at createAt,
-      JSON_OBJECT('id', u.id, 'name', u.name,'avatarUrl',p.avatar_url) user,
-      COUNT(cl.user_id) likes
-      FROM comment c
-      LEFT JOIN article a ON c.article_id = a.id
-      LEFT JOIN user u ON u.id = c.user_id
-      LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN comment_like cl ON c.id = cl.comment_id
-      WHERE u.id = ?
-      GROUP BY c.id
-      ORDER BY c.update_at DESC
-      LIMIT ?,?;
-      `;
-      const [result] = await connection.execute(statement, [userId, offset, limit]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `
+    SELECT c.id, a.title,c.content, c.comment_id commentId, c.create_at createAt,
+    JSON_OBJECT('id', u.id, 'name', u.name,'avatarUrl',p.avatar_url) user,
+    COUNT(cl.user_id) likes
+    FROM comment c
+    LEFT JOIN article a ON c.article_id = a.id
+    LEFT JOIN user u ON u.id = c.user_id
+    LEFT JOIN profile p ON u.id = p.user_id
+    LEFT JOIN comment_like cl ON c.id = cl.comment_id
+    WHERE u.id = ?
+    GROUP BY c.id
+    ORDER BY c.update_at DESC
+    LIMIT ?,?;
+    `;
+    const [result] = await connection.execute(statement, [userId, offset, limit]);
+    return result;
   };
 
-  /**
-   * 重构说明：
-   * 1. 增加表名白名单校验。
-   */
   hasLike = async (tableName, dataId, userId) => {
     const whiteList = ['article', 'comment', 'video'];
     if (!whiteList.includes(tableName)) return false;
 
-    try {
-      const statement = `SELECT * FROM ${tableName}_like WHERE ${tableName}_id = ? AND user_id = ?;`;
-      const [result] = await connection.execute(statement, [dataId, userId]);
-      return result[0] ? true : false;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `SELECT * FROM ${tableName}_like WHERE ${tableName}_id = ? AND user_id = ?;`;
+    const [result] = await connection.execute(statement, [dataId, userId]);
+    return result[0] ? true : false;
   };
 
-  /**
-   * 重构说明：
-   * 1. 增加表名白名单校验。
-   */
   changeLike = async (tableName, dataId, userId, isLike) => {
     const whiteList = ['article', 'comment', 'video'];
     if (!whiteList.includes(tableName)) return null;
 
-    try {
-      const statement = !isLike
-        ? `INSERT INTO ${tableName}_like (${tableName}_id,user_id) VALUES (?,?);`
-        : `DELETE FROM ${tableName}_like WHERE ${tableName}_id = ? AND user_id = ?;`;
-      const [result] = await connection.execute(statement, [dataId, userId]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = !isLike
+      ? `INSERT INTO ${tableName}_like (${tableName}_id,user_id) VALUES (?,?);`
+      : `DELETE FROM ${tableName}_like WHERE ${tableName}_id = ? AND user_id = ?;`;
+    const [result] = await connection.execute(statement, [dataId, userId]);
+    return result;
   };
 
   getLikedById = async (userId) => {

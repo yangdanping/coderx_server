@@ -19,56 +19,45 @@ class VideoController {
 
     console.log('📹 获取到视频数据', { userId, filename, mimetype, size, videoPath });
 
-    try {
-      // 1. 先保存视频基本信息到数据库
-      const result = await videoService.addVideo(userId, filename, mimetype, size);
+    // 1. 先保存视频基本信息到数据库
+    const result = await videoService.addVideo(userId, filename, mimetype, size);
 
-      if (!result) {
-        ctx.body = Result.fail('保存视频信息失败!');
-        return;
-      }
+    const videoId = result.insertId;
+    const videoUrl = `${baseURL}/article/video/${filename}`;
 
-      const videoId = result.insertId;
-      const videoUrl = `${baseURL}/article/video/${filename}`;
+    // 2. 生成视频封面（异步处理）
+    const posterFilename = `${path.parse(filename).name}-poster.jpg`;
+    const outputFolder = path.resolve('./public/video');
 
-      // 2. 生成视频封面（异步处理）
-      const posterFilename = `${path.parse(filename).name}-poster.jpg`;
-      const outputFolder = path.resolve('./public/video');
+    console.log(`🎬 [视频 ${videoId}] 准备生成封面:`, {
+      videoPath,
+      posterFilename,
+      outputFolder,
+    });
 
-      console.log(`🎬 [视频 ${videoId}] 准备生成封面:`, {
-        videoPath,
-        posterFilename,
-        outputFolder,
-      });
-
-      // 确保视频文件存在
-      if (!fs.existsSync(videoPath)) {
-        console.error(`❌ [视频 ${videoId}] 视频文件不存在:`, videoPath);
-        ctx.body = Result.fail('视频文件不存在');
-        return;
-      }
-
-      // 异步生成视频封面 - 使用 Promise 确保可靠性
-      this.generateVideoThumbnail(videoPath, posterFilename, outputFolder, videoId)
-        .then(() => {
-          console.log(`✅ [视频 ${videoId}] 封面生成流程启动成功`);
-        })
-        .catch((err) => {
-          console.error(`❌ [视频 ${videoId}] 封面生成失败:`, err.message);
-        });
-
-      // 3. 立即返回响应（封面在后台生成）
-      const posterUrl = `${baseURL}/article/video/${posterFilename}`;
-      ctx.body = Result.success({
-        id: videoId, // 视频ID，用于关联到文章
-        url: videoUrl,
-        poster: posterUrl, // 返回封面URL（可能稍后才能访问）
-        filename: filename, // 视频文件名
-      });
-    } catch (error) {
-      console.error('saveVideoInfo error:', error);
-      ctx.body = Result.fail('上传视频失败: ' + error.message);
+    // 确保视频文件存在
+    if (!fs.existsSync(videoPath)) {
+      console.error(`❌ [视频 ${videoId}] 视频文件不存在:`, videoPath);
+      throw new Error('视频文件不存在');
     }
+
+    // 异步生成视频封面 - 使用 Promise 确保可靠性
+    this.generateVideoThumbnail(videoPath, posterFilename, outputFolder, videoId)
+      .then(() => {
+        console.log(`✅ [视频 ${videoId}] 封面生成流程启动成功`);
+      })
+      .catch((err) => {
+        console.error(`❌ [视频 ${videoId}] 封面生成失败:`, err.message);
+      });
+
+    // 3. 立即返回响应（封面在后台生成）
+    const posterUrl = `${baseURL}/article/video/${posterFilename}`;
+    ctx.body = Result.success({
+      id: videoId, // 视频ID，用于关联到文章
+      url: videoUrl,
+      poster: posterUrl, // 返回封面URL（可能稍后才能访问）
+      filename: filename, // 视频文件名
+    });
   };
 
   /**
@@ -133,14 +122,9 @@ class VideoController {
       return;
     }
 
-    try {
-      const result = await videoService.updateVideoArticle(articleId, videoIds);
-      console.log(`关联 ${videoIds.length} 个视频到文章 ${articleId}`, result);
-      ctx.body = result ? Result.success(result) : Result.fail('关联视频到文章失败!');
-    } catch (error) {
-      console.error('updateVideoArticle error:', error);
-      ctx.body = Result.fail('关联视频到文章失败: ' + error.message);
-    }
+    const result = await videoService.updateVideoArticle(articleId, videoIds);
+    console.log(`关联 ${videoIds.length} 个视频到文章 ${articleId}`, result);
+    ctx.body = Result.success(result);
   };
 
   /**
@@ -154,41 +138,36 @@ class VideoController {
       return;
     }
 
-    try {
-      // 1. 查询视频文件信息
-      const videos = await videoService.findVideosByIds(videoIds);
+    // 1. 查询视频文件信息
+    const videos = await videoService.findVideosByIds(videoIds);
 
-      if (!videos || videos.length === 0) {
-        ctx.body = Result.fail('视频不存在');
-        return;
+    if (!videos || videos.length === 0) {
+      ctx.body = Result.fail('视频不存在');
+      return;
+    }
+
+    // 2. 删除物理文件（包括视频和封面）
+    videos.forEach((video) => {
+      const videoPath = path.join('./public/video', video.filename);
+      if (fs.existsSync(videoPath)) {
+        fs.unlinkSync(videoPath);
+        console.log(`🗑️ 已删除视频文件: ${video.filename}`);
       }
 
-      // 2. 删除物理文件（包括视频和封面）
-      videos.forEach((video) => {
-        const videoPath = path.join('./public/video', video.filename);
-        if (fs.existsSync(videoPath)) {
-          fs.unlinkSync(videoPath);
-          console.log(`🗑️ 已删除视频文件: ${video.filename}`);
+      // 删除封面图
+      if (video.poster) {
+        const posterPath = path.join('./public/video', video.poster);
+        if (fs.existsSync(posterPath)) {
+          fs.unlinkSync(posterPath);
+          console.log(`🗑️ 已删除视频封面: ${video.poster}`);
         }
+      }
+    });
 
-        // 删除封面图
-        if (video.poster) {
-          const posterPath = path.join('./public/video', video.poster);
-          if (fs.existsSync(posterPath)) {
-            fs.unlinkSync(posterPath);
-            console.log(`🗑️ 已删除视频封面: ${video.poster}`);
-          }
-        }
-      });
+    // 3. 删除数据库记录
+    await videoService.deleteVideos(videoIds);
 
-      // 3. 删除数据库记录
-      await videoService.deleteVideos(videoIds);
-
-      ctx.body = Result.success(`已删除${videos.length}个视频`);
-    } catch (error) {
-      console.error('deleteVideo error:', error);
-      ctx.body = Result.fail('删除视频失败: ' + error.message);
-    }
+    ctx.body = Result.success(`已删除${videos.length}个视频`);
   };
 
   /**
@@ -197,17 +176,12 @@ class VideoController {
   getVideoInfo = async (ctx, next) => {
     const { videoId } = ctx.params;
 
-    try {
-      const video = await videoService.getVideoById(videoId);
-      if (video) {
-        ctx.body = Result.success(video);
-      } else {
-        ctx.body = Result.fail('视频不存在');
-      }
-    } catch (error) {
-      console.error('getVideoInfo error:', error);
-      ctx.body = Result.fail('获取视频信息失败: ' + error.message);
+    const video = await videoService.getVideoById(videoId);
+    if (!video) {
+      ctx.body = Result.fail('视频不存在');
+      return;
     }
+    ctx.body = Result.success(video);
   };
 }
 
