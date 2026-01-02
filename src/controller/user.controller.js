@@ -71,22 +71,15 @@ class UserContoller {
     }
   };
   userFollow = async (ctx, next) => {
-    // 1.获取关注者id与被关注者id
     const followerId = ctx.user.id;
     const { userId } = ctx.params;
-    if (followerId !== parseInt(userId)) {
-      // 2.根据传递过来参数在数据库中判断是否有关注,若无则可增加一条关注记录,反之删除
-      const isFollowed = await userService.hasFollowed(userId, followerId);
-      if (!isFollowed) {
-        const result = await userService.follow(userId, followerId);
-        ctx.body = Result.success(result); //增加一条关注记录(该用户关注一个用户)
-      } else {
-        const result = await userService.unfollow(userId, followerId);
-        ctx.body = Result.success(result, '1'); //删除一条关注记录(该用户取关一个用户)
-      }
-    } else {
-      ctx.body = Result.fail('不能关注自己');
+
+    if (followerId === parseInt(userId)) {
+      throw new BusinessError('不能关注自己', 400);
     }
+
+    const result = await userService.toggleFollow(userId, followerId);
+    ctx.body = Result.success(result);
   };
   getFollow = async (ctx, next) => {
     const { userId } = ctx.params;

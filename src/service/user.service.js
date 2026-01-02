@@ -158,6 +158,28 @@ class UserService {
     return result;
   };
 
+  // 优化：点赞/取消点赞切换，减少数据库查询
+  toggleLike = async (tableName, dataId, userId) => {
+    const whiteList = ['article', 'comment', 'video'];
+    if (!whiteList.includes(tableName)) {
+      throw new BusinessError('非法的表名', 400);
+    }
+
+    // 先尝试删除
+    const deleteStmt = `DELETE FROM ${tableName}_like WHERE ${tableName}_id = ? AND user_id = ?;`;
+    const [deleteResult] = await connection.execute(deleteStmt, [dataId, userId]);
+
+    // 如果删除了行，说明之前已点赞，现在取消
+    if (deleteResult.affectedRows > 0) {
+      return { isLiked: false, action: 'unliked' };
+    }
+
+    // 如果没删除任何行，说明之前未点赞，现在添加
+    const insertStmt = `INSERT INTO ${tableName}_like (${tableName}_id, user_id) VALUES (?, ?);`;
+    await connection.execute(insertStmt, [dataId, userId]);
+    return { isLiked: true, action: 'liked' };
+  };
+
   getLikedById = async (userId) => {
     try {
       const statement = `
@@ -180,33 +202,38 @@ class UserService {
   };
 
   hasFollowed = async (userId, followerId) => {
-    try {
-      const statement = `SELECT * FROM user_follow WHERE user_id = ? AND follower_id= ?;`;
-      const [result] = await connection.execute(statement, [userId, followerId]);
-      return result[0] ? true : false;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `SELECT * FROM user_follow WHERE user_id = ? AND follower_id= ?;`;
+    const [result] = await connection.execute(statement, [userId, followerId]);
+    return result[0] ? true : false;
   };
 
   follow = async (userId, followerId) => {
-    try {
-      const statement = `INSERT INTO user_follow (user_id,follower_id) VALUES (?,?);`;
-      const [result] = await connection.execute(statement, [userId, followerId]);
-      return result;
-    } catch (error) {
-      console.log(error);
-    }
+    const statement = `INSERT INTO user_follow (user_id,follower_id) VALUES (?,?);`;
+    const [result] = await connection.execute(statement, [userId, followerId]);
+    return result;
   };
 
   unfollow = async (userId, followerId) => {
-    try {
-      const statement = `DELETE FROM user_follow WHERE user_id = ? AND follower_id = ?;`;
-      const [result] = await connection.execute(statement, [userId, followerId]);
-      return result;
-    } catch (error) {
-      console.log(error);
+    const statement = `DELETE FROM user_follow WHERE user_id = ? AND follower_id = ?;`;
+    const [result] = await connection.execute(statement, [userId, followerId]);
+    return result;
+  };
+
+  // 优化：关注/取关切换，减少数据库查询
+  toggleFollow = async (userId, followerId) => {
+    // 先尝试删除
+    const deleteStmt = `DELETE FROM user_follow WHERE user_id = ? AND follower_id = ?;`;
+    const [deleteResult] = await connection.execute(deleteStmt, [userId, followerId]);
+
+    // 如果删除了行，说明之前已关注，现在取关
+    if (deleteResult.affectedRows > 0) {
+      return { isFollowed: false, action: 'unfollowed' };
     }
+
+    // 如果没删除任何行，说明之前未关注，现在添加
+    const insertStmt = `INSERT INTO user_follow (user_id, follower_id) VALUES (?, ?);`;
+    await connection.execute(insertStmt, [userId, followerId]);
+    return { isFollowed: true, action: 'followed' };
   };
 
   getFollowInfo = async (userId) => {

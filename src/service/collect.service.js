@@ -40,6 +40,23 @@ class CollectService {
     return result;
   };
 
+  // 优化：先DELETE再INSERT策略，减少数据库查询
+  toggleCollect = async (articleId, collectId) => {
+    // 先尝试删除（如果已收藏，删除会成功）
+    const deleteStmt = `DELETE FROM article_collect WHERE article_id = ? AND collect_id = ?;`;
+    const [deleteResult] = await connection.execute(deleteStmt, [articleId, collectId]);
+
+    // 如果删除了行，说明之前已收藏，现在取消
+    if (deleteResult.affectedRows > 0) {
+      return { isCollected: false, action: 'uncollected' };
+    }
+
+    // 如果没删除任何行，说明之前未收藏，现在添加
+    const insertStmt = `INSERT INTO article_collect (article_id, collect_id) VALUES (?, ?);`;
+    await connection.execute(insertStmt, [articleId, collectId]);
+    return { isCollected: true, action: 'collected' };
+  };
+
   removeCollectArticle = async (idList) => {
     if (!idList || idList.length === 0) return null;
     const statement = `DELETE FROM article_collect WHERE ${SqlUtils.queryIn('article_id', idList)};`;
