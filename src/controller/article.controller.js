@@ -34,17 +34,14 @@ class ArticleController {
   likeArticle = async (ctx, next) => {
     // 1.获取用户id和点赞的评论id
     const userId = ctx.user.id;
-    const [urlKey] = Object.keys(ctx.params); //从params中取出对象的key,即我们拼接的资源id,如评论就是commentId
-    const dataId = ctx.params[urlKey]; //获取到对应id的值
-    const tableName = urlKey.replace('Id', ''); //把Id去掉就是表名
+    const [urlKey] = Object.keys(ctx.params); //从 params 中取出对象的 key
+    const dataId = ctx.params[urlKey]; //获取到对应 id 的值
+    const tableName = urlKey.replace('Id', ''); //把 Id 去掉就是表名
 
-    // 2.根据传递过来参数在数据库中判断是否有点赞,有则取消点赞,没有则成功点赞
-    const isLiked = await userService.hasLike(tableName, dataId, userId);
+    // 切换点赞状态
+    const result = await userService.toggleLike(tableName, dataId, userId);
 
-    // 3.执行点赞/取消点赞操作
-    await userService.changeLike(tableName, dataId, userId, isLiked);
-
-    // 4.获取更新后的点赞总数
+    // 获取更新后的点赞总数
     const likeInfo = await articleService.getArticleLikedById(dataId);
 
     // 5.统一返回格式：code=0 表示成功，data 中包含业务状态

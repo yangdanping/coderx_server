@@ -172,19 +172,16 @@ class CommentController {
     const { commentId } = ctx.params;
 
     try {
-      // 检查是否已点赞
-      const isLiked = await userService.hasLike('comment', commentId, userId);
-
       // 切换点赞状态
-      await userService.changeLike('comment', commentId, userId, isLiked);
+      const result = await userService.toggleLike('comment', commentId, userId);
 
       // 获取更新后的点赞总数
       const comment = await commentService.getCommentById(commentId);
       const likes = comment ? comment.likes : 0;
 
-      // 返回正确格式：liked 表示操作后的状态
+      // 返回正确格式
       ctx.body = Result.success({
-        liked: !isLiked, // 操作后的状态：原来没点赞现在点了 = true，原来点了现在取消 = false
+        liked: result.isLiked,
         likes: likes,
       });
     } catch (error) {
