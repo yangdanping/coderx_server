@@ -23,21 +23,22 @@ class HistoryService {
     try {
       const statement = `
         SELECT
-          ah.id,
-          ah.create_at createAt,
-          ah.update_at updateAt,
-          a.id articleId,
-          a.title,
-          a.content,
-          a.views,
-          a.status,
-          a.create_at articleCreateAt,
-          JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
-          (SELECT COUNT(al.user_id) FROM article_like al WHERE al.article_id = a.id) likes,
-          (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-          (SELECT JSON_ARRAYAGG(CONCAT('${baseURL}/article/images/', f.filename, '?type=small'))
-           FROM file f WHERE f.article_id = a.id AND f.filename LIKE '%-cover') cover,
-          CONCAT('${redirectURL}/article/', a.id) articleUrl
+            ah.id,
+            ah.create_at createAt,
+            ah.update_at updateAt,
+            a.id articleId,
+            a.title,
+            a.content,
+            a.views,
+            a.status,
+            a.create_at articleCreateAt,
+            JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
+            (SELECT COUNT(al.user_id) FROM article_like al WHERE al.article_id = a.id) likes, -- 点赞数子查询
+            (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount, -- 评论数子查询
+            (SELECT JSON_ARRAYAGG(CONCAT('${baseURL}/article/images/', f.filename, '?type=small'))
+                FROM file f
+                WHERE f.article_id = a.id AND f.filename LIKE '%-cover') cover, -- 封面图片子查询
+            CONCAT('${redirectURL}/article/', a.id) articleUrl
         FROM article_history ah
         LEFT JOIN article a ON ah.article_id = a.id
         LEFT JOIN user u ON a.user_id = u.id

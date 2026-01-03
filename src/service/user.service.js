@@ -61,18 +61,22 @@ class UserService {
   };
   getProfileById = async (userId) => {
     const statement = `
-    SELECT u.id,u.name,u.status,p.avatar_url avatarUrl,p.age,p.sex,p.email,
-    p.career,p.address,
-    (SELECT COUNT(*)
-    FROM article a
-    WHERE a.user_id = u.id) articleCount,
-    (SELECT COUNT(*)
-    FROM comment c
-    WHERE c.user_id = u.id) commentCount
-    FROM user u
-    LEFT JOIN profile p
-    ON u.id = p.user_id
-    WHERE u.id = ?;`;
+      SELECT
+          u.id,
+          u.name,
+          u.status,
+          p.avatar_url avatarUrl,
+          p.age,
+          p.sex,
+          p.email,
+          p.career,
+          p.address,
+          (SELECT COUNT(*) FROM article a WHERE a.user_id = u.id) articleCount, -- 文章数子查询
+          (SELECT COUNT(*) FROM comment c WHERE c.user_id = u.id) commentCount -- 评论数子查询
+      FROM user u
+      LEFT JOIN profile p ON u.id = p.user_id
+      WHERE u.id = ?;
+    `;
     const [result] = await connection.execute(statement, [userId]);
     return result[0];
   };
@@ -183,17 +187,20 @@ class UserService {
   getLikedById = async (userId) => {
     try {
       const statement = `
-      SELECT u.id,u.name,JSON_ARRAYAGG(al.article_id) articleLiked,
-      (SELECT JSON_ARRAYAGG(cl.comment_id) FROM user
-      LEFT JOIN comment_like cl
-      ON user.id = cl.user_id
-      WHERE user.id = u.id
-      GROUP BY user.id) commentLiked
-      FROM user u
-      LEFT JOIN article_like al
-      ON u.id = al.user_id
-      WHERE u.id = ?
-      GROUP BY u.id;`;
+        SELECT
+            u.id,
+            u.name,
+            JSON_ARRAYAGG(al.article_id) articleLiked, -- 点赞文章ID列表子查询
+            (SELECT JSON_ARRAYAGG(cl.comment_id)
+                FROM user
+                LEFT JOIN comment_like cl ON user.id = cl.user_id
+                WHERE user.id = u.id
+                GROUP BY user.id) commentLiked -- 点赞评论ID列表子查询
+        FROM user u
+        LEFT JOIN article_like al ON u.id = al.user_id
+        WHERE u.id = ?
+        GROUP BY u.id;
+      `;
       const [result] = await connection.execute(statement, [userId]);
       return result[0];
     } catch (error) {
@@ -239,20 +246,30 @@ class UserService {
   getFollowInfo = async (userId) => {
     try {
       const statement = `
-      SELECT u.id,u.name,
-      IF(COUNT(uf.follower_id),JSON_ARRAYAGG(JSON_OBJECT('id',uf.user_id,'name',
-      (SELECT user.name from user WHERE user.id = uf.user_id),
-      'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career
-      )),NULL) following,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',ufo.follower_id,
-      'name',us.name,'avatarUrl',pf.avatar_url,'sex',pf.sex,'career',pf.career)) FROM user us
-      LEFT JOIN user_follow ufo ON us.id = ufo.follower_id LEFT JOIN profile pf ON us.id = pf.user_id
-      WHERE ufo.user_id = u.id GROUP BY ufo.user_id) follower
-      FROM user u LEFT JOIN user_follow uf ON u.id = uf.follower_id LEFT JOIN profile p ON uf.user_id = p.user_id
-      WHERE u.id = ?
-      GROUP BY u.id;`;
+        SELECT
+            u.id,
+            u.name,
+            IF(COUNT(uf.follower_id),
+                JSON_ARRAYAGG(JSON_OBJECT('id', uf.user_id, 'name',
+                    (SELECT user.name FROM user WHERE user.id = uf.user_id), -- 被关注者名称子查询
+                    'avatarUrl', p.avatar_url, 'sex', p.sex, 'career', p.career
+                )),
+                NULL) following, -- 被关注列表子查询
+            (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', ufo.follower_id,
+                'name', us.name, 'avatarUrl', pf.avatar_url, 'sex', pf.sex, 'career', pf.career))
+                FROM user us
+                LEFT JOIN user_follow ufo ON us.id = ufo.follower_id
+                LEFT JOIN profile pf ON us.id = pf.user_id
+                WHERE ufo.user_id = u.id
+                GROUP BY ufo.user_id) follower -- 粉丝列表子查询
+        FROM user u
+        LEFT JOIN user_follow uf ON u.id = uf.follower_id
+        LEFT JOIN profile p ON uf.user_id = p.user_id
+        WHERE u.id = ?
+        GROUP BY u.id;
+      `;
       const [result] = await connection.execute(statement, [userId]);
-      return result[0]; //只拿到一条记录
+      return result[0];
     } catch (error) {
       console.log(error);
     }
@@ -313,17 +330,24 @@ class UserService {
   getHotUsers = async () => {
     try {
       const statement = `
-      SELECT u.id,u.name,p.avatar_url avatarUrl,p.age,p.sex,p.email,
-      p.career,p.address,
-      (SELECT JSON_OBJECT('totalLikes',COUNT(al.article_id),'totalViews',SUM(a.views))
-      FROM article a
-      LEFT JOIN article_like al ON a.id = al.article_id
-      WHERE a.user_id = u.id) articleInfo
-      FROM user u
-      LEFT JOIN profile p
-      ON u.id = p.user_id
-      ORDER BY u.id
-      LIMIT 0,5;`;
+        SELECT
+            u.id,
+            u.name,
+            p.avatar_url avatarUrl,
+            p.age,
+            p.sex,
+            p.email,
+            p.career,
+            p.address,
+            (SELECT JSON_OBJECT('totalLikes', COUNT(al.article_id), 'totalViews', SUM(a.views))
+                FROM article a
+                LEFT JOIN article_like al ON a.id = al.article_id
+                WHERE a.user_id = u.id) articleInfo -- 文章统计信息子查询
+        FROM user u
+        LEFT JOIN profile p ON u.id = p.user_id
+        ORDER BY u.id
+        LIMIT 0, 5;
+      `;
       const [result] = await connection.execute(statement);
       return result;
     } catch (error) {

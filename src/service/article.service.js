@@ -38,30 +38,32 @@ class ArticleService {
    */
   getArticleById = async (articleId) => {
     const statement = `
-      SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('id',file.id,'url',CONCAT('${baseURL}/article/images/',file.filename))) FROM file WHERE a.id = file.article_id) images,
-      CONCAT('${redirectURL}/article/',a.id) articleUrl
+      SELECT
+          a.id,
+          a.title,
+          a.content,
+          a.views,
+          a.status,
+          a.create_at createAt,
+          a.update_at updateAt,
+          JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
+          (SELECT COUNT(al.user_id) FROM article_like al WHERE al.article_id = a.id) likes, -- 点赞数子查询
+          (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount, -- 评论数子查询
+          (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', tag.id, 'name', tag.name))
+              FROM article_tag ag
+              LEFT JOIN tag ON tag.id = ag.tag_id
+              WHERE ag.article_id = a.id) tags, -- 标签列表子查询
+          (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', f.id, 'url', CONCAT('${baseURL}/article/images/', f.filename)))
+              FROM file f
+              WHERE f.article_id = a.id) images, -- 图片列表子查询
+          CONCAT('${redirectURL}/article/', a.id) articleUrl
       FROM article a
       LEFT JOIN user u ON a.user_id = u.id
       LEFT JOIN profile p ON u.id = p.user_id
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE a.id = ?
-      GROUP BY a.id;`;
+      WHERE a.id = ?;
+    `;
     const [result] = await connection.execute(statement, [articleId]);
 
-    // 🔑 关键改动：查询结果为空时抛出业务异常
     if (!result[0]) {
       throw new BusinessError('文章不存在', 404);
     }
@@ -86,24 +88,27 @@ class ArticleService {
     if (keywords) queryParams.push(`%${keywords}%`);
 
     const statement = `
-      SELECT a.id,a.title,a.content,a.views,a.status,a.create_at createAt,a.update_at updateAt,
-      JSON_OBJECT('id',u.id,'name',u.name,'avatarUrl',p.avatar_url,'sex',p.sex,'career',p.career) author,
-      (SELECT COUNT(al.user_id) FROM article
-      LEFT JOIN article_like al ON article.id = al.article_id
-      WHERE article.id = a.id) likes,
-      (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount,
-      IF(COUNT(tag.id),(
-      SELECT JSON_ARRAYAGG(JSON_OBJECT('id',tag.id,'name',tag.name)) FROM article
-      LEFT JOIN article_tag ag ON article.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      WHERE article.id =a.id
-      ),NULL) tags,
-      (SELECT CONCAT('${baseURL}/article/images/',f.filename,'?type=small') 
-       FROM file f 
-       LEFT JOIN image_meta im ON f.id = im.file_id 
-       WHERE f.article_id = a.id AND f.file_type = 'image' AND im.is_cover = TRUE 
-       LIMIT 1) cover,
-      CONCAT('${redirectURL}/article/',a.id) articleUrl
+      SELECT
+          a.id,
+          a.title,
+          a.content,
+          a.views,
+          a.status,
+          a.create_at createAt,
+          a.update_at updateAt,
+          JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url, 'sex', p.sex, 'career', p.career) author,
+          (SELECT COUNT(al.user_id) FROM article_like al WHERE al.article_id = a.id) likes, -- 点赞数子查询
+          (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount, -- 评论数子查询
+          (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', tag.id, 'name', tag.name))
+              FROM article_tag ag
+              LEFT JOIN tag ON tag.id = ag.tag_id
+              WHERE ag.article_id = a.id) tags, -- 标签列表子查询
+          (SELECT CONCAT('${baseURL}/article/images/', f.filename, '?type=small')
+              FROM file f
+              LEFT JOIN image_meta im ON f.id = im.file_id
+              WHERE f.article_id = a.id AND f.file_type = 'image' AND im.is_cover = TRUE
+              LIMIT 1) cover, -- 封面图片子查询
+          CONCAT('${redirectURL}/article/', a.id) articleUrl
       FROM article a
       LEFT JOIN user u ON a.user_id = u.id
       LEFT JOIN profile p ON u.id = p.user_id
@@ -115,7 +120,8 @@ class ArticleService {
       ${queryByTitle}
       GROUP BY a.id
       ${listOrder}
-      LIMIT ?,?;`;
+      LIMIT ?, ?;
+    `;
     const [result] = await connection.execute(statement, queryParams.concat(offset, limit));
     return result;
   };

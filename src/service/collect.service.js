@@ -16,14 +16,19 @@ class CollectService {
   };
 
   getCollectList = async (userId, offset, limit) => {
-    const statement = `SELECT c.id, c.name,c.user_id userId,c.create_at createAt,
-    IF(COUNT(ac.article_id),JSON_ARRAYAGG(ac.article_id),NULL) count
-    FROM collect c
-    LEFT JOIN article_collect ac
-    ON c.id = ac.collect_id
-    WHERE user_id = ?
-    GROUP BY c.id
-    LIMIT ?,?;`;
+    const statement = `
+      SELECT
+          c.id,
+          c.name,
+          c.user_id userId,
+          c.create_at createAt,
+          IF(COUNT(ac.article_id), JSON_ARRAYAGG(ac.article_id), NULL) count -- 文章ID列表子查询
+      FROM collect c
+      LEFT JOIN article_collect ac ON c.id = ac.collect_id
+      WHERE user_id = ?
+      GROUP BY c.id
+      LIMIT ?, ?;
+    `;
     const [result] = await connection.execute(statement, [userId, offset, limit]);
     return result;
   };
@@ -65,7 +70,12 @@ class CollectService {
   };
 
   getCollectArticle = async (collectId) => {
-    const statement = `SELECT JSON_ARRAYAGG(ac.article_id) collectedArticle FROM article_collect ac WHERE ac.collect_id = ?;`;
+    const statement = `
+      SELECT
+          JSON_ARRAYAGG(ac.article_id) collectedArticle -- 文章ID列表子查询
+      FROM article_collect ac
+      WHERE ac.collect_id = ?;
+    `;
     const [result] = await connection.execute(statement, [collectId]);
     return result[0];
   };
