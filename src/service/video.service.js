@@ -28,8 +28,10 @@ class VideoService {
       // 2. 插入视频元数据
       const { poster = null, duration = null, width = null, height = null, bitrate = null, format = null } = metadata;
       const metaStatement = `
-        INSERT INTO video_meta (file_id, poster, duration, width, height, bitrate, format, transcode_status) 
-        VALUES (?,?,?,?,?,?,?,'pending');
+        INSERT INTO video_meta
+            (file_id, poster, duration, width, height, bitrate, format, transcode_status)
+        VALUES
+            (?, ?, ?, ?, ?, ?, ?, 'pending');
       `;
       await conn.execute(metaStatement, [fileId, poster, duration, width, height, bitrate, format]);
 
@@ -52,8 +54,15 @@ class VideoService {
   getVideoByFilename = async (filename) => {
     try {
       const statement = `
-        SELECT f.*, vm.poster, vm.duration, vm.width, vm.height, 
-               vm.bitrate, vm.format, vm.transcode_status
+        SELECT
+            f.*,
+            vm.poster,
+            vm.duration,
+            vm.width,
+            vm.height,
+            vm.bitrate,
+            vm.format,
+            vm.transcode_status
         FROM file f
         LEFT JOIN video_meta vm ON f.id = vm.file_id
         WHERE f.filename = ? AND f.file_type = 'video'
@@ -75,8 +84,15 @@ class VideoService {
   getVideoById = async (videoId) => {
     try {
       const statement = `
-        SELECT f.*, vm.poster, vm.duration, vm.width, vm.height, 
-               vm.bitrate, vm.format, vm.transcode_status
+        SELECT
+            f.*,
+            vm.poster,
+            vm.duration,
+            vm.width,
+            vm.height,
+            vm.bitrate,
+            vm.format,
+            vm.transcode_status
         FROM file f
         LEFT JOIN video_meta vm ON f.id = vm.file_id
         WHERE f.id = ? AND f.file_type = 'video'
@@ -277,13 +293,21 @@ class VideoService {
   getArticleVideos = async (articleId) => {
     try {
       const statement = `
-        SELECT f.id, f.filename, f.mimetype, f.size, 
-               vm.poster, vm.duration, vm.width, vm.height, 
-               vm.bitrate, vm.format, vm.transcode_status
+        SELECT f.id,
+              f.filename,
+              f.mimetype,
+              f.size,
+              vm.poster,
+              vm.duration,
+              vm.width,
+              vm.height,
+              vm.bitrate,
+              vm.format,
+              vm.transcode_status
         FROM file f
-        LEFT JOIN video_meta vm ON f.id = vm.file_id
-        WHERE f.article_id = ? AND f.file_type = 'video'
-        ORDER BY f.create_at ASC;
+                LEFT JOIN video_meta vm ON f.id = vm.file_id
+        WHERE f.article_id = ?
+          AND f.file_type 
       `;
       const [result] = await connection.execute(statement, [articleId]);
       return result;

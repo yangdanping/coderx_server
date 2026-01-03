@@ -51,7 +51,11 @@ class ImageService {
   getImageByFilename = async (filename) => {
     try {
       const statement = `
-        SELECT f.*, im.is_cover, im.width, im.height
+        SELECT
+            f.*,
+            im.is_cover,
+            im.width,
+            im.height
         FROM file f
         LEFT JOIN image_meta im ON f.id = im.file_id
         WHERE f.filename LIKE ? AND f.file_type = 'image'
@@ -89,19 +93,31 @@ class ImageService {
       console.log('✅ 步骤1 - 清空旧封面标识');
 
       // 2. 查询该文章原有的图片ID
-      const selectOldStatement = `SELECT id FROM file WHERE article_id = ? AND file_type = 'image';`;
+      const selectOldStatement = `
+        SELECT id
+        FROM file
+        WHERE article_id = ? AND file_type = 'image';
+      `;
       const [oldImages] = await conn.execute(selectOldStatement, [articleId]);
       const oldImageIds = oldImages.map((img) => img.id);
       console.log(`📋 步骤2 - 原有图片ID:`, oldImageIds);
 
       // 3. 将该文章的所有图片关联清空
-      const clearArticleStatement = `UPDATE file SET article_id = NULL WHERE article_id = ? AND file_type = 'image';`;
+      const clearArticleStatement = `
+        UPDATE file
+        SET article_id = NULL
+        WHERE article_id = ? AND file_type = 'image';
+      `;
       const [result3] = await conn.execute(clearArticleStatement, [articleId]);
       console.log(`✅ 步骤3 - 清除原有关联: ${result3.affectedRows} 条记录`);
 
       // 4. 关联新的图片到该文章
       if (imageIds.length > 0) {
-        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE ${SqlUtils.queryIn('id', imageIds)} AND file_type = 'image';`;
+        const updateArticleStatement = `
+          UPDATE file
+          SET article_id = ?
+          WHERE ${SqlUtils.queryIn('id', imageIds)} AND file_type = 'image';
+        `;
         const [result4] = await conn.execute(updateArticleStatement, [articleId, ...imageIds]);
         console.log(`✅ 步骤4 - 关联新图片: ${result4.affectedRows} 条记录`);
       }
@@ -174,7 +190,11 @@ class ImageService {
   findImagesByIds = async (imageIds) => {
     if (!imageIds || imageIds.length === 0) return [];
     try {
-      const statement = `SELECT f.filename FROM file f WHERE ${SqlUtils.queryIn('f.id', imageIds)} AND f.file_type = 'image';`;
+      const statement = `
+        SELECT f.filename
+        FROM file f
+        WHERE ${SqlUtils.queryIn('f.id', imageIds)} AND f.file_type = 'image';
+      `;
       const [result] = await connection.execute(statement, imageIds);
       return result;
     } catch (error) {
@@ -191,8 +211,14 @@ class ImageService {
   getArticleImages = async (articleId) => {
     try {
       const statement = `
-        SELECT f.id, f.filename, f.mimetype, f.size, 
-               im.is_cover, im.width, im.height
+        SELECT
+            f.id,
+            f.filename,
+            f.mimetype,
+            f.size,
+            im.is_cover,
+            im.width,
+            im.height
         FROM file f
         LEFT JOIN image_meta im ON f.id = im.file_id
         WHERE f.article_id = ? AND f.file_type = 'image'

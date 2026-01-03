@@ -35,20 +35,20 @@ class CommentService {
 
       // 查询一级评论（comment_id IS NULL）
       const statement = `
-        SELECT 
-          c.id,
-          c.content,
-          c.status,
-          c.create_at AS createAt,
-          JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) AS author,
-          (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) AS likes,
-          (SELECT COUNT(*) FROM comment r WHERE r.comment_id = c.id) AS replyCount
+        SELECT
+            c.id,
+            c.content,
+            c.status,
+            c.create_at createAt,
+            JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
+            (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes, -- 点赞数子查询
+            (SELECT COUNT(*) FROM comment r WHERE r.comment_id = c.id) replyCount -- 回复数子查询
         FROM comment c
         LEFT JOIN user u ON u.id = c.user_id
         LEFT JOIN profile p ON u.id = p.user_id
-        WHERE c.article_id = ? 
-          AND c.comment_id IS NULL
-          ${cursorCondition}
+        WHERE c.article_id = ?
+            AND c.comment_id IS NULL
+            ${cursorCondition}
         ORDER BY c.create_at DESC, c.id DESC
         LIMIT ?
       `;
@@ -96,17 +96,17 @@ class CommentService {
   getUserCommentList = async (userId, offset, limit) => {
     try {
       const statement = `
-        SELECT 
-          c.id,
-          c.content,
-          c.status,
-          c.create_at AS createAt,
-          c.update_at AS updateAt,
-          c.article_id AS articleId,
-          a.title AS articleTitle,
-          JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) AS author,
-          JSON_OBJECT('id', a.id, 'title', a.title) AS article,
-          (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) AS likes
+        SELECT
+            c.id,
+            c.content,
+            c.status,
+            c.create_at createAt,
+            c.update_at updateAt,
+            c.article_id articleId,
+            a.title articleTitle,
+            JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
+            JSON_OBJECT('id', a.id, 'title', a.title) article,
+            (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes
         FROM comment c
         LEFT JOIN user u ON u.id = c.user_id
         LEFT JOIN profile p ON u.id = p.user_id
@@ -119,7 +119,7 @@ class CommentService {
       const [comments] = await connection.execute(statement, [userId, String(offset), String(limit)]);
 
       // 获取总数
-      const countStatement = `SELECT COUNT(*) AS total FROM comment WHERE user_id = ?`;
+      const countStatement = `SELECT COUNT(*) total FROM comment WHERE user_id = ?`;
       const [[{ total }]] = await connection.execute(countStatement, [userId]);
 
       // 处理数据格式
@@ -154,19 +154,19 @@ class CommentService {
   getReplyPreview = async (commentId, limit) => {
     try {
       const statement = `
-        SELECT 
-          c.id,
-          c.content,
-          c.status,
-          c.comment_id AS cid,
-          c.reply_id AS rid,
-          c.create_at AS createAt,
-          JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) AS author,
-          (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) AS likes,
-          (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content) 
-           FROM comment rc 
-           LEFT JOIN user ru ON ru.id = rc.user_id 
-           WHERE rc.id = c.reply_id) AS replyTo
+        SELECT
+            c.id,
+            c.content,
+            c.status,
+            c.comment_id cid,
+            c.reply_id rid,
+            c.create_at createAt,
+            JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
+            (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes, -- 点赞数子查询
+            (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content)
+                FROM comment rc
+                LEFT JOIN user ru ON ru.id = rc.user_id
+                WHERE rc.id = c.reply_id) replyTo -- 被回复的内容子查询
         FROM comment c
         LEFT JOIN user u ON u.id = c.user_id
         LEFT JOIN profile p ON u.id = p.user_id
@@ -204,24 +204,24 @@ class CommentService {
       queryParams.push(limitForHasMore);
 
       const statement = `
-        SELECT 
-          c.id,
-          c.content,
-          c.status,
-          c.comment_id AS cid,
-          c.reply_id AS rid,
-          c.create_at AS createAt,
-          JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) AS author,
-          (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) AS likes,
-          (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content) 
-           FROM comment rc 
-           LEFT JOIN user ru ON ru.id = rc.user_id 
-           WHERE rc.id = c.reply_id) AS replyTo
+        SELECT
+            c.id,
+            c.content,
+            c.status,
+            c.comment_id cid,
+            c.reply_id rid,
+            c.create_at createAt,
+            JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
+            (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes, -- 点赞数子查询
+            (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content)
+                FROM comment rc
+                LEFT JOIN user ru ON ru.id = rc.user_id
+                WHERE rc.id = c.reply_id) replyTo -- 被回复的内容子查询
         FROM comment c
         LEFT JOIN user u ON u.id = c.user_id
         LEFT JOIN profile p ON u.id = p.user_id
         WHERE c.comment_id = ?
-          ${cursorCondition}
+            ${cursorCondition}
         ORDER BY c.create_at ASC, c.id ASC
         LIMIT ?
       `;
@@ -331,20 +331,20 @@ class CommentService {
   getCommentById = async (commentId) => {
     try {
       const statement = `
-        SELECT 
-          c.id,
-          c.content,
-          c.status,
-          c.comment_id AS cid,
-          c.reply_id AS rid,
-          c.article_id AS articleId,
-          c.create_at AS createAt,
-          JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) AS author,
-          (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) AS likes,
-          (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content) 
-           FROM comment rc 
-           LEFT JOIN user ru ON ru.id = rc.user_id 
-           WHERE rc.id = c.reply_id) AS replyTo
+        SELECT
+            c.id,
+            c.content,
+            c.status,
+            c.comment_id cid,
+            c.reply_id rid,
+            c.article_id articleId,
+            c.create_at createAt,
+            JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
+            (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes, -- 点赞数子查询
+            (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content)
+                FROM comment rc
+                LEFT JOIN user ru ON ru.id = rc.user_id
+                WHERE rc.id = c.reply_id) replyTo -- 被回复的内容子查询
         FROM comment c
         LEFT JOIN user u ON u.id = c.user_id
         LEFT JOIN profile p ON u.id = p.user_id
