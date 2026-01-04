@@ -1,8 +1,9 @@
 const aiService = require('@/service/ai.service');
+const { errorLogger } = require('@/app/logger');
 
 class AiController {
   /**
-   * 健康检查接口
+   * 健康检查接口(
    * 用于前端检测 AI 服务是否可用
    */
   health = async (ctx, next) => {
@@ -36,6 +37,9 @@ class AiController {
     }
 
     try {
+      // 🧪 测试开关：取消注释下面一行来触发错误，验证 errorLogger 是否正常记录日志
+      // throw new Error('测试错误：模拟 AI 服务连接失败');
+
       // 获取 AI SDK 的 result 对象
       const result = await aiService.streamChat(messages, model, context);
 
@@ -67,7 +71,14 @@ class AiController {
         ctx.res.end();
       }
     } catch (error) {
+      // 🆕 手动记录错误日志
+      // 原因：流式响应需要在 try-catch 中捕获错误（无法抛给全局中间件）
+      // 如果不手动调用 errorLogger，错误将不会被记录到日志文件
+      // 其他模块的错误会自然抛出 → 由全局中间件统一记录
+      const logMessage = `[AI Controller Error] ${error.message}\n路径: ${ctx.method} ${ctx.url}\nIP: ${ctx.ip}\n堆栈: ${error.stack}`;
+      errorLogger.error(logMessage);
       console.error('❌ [AI Controller Error]', error.message);
+
       // 如果还没有发送响应头，可以返回 JSON 错误
       if (!ctx.headerSent) {
         ctx.status = 503; // Service Unavailable
