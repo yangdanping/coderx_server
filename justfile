@@ -1,17 +1,12 @@
-# 开发服务器（同时启动主服务器和Socket服务器）
+# 仅启动主服务器（开发环境）
 
 dev:
   npm run dev
 
-# 仅启动主服务器（开发环境）
-
-serve:
-  npm run serve
-
 # 仅启动Socket服务器（开发环境）
 
 socket:
-  npm run socket
+  npm run dev:socket
 
 # 格式化代码
 
