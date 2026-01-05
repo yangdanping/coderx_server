@@ -4,23 +4,20 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "serve": "cross-env NODE_ENV=development nodemon ./src/main.js",
-    "socket": "cross-env NODE_ENV=development nodemon ./src/socket_server.js",
-    "dev": "concurrently \"npm run serve\" \"npm run socket\"",
+    "dev": "cross-env NODE_ENV=development nodemon ./src/main.js",
+    "dev:socket": "cross-env NODE_ENV=development nodemon ./src/socket_server.js",
     "prettier": "prettier --write .",
-    "update:prettier": "git fetch https://github.com/yangdanping/prettier_config_repo.git main && git checkout FETCH_HEAD -- .prettierrc .prettierignore",
-    "start": "cross-env NODE_ENV=production node ./src/main.js",
-    "start:socket": "cross-env NODE_ENV=production node ./src/socket_server.js"
+    "update:prettier": "git fetch https://github.com/yangdanping/prettier_config_repo.git main && git checkout FETCH_HEAD -- .prettierrc .prettierignore"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@ai-sdk/openai": "^3.0.2",
-    "@ai-sdk/openai-compatible": "^2.0.1",
+    "@ai-sdk/openai-compatible": "^2.0.2",
     "@koa/cors": "^5.0.0",
     "@koa/multer": "^4.0.0",
-    "ai": "^6.0.5",
+    "ai": "^6.0.7",
     "bcryptjs": "^3.0.3",
     "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
