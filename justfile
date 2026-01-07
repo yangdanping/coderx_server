@@ -6,6 +6,12 @@ i:
 up:
   pnpm up -i --latest
 
+# 服务器部署
+deploy:
+  git pull
+  pnpm i
+  pm2 restart ecosystem.config.js
+
 # 仅启动主服务器（开发环境）
 dev:
   pnpm dev
