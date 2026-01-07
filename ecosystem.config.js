@@ -7,15 +7,25 @@ module.exports = {
   apps: [
     {
       name: 'coderx_koa_server',
-      script: './src/main.js',
+      // 使用 pnpm 启动，确保能正确加载 pnpm 管理的 node_modules 符号链接
+      script: 'pnpm',
+      // 传递给 pnpm 的参数，对应 package.json 中的 scripts.start(在 npm/pnpm 中，start/test/stop/restart 脚本命令是内置标准的，可以省略 run 直接调用)
+      args: 'start',
+      // 告知 PM2 直接运行 pnpm 命令，不要尝试用 node 去解释 pnpm 本身
+      interpreter: 'none',
+      // 项目在生产服务器上的绝对路径，确保 pnpm 在正确的目录下执行
       cwd: '/root/coderx_server',
       env: {
+        // 设置生产环境标识，供应用内部逻辑（如日志、数据库连接）判断
         NODE_ENV: 'production',
       },
     },
     {
       name: 'coderx_socket_server',
-      script: './src/socket_server.js',
+      script: 'pnpm',
+      // 对应 package.json 中的 scripts["start:socket"]
+      args: 'run start:socket', // start:socket 是自定义脚本名称，不属于上述的内置标准命令。
+      interpreter: 'none',
       cwd: '/root/coderx_server',
       env: {
         NODE_ENV: 'production',
