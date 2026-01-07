@@ -32,3 +32,13 @@ node_modules
 *文档*/
 
 *.conf
+
+# 忽略头像,图片,视频文件夹,避免上传到仓库
+# 但保留 .gitkeep 文件,确保文件夹存在
+public/avatar/*
+public/img/*
+public/video/*
+# 不忽略头像和图片文件夹的 .gitkeep 文件
+!public/avatar/.gitkeep
+!public/img/.gitkeep
+!public/video/.gitkeep
