@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development nodemon ./src/main.js",
     "dev:socket": "cross-env NODE_ENV=development nodemon ./src/socket_server.js",
-    "start": "node ./src/main.js",
-    "start:socket": "node ./src/socket_server.js",
+    "start": "cross-env NODE_ENV=production node ./src/main.js",
+    "start:socket": "cross-env NODE_ENV=production node ./src/socket_server.js",
     "prettier": "prettier --write .",
     "update:prettier": "git fetch https://github.com/yangdanping/prettier_config_repo.git main && git checkout FETCH_HEAD -- .prettierrc .prettierignore"
   },
