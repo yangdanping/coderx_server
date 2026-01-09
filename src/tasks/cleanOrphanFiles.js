@@ -22,14 +22,15 @@ const SqlUtils = require('@/utils/SqlUtils');
 const CRON_MODE = process.env.CLEAN_CRON_MODE || 'prod';
 
 // SQL语句清理时间阈值配置（根据模式自动调整,超过时间后,sql将执行清理）
+// 注意：生产环境设置为 7 天，给用户足够时间处理草稿（草稿文件 ID 存储在前端 localStorage）
 const CLEANUP_THRESHOLDS = {
   test: {
     interval: 10, // 自定义文件过期时间(秒)
     unit: 'SECOND',
   },
   prod: {
-    interval: 24, // 自定义文件过期时间(小时)
-    unit: 'HOUR',
+    interval: 7, // 自定义文件过期时间(天) - 延长至 7 天以保护草稿中的文件
+    unit: 'DAY',
   },
 };
 
@@ -124,7 +125,8 @@ const cleanOrphanFiles = async (fileType, method = 'cron') => {
 
   // 获取当前模式的清理阈值
   const threshold = CLEANUP_THRESHOLDS[CRON_MODE];
-  console.log(`🔍 清理阈值: ${threshold.interval}${threshold.unit === 'SECOND' ? '秒' : '小时'}前创建的文件`);
+  const unitTextMap = { SECOND: '秒', HOUR: '小时', DAY: '天' };
+  console.log(`🔍 清理阈值: ${threshold.interval}${unitTextMap[threshold.unit] || threshold.unit}前创建的文件`);
 
   try {
     await conn.beginTransaction();
@@ -185,7 +187,7 @@ const cleanOrphanFiles = async (fileType, method = 'cron') => {
     console.log(`📊 找到 ${orphanFiles.length} 个孤儿${config.name}需要清理:`);
 
     // 2. 打印详细信息
-    const unitText = threshold.unit === 'SECOND' ? '秒' : '小时';
+    const unitText = unitTextMap[threshold.unit] || threshold.unit;
     orphanFiles.forEach((file, index) => {
       console.log(`   ${index + 1}. ID: ${file.id}, 文件: ${file.filename}, 创建于: ${file.age_in_units} ${unitText}前`);
     });
