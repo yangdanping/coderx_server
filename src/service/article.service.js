@@ -70,11 +70,11 @@ class ArticleService {
     return result[0];
   };
   /**
-   * 重构说明：
-   * 1. 采用与 getTotal 相同的占位符策略，彻底消除字符串拼接带来的注入风险。
-   * 2. 动态维护 queryParams 数组，并将 offset 和 limit 追加到末尾。
+   * 通过性能对比测试开关：切换getArticleList和getArticleListOptimized方法来对比性能差异
    */
   getArticleList = async (offset, limit, tagId = '', userId = '', pageOrder = 'date', idList = [], keywords = '') => {
+    // return await this.getArticleListOptimized(offset, limit, tagId, userId, pageOrder, idList, keywords); // 🔧 取消注释以使用优化版本
+
     let queryByTag = tagId ? `WHERE tag.id = ?` : `WHERE 1=1`;
     let queryByUserId = userId ? `AND a.user_id = ?` : '';
     let queryByCollectId = SqlUtils.queryIn('a.id', idList, 'AND');
@@ -97,17 +97,17 @@ class ArticleService {
           a.create_at createAt,
           a.update_at updateAt,
           JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url, 'sex', p.sex, 'career', p.career) author,
-          (SELECT COUNT(al.user_id) FROM article_like al WHERE al.article_id = a.id) likes, -- 点赞数子查询
-          (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount, -- 评论数子查询
+          (SELECT COUNT(al.user_id) FROM article_like al WHERE al.article_id = a.id) likes, -- ⚠️ 相关子查询：每行执行一次
+          (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount, -- ⚠️ 相关子查询：每行执行一次
           (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', tag.id, 'name', tag.name))
               FROM article_tag ag
               LEFT JOIN tag ON tag.id = ag.tag_id
-              WHERE ag.article_id = a.id) tags, -- 标签列表子查询
+              WHERE ag.article_id = a.id) tags, -- ⚠️ 相关子查询：每行执行一次
           (SELECT CONCAT('${baseURL}/article/images/', f.filename, '?type=small')
               FROM file f
               LEFT JOIN image_meta im ON f.id = im.file_id
               WHERE f.article_id = a.id AND f.file_type = 'image' AND im.is_cover = TRUE
-              LIMIT 1) cover, -- 封面图片子查询
+              LIMIT 1) cover, -- ⚠️ 相关子查询：每行执行一次
           CONCAT('${redirectURL}/article/', a.id) articleUrl
       FROM article a
       LEFT JOIN user u ON a.user_id = u.id
@@ -125,6 +125,91 @@ class ArticleService {
     const [result] = await connection.execute(statement, queryParams.concat(offset, limit));
     return result;
   };
+
+  /**
+   * ✅ 优化版本：使用 LEFT JOIN + 预聚合替代相关子查询
+   *
+   * 核心优化点：
+   * 1. 将 4 个相关子查询改为预聚合 + LEFT JOIN
+   * 2. 聚合查询只执行一次，然后通过 JOIN 关联结果
+   * 3. 性能提升：O(n²) → O(n)，在大数据量下差异明显
+   *
+   * 性能对比（假设 20 条文章）：
+   * - 旧版：1 + 20×4 = 81 次查询
+   * - 新版：1 + 4 = 5 次查询（主查询 + 4 个预聚合子查询）
+   */
+  getArticleListOptimized = async (offset, limit, tagId = '', userId = '', pageOrder = 'date', idList = [], keywords = '') => {
+    // ✅ 使用子查询方式筛选 tag，避免 JOIN 导致的重复行
+    let queryByTag = tagId ? `AND a.id IN (SELECT article_id FROM article_tag WHERE tag_id = ?)` : '';
+    let queryByUserId = userId ? `AND a.user_id = ?` : '';
+    let queryByCollectId = SqlUtils.queryIn('a.id', idList, 'AND');
+    let queryByTitle = keywords ? `AND a.title LIKE ?` : '';
+    let listOrder = `ORDER BY ${pageOrder === 'date' ? 'a.create_at' : 'COALESCE(likes_agg.likes, 0)+a.views+COALESCE(comment_agg.commentCount, 0)'} DESC`;
+
+    const queryParams = [];
+    if (tagId) queryParams.push(tagId);
+    if (userId) queryParams.push(userId);
+    if (idList.length) queryParams.push(...idList);
+    if (keywords) queryParams.push(`%${keywords}%`);
+
+    const statement = `
+      SELECT
+          a.id,
+          a.title,
+          a.content,
+          a.views,
+          a.status,
+          a.create_at createAt,
+          a.update_at updateAt,
+          JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url, 'sex', p.sex, 'career', p.career) author,
+          COALESCE(likes_agg.likes, 0) likes, -- ✅ 预聚合：所有文章的点赞数一次性计算
+          COALESCE(comment_agg.commentCount, 0) commentCount, -- ✅ 预聚合：所有文章的评论数一次性计算
+          tags_agg.tags, -- ✅ 预聚合：所有文章的标签一次性计算
+          cover_agg.cover, -- ✅ 预聚合：所有文章的封面一次性查询
+          CONCAT('${redirectURL}/article/', a.id) articleUrl
+      FROM article a
+      LEFT JOIN user u ON a.user_id = u.id
+      LEFT JOIN profile p ON u.id = p.user_id
+      -- 点赞数预聚合：先按 article_id 分组统计，再 JOIN 关联
+      LEFT JOIN (
+          SELECT article_id, COUNT(*) likes 
+          FROM article_like 
+          GROUP BY article_id
+      ) likes_agg ON a.id = likes_agg.article_id
+      -- 评论数预聚合
+      LEFT JOIN (
+          SELECT article_id, COUNT(*) commentCount 
+          FROM comment 
+          GROUP BY article_id
+      ) comment_agg ON a.id = comment_agg.article_id
+      -- 标签列表预聚合
+      LEFT JOIN (
+          SELECT ag.article_id, JSON_ARRAYAGG(JSON_OBJECT('id', tag.id, 'name', tag.name)) tags
+          FROM article_tag ag
+          LEFT JOIN tag ON tag.id = ag.tag_id
+          GROUP BY ag.article_id
+      ) tags_agg ON a.id = tags_agg.article_id
+      -- 封面图片预聚合
+      LEFT JOIN (
+          SELECT f.article_id, CONCAT('${baseURL}/article/images/', MAX(f.filename), '?type=small') cover
+          FROM file f
+          LEFT JOIN image_meta im ON f.id = im.file_id
+          WHERE f.file_type = 'image' AND im.is_cover = TRUE
+          GROUP BY f.article_id
+      ) cover_agg ON a.id = cover_agg.article_id
+      -- 💡 MAX(f.filename): 解决 only_full_group_by 错误，每个文章多个封面时取文件名最大的一个
+      WHERE 1=1
+      ${queryByTag}
+      ${queryByUserId}
+      ${queryByCollectId}
+      ${queryByTitle}
+      ${listOrder}
+      LIMIT ?, ?;
+    `;
+    const [result] = await connection.execute(statement, queryParams.concat(offset, limit));
+    return result;
+  };
+
   getTotal = async (tagId = '', userId = '', idList = [], keywords = '') => {
     let queryByTag = tagId ? `WHERE tag.id = ?` : `WHERE 1=1`;
     let queryByUserId = userId ? `AND a.user_id = ?` : '';
