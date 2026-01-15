@@ -21,6 +21,15 @@ node_modules
 .env.development
 .env.production
 
+# JWT 密钥文件
+src/app/keys/*.key
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+secrets.json
+
 # Editor directories and files
 .idea
 .vscode
