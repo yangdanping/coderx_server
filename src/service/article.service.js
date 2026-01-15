@@ -172,14 +172,14 @@ class ArticleService {
       LEFT JOIN profile p ON u.id = p.user_id
       -- 点赞数预聚合：先按 article_id 分组统计，再 JOIN 关联
       LEFT JOIN (
-          SELECT article_id, COUNT(*) likes 
-          FROM article_like 
+          SELECT article_id, COUNT(*) likes
+          FROM article_like
           GROUP BY article_id
       ) likes_agg ON a.id = likes_agg.article_id
       -- 评论数预聚合
       LEFT JOIN (
-          SELECT article_id, COUNT(*) commentCount 
-          FROM comment 
+          SELECT article_id, COUNT(*) commentCount
+          FROM comment
           GROUP BY article_id
       ) comment_agg ON a.id = comment_agg.article_id
       -- 标签列表预聚合
@@ -223,7 +223,7 @@ class ArticleService {
     if (keywords) queryParams.push(`%${keywords}%`);
 
     const statement = `
-      SELECT COUNT(DISTINCT a.id) total 
+      SELECT COUNT(DISTINCT a.id) total
       FROM article a
       LEFT JOIN article_tag ag ON a.id = ag.article_id
       LEFT JOIN tag ON tag.id = ag.tag_id
@@ -257,7 +257,7 @@ class ArticleService {
 
       // 2. 查询需要删除的视频文件列表（包括封面）
       const statement2 = `
-        SELECT f.filename, vm.poster 
+        SELECT f.filename, vm.poster
         FROM file f
         LEFT JOIN video_meta vm ON f.id = vm.file_id
         WHERE f.article_id = ? AND f.file_type = 'video';

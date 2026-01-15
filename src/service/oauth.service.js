@@ -104,9 +104,9 @@ class OAuthService {
    */
   async findUserByEmail(email) {
     const statement = `
-      SELECT u.*, p.email as profileEmail 
-      FROM user u 
-      LEFT JOIN profile p ON u.id = p.user_id 
+      SELECT u.*, p.email as profileEmail
+      FROM user u
+      LEFT JOIN profile p ON u.id = p.user_id
       WHERE p.email = ?;
     `;
     const [result] = await connection.execute(statement, [email]);

@@ -138,9 +138,9 @@ const cleanOrphanFiles = async (fileType, method = 'cron') => {
       // 图片孤儿：未关联文章 且 未被视频封面引用
       [orphanFiles] = await conn.execute(
         `
-        SELECT 
-          f.id, 
-          f.filename, 
+        SELECT
+          f.id,
+          f.filename,
           f.mimetype,
           f.size,
           f.create_at as createTime,
@@ -159,9 +159,9 @@ const cleanOrphanFiles = async (fileType, method = 'cron') => {
       // 视频孤儿：未关联文章
       [orphanFiles] = await conn.execute(
         `
-        SELECT 
-          f.id, 
-          f.filename, 
+        SELECT
+          f.id,
+          f.filename,
           f.mimetype,
           f.size,
           f.create_at as createTime,

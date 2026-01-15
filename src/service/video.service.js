@@ -272,7 +272,7 @@ class VideoService {
     if (!videoIds || videoIds.length === 0) return [];
     try {
       const statement = `
-        SELECT f.filename, vm.poster 
+        SELECT f.filename, vm.poster
         FROM file f
         LEFT JOIN video_meta vm ON f.id = vm.file_id
         WHERE ${SqlUtils.queryIn('f.id', videoIds)} AND f.file_type = 'video';
@@ -307,7 +307,7 @@ class VideoService {
         FROM file f
                 LEFT JOIN video_meta vm ON f.id = vm.file_id
         WHERE f.article_id = ?
-          AND f.file_type 
+          AND f.file_type
       `;
       const [result] = await connection.execute(statement, [articleId]);
       return result;

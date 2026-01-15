@@ -2,8 +2,8 @@ const connection = require('@/app/database');
 
 class AuthService {
   /* 根据表名/内容id/用户id从数据库中查询该用户是否具备更新/删除<某表>的权限
-  id和user_id是固定的,这里只需改表名 
-  
+  id和user_id是固定的,这里只需改表名
+
   重构说明：
   1. 对 tableName 进行白名单校验，防止非法表名通过字符串拼接进入 SQL。
   */

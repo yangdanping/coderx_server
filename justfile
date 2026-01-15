@@ -6,6 +6,11 @@ i:
 up:
   pnpm up -i --latest
 
+# 在服务器上生成JWT密钥对
+generate-keys:
+  cd src/app/keys && node generate-keys.js
+  @echo "✅ JWT密钥对已生成"
+
 # 推送环境配置文件到生产服务器
 push-env:
   scp .env.production root@95.40.29.75:/root/coderx_server
@@ -70,3 +75,21 @@ start:
 # 生产环境启动Socket服务器
 start-socket:
   pnpm start:socket
+
+# 首次部署（包含密钥生成）
+deploy-first-time:
+  #!/bin/bash
+  echo "🚀 开始首次部署..."
+  git pull
+  pnpm i
+  echo "🔑 生成JWT密钥对..."
+  cd src/app/keys && node generate-keys.js && cd ../../..
+  echo "▶️  启动服务..."
+  pm2 start ecosystem.config.js
+  echo "🎉 首次部署完成！"
+
+# 完整部署流程（推送配置 + 代码部署）
+deploy-full:
+  just push-env
+  ssh root@95.40.29.75 "cd /root/coderx_server && just deploy"
+  @echo "🎉 完整部署完成！"

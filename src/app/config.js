@@ -14,4 +14,3 @@ module.exports = { APP_HOST, APP_PORT, MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, M
 
 module.exports.PRIVATE_KEY = PRIVATE_KEY;
 module.exports.PUBLIC_KEY = PUBLIC_KEY;
-

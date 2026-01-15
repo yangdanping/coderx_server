@@ -6,8 +6,8 @@ class HistoryService {
   addHistory = async (userId, articleId) => {
     try {
       const statement = `
-        INSERT INTO article_history (user_id, article_id) 
-        VALUES (?, ?) 
+        INSERT INTO article_history (user_id, article_id)
+        VALUES (?, ?)
         ON DUPLICATE KEY UPDATE update_at = CURRENT_TIMESTAMP;
       `;
       const [result] = await connection.execute(statement, [userId, articleId]);
@@ -60,7 +60,7 @@ class HistoryService {
   getUserHistoryCount = async (userId) => {
     try {
       const statement = `
-        SELECT COUNT(*) as total 
+        SELECT COUNT(*) as total
         FROM article_history ah
         LEFT JOIN article a ON ah.article_id = a.id
         WHERE ah.user_id = ? AND a.id IS NOT NULL;
@@ -77,7 +77,7 @@ class HistoryService {
   deleteHistory = async (userId, articleId) => {
     try {
       const statement = `
-        DELETE FROM article_history 
+        DELETE FROM article_history
         WHERE user_id = ? AND article_id = ?;
       `;
       const [result] = await connection.execute(statement, [userId, articleId]);
@@ -104,7 +104,7 @@ class HistoryService {
   hasViewed = async (userId, articleId) => {
     try {
       const statement = `
-        SELECT id FROM article_history 
+        SELECT id FROM article_history
         WHERE user_id = ? AND article_id = ?;
       `;
       const [result] = await connection.execute(statement, [userId, articleId]);

@@ -20,7 +20,7 @@ class CommentService {
       const queryParams = [articleId];
       const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildCursorCondition(cursor, 'DESC');
       queryParams.push(...cursorParams);
-      /* 
+      /*
       为什么要多查一条 (limit + 1)？
       目的：为了高效地判断“是否还有下一页” (hasMore)。
       原理：如果不这样做，通常需要额外执行一条 COUNT 查询来计算剩余总数，这会增加数据库负担。

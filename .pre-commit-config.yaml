@@ -1,0 +1,34 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # 检查是否添加了大文件（超过500KB）
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+
+      # 检测私钥文件
+      - id: detect-private-key
+
+      # 检查合并冲突标记
+      - id: check-merge-conflict
+
+      # 检查YAML文件格式
+      - id: check-yaml
+        exclude: ^\.pre-commit-config\.yaml$
+
+      # 检查JSON文件格式
+      - id: check-json
+
+      # 确保文件以换行符结尾
+      - id: end-of-file-fixer
+
+      # 移除行尾空格
+      - id: trailing-whitespace
+
+  # 扫描密钥泄露
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package-lock.json|pnpm-lock.yaml
