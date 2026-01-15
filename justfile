@@ -6,6 +6,12 @@ i:
 up:
   pnpm up -i --latest
 
+# 推送环境配置文件到生产服务器
+push-env:
+  scp .env.production root@95.40.29.75:/root/coderx_server
+  scp .env.development root@95.40.29.75:/root/coderx_server
+  @echo "✅ 环境配置文件已推送到生产服务器"
+
 # 服务器部署
 deploy:
   git pull
