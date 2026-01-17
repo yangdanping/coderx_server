@@ -21,8 +21,8 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0(koa@3.1.1)(multer@2.0.2)
       ai:
-        specifier: ^6.0.38
-        version: 6.0.38(zod@3.25.76)
+        specifier: ^6.0.39
+        version: 6.0.39(zod@3.25.76)
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -290,8 +290,8 @@ packages:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
 
-  ai@6.0.38:
-    resolution: {integrity: sha512-X8AaZFrdsPO1RNCAQLsaWfmE/SL9zgsiIZN3XqEHs3jIZ7ycR5aQZRg5XpNtbLWJxKXzK2b1ZXLx13AFOjksSg==}
+  ai@6.0.39:
+    resolution: {integrity: sha512-hF05gF4H+IxuilA8kNANVVHQXduTJsJaH74jmlmy8mcQt3NZgPYe2zZNyGBV4DPDYTUDt1h31hbLgQqJTn5LGA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -1482,7 +1482,7 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  ai@6.0.38(zod@3.25.76):
+  ai@6.0.39(zod@3.25.76):
     dependencies:
       '@ai-sdk/gateway': 3.0.16(zod@3.25.76)
       '@ai-sdk/provider': 3.0.4
