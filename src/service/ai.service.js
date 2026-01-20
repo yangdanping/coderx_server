@@ -1,5 +1,5 @@
 const { createOpenAI } = require('@ai-sdk/openai');
-const { streamText, convertToModelMessages } = require('ai');
+const { streamText, convertToModelMessages, generateText } = require('ai');
 const { ollamaBaseURL } = require('@/constants/urls');
 const Utils = require('@/utils');
 // 创建 Ollama 的 OpenAI 兼容实例
@@ -56,7 +56,7 @@ class AiService {
       console.log(`\n🤖 [AI Request] 模型: ${model}, 消息数: ${messages.length}`);
       const startTime = Date.now();
 
-      // 构建系统提示
+      // 组装系统提示
       let systemPrompt = '你是一个专业的编程助手，擅长解释代码、总结文章和回答技术问题。';
       // 如果有文章上下文，添加到系统提示中
       if (context) {
@@ -115,6 +115,103 @@ class AiService {
       } else if (error.message.includes('model')) {
         errorMessage = `模型 "${model}" 未找到，请先下载: ollama pull ${model}`;
         errorCode = 'MODEL_NOT_FOUND';
+      }
+
+      const customError = new Error(errorMessage);
+      customError.code = errorCode;
+      customError.originalError = error.message;
+      throw customError;
+    }
+  };
+
+  /**
+   * 编辑补全接口（非流式，快速响应）
+   * @param {String} beforeText - 光标前文本（最多 500 字）
+   * @param {String} afterText - 光标后文本（可选，最多 200 字）
+   * @param {String} model - 模型名称
+   * @param {Number} maxSuggestions - 建议数量（默认 3）
+   * @returns {Promise<Array>} 补全建议数组
+   */
+  getCompletion = async (beforeText, afterText = '', model = 'qwen2.5:7b', maxSuggestions = 3) => {
+    try {
+      console.log(`\n✏️ [AI Completion] 模型: ${model}, 上文长度: ${beforeText.length}, 下文长度: ${afterText.length}`);
+      const startTime = Date.now();
+
+      // 组装专门的补全提示
+      const systemPrompt = `你是一个写作补全助手。根据用户的上下文，生成 ${maxSuggestions} 个续写建议。
+
+规则：
+1. 每个建议控制在 1-30 字之间
+2. 建议应自然衔接上文，语义连贯
+3. 按长度从短到长排序（词 -> 短语 -> 句子）
+4. 只返回补全内容本身，不要解释或添加标点（除非必要）
+5. 必须严格返回 JSON 格式
+
+返回格式示例：
+{"suggestions": ["建议1", "建议2", "建议3"]}`;
+
+      // 组装用于补全的Prompt
+      let userPrompt = `上文内容：
+"""
+${beforeText}
+"""`;
+
+      if (afterText) {
+        userPrompt += `
+
+下文内容：
+"""
+${afterText}
+"""`;
+      }
+
+      userPrompt += `
+
+请根据上下文生成 ${maxSuggestions} 个续写建议（JSON 格式）：`;
+
+      const result = await generateText({
+        model: ollama.chat(model),
+        system: systemPrompt,
+        prompt: userPrompt,
+        maxTokens: 200, // 限制生成长度，确保快速响应
+      });
+
+      const endTime = Date.now();
+      console.log(`✅ [AI Completion] 请求完成, 耗时: ${endTime - startTime}ms`);
+      console.log(`📝 [AI Completion] 原始响应: ${result.text}`);
+
+      // 解析 JSON 响应
+      try {
+        // 尝试从响应中提取 JSON
+        const jsonMatch = result.text.match(/\{[\s\S]*"suggestions"[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          // 格式化返回结果
+          const suggestions = parsed.suggestions.slice(0, maxSuggestions).map((text, index) => ({
+            id: String.fromCharCode(65 + index), // A, B, C...
+            text: text.trim(),
+            type: text.length <= 5 ? 'word' : text.length <= 15 ? 'phrase' : 'sentence',
+          }));
+          return suggestions;
+        }
+        throw new Error('无法解析 AI 响应');
+      } catch (parseError) {
+        console.error('❌ [AI Completion] JSON 解析失败:', parseError.message);
+        // 返回空数组，而不是抛出错误
+        return [];
+      }
+    } catch (error) {
+      console.error('❌ [AI Completion Error]', error);
+
+      let errorMessage = 'AI 补全服务暂时不可用';
+      let errorCode = 'COMPLETION_ERROR';
+
+      if (error.message.includes('ECONNREFUSED') || error.message.includes('connect')) {
+        errorMessage = 'AI 服务器连接失败';
+        errorCode = 'CONNECTION_REFUSED';
+      } else if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+        errorMessage = 'AI 服务器响应超时';
+        errorCode = 'TIMEOUT';
       }
 
       const customError = new Error(errorMessage);

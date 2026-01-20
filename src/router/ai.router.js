@@ -12,4 +12,7 @@ aiRouter.get('/health', aiController.health);
 // aiRouter.post('/chat', verifyAuth, aiController.chat);
 aiRouter.post('/chat', aiController.chat);
 
+// AI 编辑补全接口（无需登录，用于编辑器内联补全）
+aiRouter.post('/completion', aiController.completion);
+
 module.exports = aiRouter;

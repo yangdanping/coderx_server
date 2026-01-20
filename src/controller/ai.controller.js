@@ -98,6 +98,51 @@ class AiController {
       }
     }
   };
+  /**
+   * 编辑补全接口
+   * 用于编辑器内联补全功能，非流式快速响应
+   */
+  completion = async (ctx, next) => {
+    const { beforeText, afterText, model, maxSuggestions } = ctx.request.body;
+
+    // 参数验证
+    if (!beforeText || typeof beforeText !== 'string') {
+      ctx.status = 400;
+      ctx.body = {
+        success: false,
+        message: 'beforeText is required and must be a string',
+      };
+      return;
+    }
+
+    // 上下文长度限制（熔断机制）
+    const MAX_BEFORE = 500;
+    const MAX_AFTER = 200;
+    const truncatedBefore = beforeText.slice(-MAX_BEFORE);
+    const truncatedAfter = afterText ? afterText.slice(0, MAX_AFTER) : '';
+
+    try {
+      const suggestions = await aiService.getCompletion(truncatedBefore, truncatedAfter, model, maxSuggestions || 3);
+
+      ctx.status = 200;
+      ctx.body = {
+        success: true,
+        suggestions,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('❌ [AI Completion Controller Error]', error.message);
+
+      ctx.status = 503;
+      ctx.body = {
+        success: false,
+        message: error.message,
+        code: error.code || 'COMPLETION_ERROR',
+        suggestions: [],
+        timestamp: new Date().toISOString(),
+      };
+    }
+  };
 }
 
 module.exports = new AiController();

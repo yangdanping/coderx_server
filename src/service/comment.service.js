@@ -124,7 +124,7 @@ class CommentService {
 
       // 处理数据格式
       const items = comments.map((item) => {
-        // 构建 articleUrl (假设路由结构)
+        // 组装 articleUrl (假设路由结构)
         item.articleUrl = `/article/${item.articleId}`;
 
         if (item.status) {

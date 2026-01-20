@@ -89,7 +89,7 @@ const deletePhysicalFile = (filename, uploadDir = 'public/img') => {
       // 1. 生成封面文件名：将视频扩展名（如 .mp4）替换为 -poster.jpg
       const posterFilename = filename.replace(extname, `-poster.jpg`);
 
-      // 2. 构建封面文件的完整路径
+      // 2. 组装封面文件的完整路径
       const posterFilePath = path.resolve(process.cwd(), uploadDir, posterFilename);
 
       // 3. 检查封面文件是否存在，存在则删除
