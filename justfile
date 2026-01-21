@@ -11,11 +11,17 @@ generate-keys:
   cd src/app/keys && node generate-keys.js
   @echo "✅ JWT密钥对已生成"
 
-# 推送环境配置文件到生产服务器
-push-env:
-  scp .env.production root@95.40.29.75:/root/coderx_server
-  scp .env.development root@95.40.29.75:/root/coderx_server
-  @echo "✅ 环境配置文件已推送到生产服务器"
+# 推送环境配置文件
+# 使用示例:
+#   just push-env          (默认推送到生产服务器)
+#   just push-env macbook  (推送到另一台 MacBook)
+push-env target="prod":
+    {{ if target == "macbook" { \
+        "scp .env.production .env.development yangdanping@100.124.104.82:/Users/yangdanping/Desktop/personal_project/coderx_server" \
+    } else { \
+        "scp .env.production .env.development root@95.40.29.75:/root/coderx_server" \
+    } }}
+    @echo "✅ 环境配置文件已推送到 {{ if target == 'macbook' { "MacBook" } else { "生产服务器" } }}"
 
 # 服务器部署
 deploy:
