@@ -54,9 +54,10 @@ class UserService {
     //   console.log(error);
     // }
   };
-  updateAvatarUrl = async (avatarUrl, userId) => {
+  updateAvatarUrl = async (avatarUrl, userId, conn = null) => {
     const statement = `UPDATE profile SET avatar_url = ? WHERE user_id = ?;`;
-    const [result] = await connection.execute(statement, [avatarUrl, userId]);
+    const execute = conn ? conn.execute.bind(conn) : connection.execute.bind(connection);
+    const [result] = await execute(statement, [avatarUrl, userId]);
     return result;
   };
   getProfileById = async (userId) => {

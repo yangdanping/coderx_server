@@ -12,12 +12,14 @@ class AvatarService {
    * @param {string} filename - 文件名
    * @param {string} mimetype - MIME类型
    * @param {number} size - 文件大小
+   * @param {object} conn - 数据库连接（可选，用于事务）
    * @returns {Promise} 插入结果
    */
-  addAvatar = async (userId, filename, mimetype, size) => {
+  addAvatar = async (userId, filename, mimetype, size, conn = null) => {
     try {
       const statement = `INSERT INTO avatar (user_id,filename, mimetype, size) VALUES (?,?,?,?)`;
-      const [result] = await connection.execute(statement, [userId, filename, mimetype, size]);
+      const execute = conn ? conn.execute.bind(conn) : connection.execute.bind(connection);
+      const [result] = await execute(statement, [userId, filename, mimetype, size]);
       return result;
     } catch (error) {
       console.log('addAvatar error:', error);
@@ -60,12 +62,14 @@ class AvatarService {
   /**
    * 删除头像
    * @param {number} avatarId - 头像ID
+   * @param {object} conn - 数据库连接（可选，用于事务）
    * @returns {Promise} 删除结果
    */
-  deleteAvatar = async (avatarId) => {
+  deleteAvatar = async (avatarId, conn = null) => {
     try {
       const statement = `DELETE FROM avatar ar WHERE ar.id = ?;`;
-      const [result] = await connection.execute(statement, [avatarId]);
+      const execute = conn ? conn.execute.bind(conn) : connection.execute.bind(connection);
+      const [result] = await execute(statement, [avatarId]);
       return result;
     } catch (error) {
       console.log('deleteAvatar error:', error);
