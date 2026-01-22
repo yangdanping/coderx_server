@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@ai-sdk/openai':
-        specifier: ^3.0.13
-        version: 3.0.13(zod@3.25.76)
+        specifier: ^3.0.17
+        version: 3.0.17(zod@3.25.76)
       '@ai-sdk/openai-compatible':
-        specifier: ^2.0.16
-        version: 2.0.16(zod@3.25.76)
+        specifier: ^2.0.17
+        version: 2.0.17(zod@3.25.76)
       '@koa/cors':
         specifier: ^5.0.0
         version: 5.0.0
@@ -21,8 +21,8 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0(koa@3.1.1)(multer@2.0.2)
       ai:
-        specifier: ^6.0.43
-        version: 6.0.43(zod@3.25.76)
+        specifier: ^6.0.47
+        version: 6.0.47(zod@3.25.76)
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -82,25 +82,25 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0
       prettier:
-        specifier: ^3.8.0
-        version: 3.8.0
+        specifier: ^3.8.1
+        version: 3.8.1
 
 packages:
 
-  '@ai-sdk/gateway@3.0.17':
-    resolution: {integrity: sha512-mCz50GlBPyBV96Wcll1Mpaz56MVFuHL+bwRWGkIsCJwKAKIfdgUZecFzS3gckpHGaqP5+BYnmyJocIMzUhTQ2A==}
+  '@ai-sdk/gateway@3.0.21':
+    resolution: {integrity: sha512-RmmWiNETbusjF6ZroYTCuZfaQu3LtdEu0VC6mK+sCWU0Lqp8N0hSVjMg3hsJeJ53i77vSonS3F9NELPQvu5U4g==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/openai-compatible@2.0.16':
-    resolution: {integrity: sha512-Vn+zlFSeo3DiBvYZv575+9WxqYqFyu0xNx3eAWwFDHkQpMwh9MC5eVTfdpT/YRW9lK0jWvJ//aG7QnX+FE16/w==}
+  '@ai-sdk/openai-compatible@2.0.17':
+    resolution: {integrity: sha512-Uvf+IrXYq5mgR47Vu7EOzAuRThYz6ZUzOEB6NI6neSN6Ozw7t/C8n2UYBlm6/wjruVwRbazm7hhtCKYxZydUKw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/openai@3.0.13':
-    resolution: {integrity: sha512-H+iqcmtND5dLsKpuMKjGdSRbU0OQwDdpJZbVBueASmCxsEL52FEWDjwTStDpSyZuvv68Xbs6tej8xcbQXFRCaw==}
+  '@ai-sdk/openai@3.0.17':
+    resolution: {integrity: sha512-2XR4d4wPsxKydSayc23uqnXsH4LzLRUhYzQ40JyEhMSdKH7WX12fo58hG0tX03P+ggxxIMBQhtRUSL2XGdl1ug==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -290,8 +290,8 @@ packages:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
 
-  ai@6.0.43:
-    resolution: {integrity: sha512-CCYfTjU/b3hbP1+nTKHkZgVy7mB+80o8dlga3UWw2xMc6syfenaJoLJ1YbqMfFI4K5PS1zBLeZIfqjUFjsEzBw==}
+  ai@6.0.47:
+    resolution: {integrity: sha512-IXbUdwG/8i7dk84jRxVY5il2GSq7+7RuxORixfxnyySY0XMfh+jKee4ubaddc+cVIx9zdWhLolAYPBS+ecJFHA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -923,8 +923,8 @@ packages:
     resolution: {integrity: sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==}
     engines: {node: '>=14.19.0'}
 
-  prettier@3.8.0:
-    resolution: {integrity: sha512-yEPsovQfpxYfgWNhCfECjG5AQaO+K3dp6XERmOepyPDVqcJm+bjyCVO3pmU+nAPe0N5dDvekfGezt/EIiRe1TA==}
+  prettier@3.8.1:
+    resolution: {integrity: sha512-UOnG6LftzbdaHZcKoPFtOcCKztrQ57WkHDeRD9t/PTQtmT0NHSeWWepj6pS0z/N7+08BHFDQVUrfmfMRcZwbMg==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -1207,20 +1207,20 @@ packages:
 
 snapshots:
 
-  '@ai-sdk/gateway@3.0.17(zod@3.25.76)':
+  '@ai-sdk/gateway@3.0.21(zod@3.25.76)':
     dependencies:
       '@ai-sdk/provider': 3.0.4
       '@ai-sdk/provider-utils': 4.0.8(zod@3.25.76)
       '@vercel/oidc': 3.1.0
       zod: 3.25.76
 
-  '@ai-sdk/openai-compatible@2.0.16(zod@3.25.76)':
+  '@ai-sdk/openai-compatible@2.0.17(zod@3.25.76)':
     dependencies:
       '@ai-sdk/provider': 3.0.4
       '@ai-sdk/provider-utils': 4.0.8(zod@3.25.76)
       zod: 3.25.76
 
-  '@ai-sdk/openai@3.0.13(zod@3.25.76)':
+  '@ai-sdk/openai@3.0.17(zod@3.25.76)':
     dependencies:
       '@ai-sdk/provider': 3.0.4
       '@ai-sdk/provider-utils': 4.0.8(zod@3.25.76)
@@ -1482,9 +1482,9 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  ai@6.0.43(zod@3.25.76):
+  ai@6.0.47(zod@3.25.76):
     dependencies:
-      '@ai-sdk/gateway': 3.0.17(zod@3.25.76)
+      '@ai-sdk/gateway': 3.0.21(zod@3.25.76)
       '@ai-sdk/provider': 3.0.4
       '@ai-sdk/provider-utils': 4.0.8(zod@3.25.76)
       '@opentelemetry/api': 1.9.0
@@ -2146,7 +2146,7 @@ snapshots:
 
   pngjs@7.0.0: {}
 
-  prettier@3.8.0: {}
+  prettier@3.8.1: {}
 
   process@0.11.10: {}
 
