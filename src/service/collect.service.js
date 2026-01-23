@@ -79,6 +79,23 @@ class CollectService {
     const [result] = await connection.execute(statement, [collectId]);
     return result[0];
   };
+
+  // 修改收藏夹名称
+  updateCollect = async (collectId, name) => {
+    const statement = `UPDATE collect SET name = ? WHERE id = ?;`;
+    const [result] = await connection.execute(statement, [name, collectId]);
+    return result;
+  };
+
+  // 删除收藏夹（同时删除关联的文章收藏记录）
+  removeCollect = async (collectId) => {
+    // 先删除关联表数据
+    await connection.execute(`DELETE FROM article_collect WHERE collect_id = ?;`, [collectId]);
+    // 再删除收藏夹
+    const statement = `DELETE FROM collect WHERE id = ?;`;
+    const [result] = await connection.execute(statement, [collectId]);
+    return result;
+  };
 }
 
 module.exports = new CollectService();

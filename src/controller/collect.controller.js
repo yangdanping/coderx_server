@@ -33,6 +33,21 @@ class collectController {
 
     ctx.body = Result.success(newCollectIds);
   };
+
+  // 修改收藏夹名称
+  updateCollect = async (ctx, next) => {
+    const { collectId } = ctx.params;
+    const { name } = ctx.request.body;
+    const result = await collectService.updateCollect(collectId, name);
+    ctx.body = Result.success(result);
+  };
+
+  // 删除收藏夹
+  removeCollect = async (ctx, next) => {
+    const { collectId } = ctx.params;
+    const result = await collectService.removeCollect(collectId);
+    ctx.body = Result.success(result);
+  };
 }
 
 module.exports = new collectController();
