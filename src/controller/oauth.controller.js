@@ -5,7 +5,7 @@ const Result = require('@/app/Result');
 
 /**
  * OAuth 控制器
- * 处理 Google OAuth 2.0 登录流程
+ * 处理 Google 和 GitHub OAuth 2.0 登录流程
  */
 class OAuthController {
   /**
@@ -98,7 +98,97 @@ class OAuthController {
   getStatus = async (ctx) => {
     ctx.body = Result.success({
       google: oauthService.isConfigured(),
+      github: oauthService.isGitHubConfigured(),
     });
+  };
+
+  // ==================== GitHub OAuth ====================
+
+  /**
+   * 获取 GitHub 授权 URL
+   * GET /oauth/github
+   */
+  getGitHubAuthUrl = async (ctx) => {
+    if (!oauthService.isGitHubConfigured()) {
+      ctx.body = Result.fail('GitHub OAuth 未配置，请联系管理员');
+      return;
+    }
+
+    const authUrl = oauthService.getGitHubAuthUrl();
+    ctx.body = Result.success({ authUrl });
+  };
+
+  /**
+   * GitHub OAuth 回调处理
+   * GET /oauth/github/callback?code=xxx
+   *
+   * 流程：
+   * 1. 用 code 换取 GitHub 用户信息
+   * 2. 检查用户是否已存在（通过 github_id）
+   * 3. 不存在则检查邮箱是否已注册（账号关联）
+   * 4. 都不存在则创建新用户
+   * 5. 颁发 JWT token
+   * 6. 重定向到前端并携带 token
+   */
+  githubCallback = async (ctx) => {
+    const { code } = ctx.query;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    if (!code) {
+      ctx.redirect(`${frontendUrl}/oauth/callback?error=missing_code`);
+      return;
+    }
+
+    try {
+      // 1. 用 code 换取 GitHub 用户信息
+      const githubUser = await oauthService.getGitHubUserInfo(code);
+      console.log('[OAuth] GitHub 用户信息:', githubUser);
+
+      let user = null;
+
+      // 2. 检查是否已通过 GitHub 登录过
+      user = await oauthService.findUserByGitHubId(githubUser.githubId);
+
+      if (!user) {
+        // 3. 检查邮箱是否已注册（账号关联场景）
+        if (githubUser.email) {
+          const existingUser = await oauthService.findUserByEmail(githubUser.email);
+
+          if (existingUser) {
+            // 关联现有账号
+            await oauthService.linkGitHubAccount(existingUser.id, githubUser.githubId);
+            user = { id: existingUser.id, name: existingUser.name };
+            console.log('[OAuth] 已关联现有账号:', user.name);
+          }
+        }
+
+        if (!user) {
+          // 4. 创建新用户
+          user = await oauthService.createGitHubOAuthUser(githubUser);
+          console.log('[OAuth] 已创建新 GitHub 用户:', user.name);
+        }
+      }
+
+      // 5. 颁发 JWT token（复用现有逻辑）
+      const token = jwt.sign({ id: user.id, name: user.name }, PRIVATE_KEY, {
+        expiresIn: 60 * 60 * 24 * 7, // 7 天
+        algorithm: 'RS256',
+        allowInsecureKeySizes: true,
+      });
+
+      console.log('[OAuth] GitHub 登录成功，用户:', user.name);
+
+      // 6. 重定向到前端回调页面，携带 token 和用户信息
+      const params = new URLSearchParams({
+        token,
+        userId: user.id,
+        userName: user.name,
+      });
+      ctx.redirect(`${frontendUrl}/oauth/callback?${params.toString()}`);
+    } catch (error) {
+      console.error('[OAuth] GitHub 登录失败:', error.message);
+      ctx.redirect(`${frontendUrl}/oauth/callback?error=${encodeURIComponent(error.message)}`);
+    }
   };
 }
 
