@@ -8,6 +8,8 @@ const { IMG_PATH, VIDEO_PATH } = require('@/constants/filePaths');
 const Utils = require('@/utils');
 const Result = require('@/app/Result');
 const deleteFile = require('@/utils/deleteFile');
+const MdUtils = require('@/utils/MdUtils');
+
 class ArticleController {
   /**
    * 发布文章
@@ -63,7 +65,11 @@ class ArticleController {
    */
   addArticle = async (ctx, next) => {
     const userId = ctx.user.id;
-    const { title, content } = ctx.request.body;
+    let { title, content } = ctx.request.body;
+
+    // 自动转换 Markdown 为 HTML 以保证详情页兼容性
+    content = MdUtils.renderHtml(content);
+
     const result = await articleService.addArticle(userId, title, content);
     ctx.body = Result.success(result);
   };
@@ -116,6 +122,11 @@ class ArticleController {
     // Service 层如果查不到会抛出 BusinessError，不会走到下面的代码
     const result = await articleService.getArticleById(articleId);
 
+    // 自动转换内容为 HTML，确保前端渲染一致性
+    if (result && result.content) {
+      result.content = MdUtils.renderHtml(result.content);
+    }
+
     // 如果用户已登录，添加浏览记录
     if (ctx.user && ctx.user.id) {
       try {
@@ -146,6 +157,9 @@ class ArticleController {
     // 处理文章内容（清理HTML标签、截取长度、封禁提示）
     result.forEach((article) => {
       if (!article.status) {
+        // 先确保内容是 HTML
+        article.content = MdUtils.renderHtml(article.content);
+        // 然后再清理标签用于预览
         article.content = Utils.removeHTMLTag(article.content);
         if (article.content.length > 50) {
           article.content = article.content.slice(0, 50);
@@ -164,8 +178,12 @@ class ArticleController {
     ctx.body = Result.success(result);
   };
   update = async (ctx, next) => {
-    const { title, content } = ctx.request.body;
+    let { title, content } = ctx.request.body;
     const { articleId } = ctx.params;
+
+    // 自动转换 Markdown 为 HTML 以保证详情页兼容性
+    content = MdUtils.renderHtml(content);
+
     const result = await articleService.update(title, content, articleId);
     ctx.body = Result.success(result);
   };

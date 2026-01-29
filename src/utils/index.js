@@ -73,7 +73,16 @@ class Utils {
 
   // 移除HTML标签工具-----------------------------
   static removeHTMLTag = (str) => {
-    return str.replace(new RegExp('<(S*?)[^>]*>.*?|<.*? />|&nbsp; ', 'g'), '');
+    if (!str) return '';
+    return str
+      .replace(/<[^>]+>/g, '') // 移除所有 HTML 标签
+      .replace(/&nbsp;/g, ' ') // 替换空格实体
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, ' ') // 合并多个空格
+      .trim();
   };
 
   // 专门用于 AI 上下文的清洗工具（保留段落结构）
