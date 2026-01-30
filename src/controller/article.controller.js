@@ -13,61 +13,12 @@ const MdUtils = require('@/utils/MdUtils');
 class ArticleController {
   /**
    * 发布文章
-   * 重构说明：
-   * - 移除 result ? ... : ... 判断
-   * - Service 层如果出错会抛异常，由全局中间件捕获并返回 Result.fail()
-   * - Controller 只关心"正常路径"，代码更简洁
-   *
-   * ============================================================
-   * 【扩展讨论】Markdown 存储方案
-   * ============================================================
-   *
-   * 当前状态：
-   * - content 字段存储 HTML 格式（wangeditor 和 Tiptap 默认输出）
-   * - 前端 Tiptap 编辑器已支持 getMarkdown()，但初期仍输出 HTML
-   *
-   * 如需支持 Markdown 存储，需要进行以下扩展：
-   *
-   * 1. 数据库扩展（article 表新增字段）：
-   *    ALTER TABLE article
-   *    ADD COLUMN content_md TEXT DEFAULT NULL COMMENT 'Markdown 格式内容',
-   *    ADD COLUMN content_type ENUM('html', 'markdown') DEFAULT 'html' COMMENT '内容格式类型';
-   *
-   * 2. 本方法修改（addArticle）：
-   *    - 请求体新增 contentType 参数：const { title, content, contentType = 'html' } = ctx.request.body;
-   *    - 根据 contentType 决定存储字段：
-   *      if (contentType === 'markdown') {
-   *        // 调用 articleService.addArticleWithMarkdown(userId, title, content)
-   *        // 存储到 content_md 字段，content 字段可存储渲染后的 HTML 或留空
-   *      }
-   *
-   * 3. 接口扩展方案对比：
-   *
-   *    【方案 A：新增 /v2 独立路由】
-   *    articleRouter.post('/v2', verifyAuth, verifyStatus, articleController.addArticleV2)
-   *    - 优点：解耦性好，不影响现有接口，便于灰度发布和版本回退
-   *    - 缺点：维护两套路由，共有逻辑可能重复，长期增加维护成本
-   *    - 适用场景：需要长期支持两种格式、或有大量旧客户端需要兼容
-   *
-   *    【方案 B：现有路由扩展参数】（推荐）
-   *    在现有 POST /article 接口中增加 contentType 参数判断
-   *    - 优点：改动小，部署简单，无需新增路由
-   *    - 缺点：接口逻辑略复杂，需要明确文档规范
-   *    - 适用场景：渐进式迁移，旧客户端不传 contentType 时默认 html
-   *
-   * 4. 收益分析：
-   *    - 支持 Markdown 存储后，可实现"源码级"内容编辑，便于批量处理和迁移
-   *    - 前端可根据 content_type 字段选择性渲染（直接渲染 HTML 或动态渲染 Markdown）
-   *    - 搜索优化：Markdown 纯文本更适合全文检索
-   *
-   * 当前建议：暂不实现，待实际需求明确后再决定采用方案 A 或 B
-   * ============================================================
    */
   addArticle = async (ctx, next) => {
     const userId = ctx.user.id;
     let { title, content } = ctx.request.body;
 
-    // 自动转换 Markdown 为 HTML 以保证详情页兼容性
+    // 自动转换 Markdown 为 HTML 以保证详情页兼容性 (兼容旧版或第三方输入)
     content = MdUtils.renderHtml(content);
 
     const result = await articleService.addArticle(userId, title, content);
@@ -110,10 +61,6 @@ class ArticleController {
 
   /**
    * 获取文章详情
-   * 重构说明：
-   * - 移除 result ? ... : ... 判断
-   * - Service 层查不到文章时会抛出 BusinessError('文章不存在', 404)
-   * - 封禁文章的处理逻辑保持不变（这是业务逻辑，不是错误）
    */
   getDetail = async (ctx, next) => {
     const { articleId } = ctx.params;
@@ -122,7 +69,7 @@ class ArticleController {
     // Service 层如果查不到会抛出 BusinessError，不会走到下面的代码
     const result = await articleService.getArticleById(articleId);
 
-    // 自动转换内容为 HTML，确保前端渲染一致性
+    // 自动转换内容为 HTML，确保前端渲染一致性 (兼容历史 Markdown 数据)
     if (result && result.content) {
       result.content = MdUtils.renderHtml(result.content);
     }
@@ -189,7 +136,6 @@ class ArticleController {
   };
   /**
    * 删除文章
-   * 重构说明：移除手动 try-catch，Service 层异常由全局中间件捕获
    */
   delete = async (ctx, next) => {
     const { articleId } = ctx.params;
