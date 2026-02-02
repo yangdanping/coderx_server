@@ -11,17 +11,21 @@ generate-keys:
   cd src/app/keys && node generate-keys.js
   @echo "✅ JWT密钥对已生成"
 
-# 推送环境配置文件
-# 使用示例:
-#   just push-env          (默认推送到生产服务器)
-#   just push-env macbook  (推送到另一台 MacBook)
-push-env target="prod":
-    {{ if target == "macbook" { \
-        "scp .env.production .env.development yangdanping@100.124.104.82:/Users/yangdanping/Desktop/personal_project/coderx_server" \
-    } else { \
-        "scp .env.production .env.development root@95.40.29.75:/root/coderx_server" \
-    } }}
-    @echo "✅ 环境配置文件已推送到 {{ if target == 'macbook' { "MacBook" } else { "生产服务器" } }}"
+# 推送环境配置到 MacBook
+push-env-to-macbook:
+  scp .env.production .env.development macbook:/Users/yangdanping/Desktop/personal_project/coderx_server/
+  @echo "✅ 环境配置文件已推送到 MacBook"
+
+# 推送环境配置到生产服务器
+push-env:
+  scp .env.production .env.development aws:/root/coderx_server/
+  @echo "✅ 环境配置文件已推送到生产服务器"
+
+# 从 MacBook 拉取环境配置
+pull-env-from-macbook:
+  scp macbook:/Users/yangdanping/Desktop/personal_project/coderx_server/.env.production .
+  scp macbook:/Users/yangdanping/Desktop/personal_project/coderx_server/.env.development .
+  @echo "✅ 环境配置已从 MacBook 拉取"
 
 # 服务器部署
 deploy:
@@ -97,5 +101,5 @@ deploy-first-time:
 # 完整部署流程（推送配置 + 代码部署）
 deploy-full:
   just push-env
-  ssh root@95.40.29.75 "cd /root/coderx_server && just deploy"
+  ssh aws "cd /root/coderx_server && just deploy"
   @echo "🎉 完整部署完成！"
