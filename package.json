@@ -32,7 +32,7 @@
     "koa-router": "^14.0.0",
     "log4js": "^6.9.1",
     "markdown-it": "^14.1.0",
-    "module-alias": "^2.2.3",
+    "module-alias": "^2.3.3",
     "multer": "^2.0.2",
     "mysql2": "^3.16.2",
     "node-cron": "^4.2.1",
