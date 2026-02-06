@@ -12,8 +12,8 @@ importers:
         specifier: ^3.0.25
         version: 3.0.25(zod@3.25.76)
       '@ai-sdk/openai-compatible':
-        specifier: ^2.0.26
-        version: 2.0.26(zod@3.25.76)
+        specifier: ^2.0.27
+        version: 2.0.27(zod@3.25.76)
       '@koa/cors':
         specifier: ^5.0.0
         version: 5.0.0
@@ -21,8 +21,8 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0(koa@3.1.1)(multer@2.0.2)
       ai:
-        specifier: ^6.0.68
-        version: 6.0.68(zod@3.25.76)
+        specifier: ^6.0.73
+        version: 6.0.73(zod@3.25.76)
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -30,8 +30,8 @@ importers:
         specifier: ^1.11.19
         version: 1.11.19
       dotenv:
-        specifier: ^17.2.3
-        version: 17.2.3
+        specifier: ^17.2.4
+        version: 17.2.4
       fluent-ffmpeg:
         specifier: ^2.1.3
         version: 2.1.3
@@ -60,14 +60,14 @@ importers:
         specifier: ^14.1.0
         version: 14.1.0
       module-alias:
-        specifier: ^2.3.3
-        version: 2.3.3
+        specifier: ^2.3.4
+        version: 2.3.4
       multer:
         specifier: ^2.0.2
         version: 2.0.2
       mysql2:
-        specifier: ^3.16.2
-        version: 3.16.2
+        specifier: ^3.16.3
+        version: 3.16.3
       node-cron:
         specifier: ^4.2.1
         version: 4.2.1
@@ -90,14 +90,14 @@ importers:
 
 packages:
 
-  '@ai-sdk/gateway@3.0.32':
-    resolution: {integrity: sha512-7clZRr07P9rpur39t1RrbIe7x8jmwnwUWI8tZs+BvAfX3NFgdSVGGIaT7bTz2pb08jmLXzTSDbrOTqAQ7uBkBQ==}
+  '@ai-sdk/gateway@3.0.36':
+    resolution: {integrity: sha512-2r1Q6azvqMYxQ1hqfWZmWg4+8MajoldD/ty65XdhCaCoBfvDu7trcvxXDfTSU+3/wZ1JIDky46SWYFOHnTbsBw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/openai-compatible@2.0.26':
-    resolution: {integrity: sha512-l6jdFjI1C2eDAEm7oo+dnRn0oG1EkcyqfbEZ7ozT0TnYrah6amX2JkftYMP1GRzNtAeCB3WNN8XspXdmi6ZNlQ==}
+  '@ai-sdk/openai-compatible@2.0.27':
+    resolution: {integrity: sha512-YpAZe7OQuMkYqcM/m1BMX0xFn4QdhuL4qGo8sNaiLq1VjEeU/pPfz51rnlpCfCvYanUL5TjIZEbdclBUwLooSQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -293,8 +293,8 @@ packages:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
 
-  ai@6.0.68:
-    resolution: {integrity: sha512-nrTOAXm+XUhi/NvkUbb5yRebf6+PBkZT8zkR2P57ot1f4IMGWMmBzk9JOSSSGiVeVUaakhOkLq/IUEtb71yWTw==}
+  ai@6.0.73:
+    resolution: {integrity: sha512-p2/ICXIjAM4+bIFHEkAB+l58zq+aTmxAkotsb6doNt/CEms72zt6gxv2ky1fQDwU4ecMOcmMh78VJUSEKECzlg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -485,8 +485,8 @@ packages:
     resolution: {integrity: sha512-2sJGJTaXIIaR1w4iJSNoN0hnMY7Gpc/n8D4qSCJw8QqFWXf7cuAgnEHxBpweaVcPevC2l3KpjYCx3NypQQgaJg==}
     engines: {node: '>= 0.8', npm: 1.2.8000 || >= 1.4.16}
 
-  dotenv@17.2.3:
-    resolution: {integrity: sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w==}
+  dotenv@17.2.4:
+    resolution: {integrity: sha512-mudtfb4zRB4bVvdj0xRo+e6duH1csJRM8IukBqfTRvHotn9+LBXB8ynAidP9zHqoRC/fsllXgk4kCKlR21fIhw==}
     engines: {node: '>=12'}
 
   dunder-proto@1.0.1:
@@ -788,8 +788,8 @@ packages:
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
-  lru.min@1.1.3:
-    resolution: {integrity: sha512-Lkk/vx6ak3rYkRR0Nhu4lFUT2VDnQSxBe8Hbl7f36358p6ow8Bnvr8lrLt98H8J1aGxfhbX4Fs5tYg2+FTwr5Q==}
+  lru.min@1.1.4:
+    resolution: {integrity: sha512-DqC6n3QQ77zdFpCMASA1a3Jlb64Hv2N2DciFGkO/4L9+q/IpIAuRlKOvCXabtRW6cQf8usbmM6BE/TOPysCdIA==}
     engines: {bun: '>=1.0.0', deno: '>=1.30.0', node: '>=8.0.0'}
 
   markdown-it@14.1.0:
@@ -847,8 +847,8 @@ packages:
     resolution: {integrity: sha512-FP+p8RB8OWpF3YZBCrP5gtADmtXApB5AMLn+vdyA+PyxCjrCs00mjyUozssO33cwDeT3wNGdLxJ5M//YqtHAJw==}
     hasBin: true
 
-  module-alias@2.3.3:
-    resolution: {integrity: sha512-vN8YITf48QuzKHiWGGFRnf+kM8xcFtUZ5Ba9FeiVkzwp1RS09nIwX7Ac7wWa5gfvyDhwF5Cy/7/21hqG0rqgUQ==}
+  module-alias@2.3.4:
+    resolution: {integrity: sha512-bOclZt8hkpuGgSSoG07PKmvzTizROilUTvLNyrMqvlC9snhs7y7GzjNWAVbISIOlhCP1T14rH1PDAV9iNyBq/w==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -857,8 +857,8 @@ packages:
     resolution: {integrity: sha512-u7f2xaZ/UG8oLXHvtF/oWTRvT44p9ecwBBqTwgJVq0+4BW1g8OW01TyMEGWBHbyMOYVHXslaut7qEQ1meATXgw==}
     engines: {node: '>= 10.16.0'}
 
-  mysql2@3.16.2:
-    resolution: {integrity: sha512-JsqBpYNy7pH20lGfPuSyRSIcCxSeAIwxWADpV64nP9KeyN3ZKpHZgjKXuBKsh7dH6FbOvf1bOgoVKjSUPXRMTw==}
+  mysql2@3.16.3:
+    resolution: {integrity: sha512-+3XhQEt4FEFuvGV0JjIDj4eP2OT/oIj/54dYvqhblnSzlfcxVOuj+cd15Xz6hsG4HU1a+A5+BA9gm0618C4z7A==}
     engines: {node: '>= 8.0'}
 
   named-placeholders@1.1.6:
@@ -1234,14 +1234,14 @@ packages:
 
 snapshots:
 
-  '@ai-sdk/gateway@3.0.32(zod@3.25.76)':
+  '@ai-sdk/gateway@3.0.36(zod@3.25.76)':
     dependencies:
       '@ai-sdk/provider': 3.0.7
       '@ai-sdk/provider-utils': 4.0.13(zod@3.25.76)
       '@vercel/oidc': 3.1.0
       zod: 3.25.76
 
-  '@ai-sdk/openai-compatible@2.0.26(zod@3.25.76)':
+  '@ai-sdk/openai-compatible@2.0.27(zod@3.25.76)':
     dependencies:
       '@ai-sdk/provider': 3.0.7
       '@ai-sdk/provider-utils': 4.0.13(zod@3.25.76)
@@ -1509,9 +1509,9 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  ai@6.0.68(zod@3.25.76):
+  ai@6.0.73(zod@3.25.76):
     dependencies:
-      '@ai-sdk/gateway': 3.0.32(zod@3.25.76)
+      '@ai-sdk/gateway': 3.0.36(zod@3.25.76)
       '@ai-sdk/provider': 3.0.7
       '@ai-sdk/provider-utils': 4.0.13(zod@3.25.76)
       '@opentelemetry/api': 1.9.0
@@ -1674,7 +1674,7 @@ snapshots:
 
   destroy@1.2.0: {}
 
-  dotenv@17.2.3: {}
+  dotenv@17.2.4: {}
 
   dunder-proto@1.0.1:
     dependencies:
@@ -2061,7 +2061,7 @@ snapshots:
 
   lru-cache@10.4.3: {}
 
-  lru.min@1.1.3: {}
+  lru.min@1.1.4: {}
 
   markdown-it@14.1.0:
     dependencies:
@@ -2106,7 +2106,7 @@ snapshots:
     dependencies:
       minimist: 1.2.8
 
-  module-alias@2.3.3: {}
+  module-alias@2.3.4: {}
 
   ms@2.1.3: {}
 
@@ -2120,21 +2120,21 @@ snapshots:
       type-is: 1.6.18
       xtend: 4.0.2
 
-  mysql2@3.16.2:
+  mysql2@3.16.3:
     dependencies:
       aws-ssl-profiles: 1.1.2
       denque: 2.1.0
       generate-function: 2.3.1
       iconv-lite: 0.7.2
       long: 5.3.2
-      lru.min: 1.1.3
+      lru.min: 1.1.4
       named-placeholders: 1.1.6
       seq-queue: 0.0.5
       sqlstring: 2.3.3
 
   named-placeholders@1.1.6:
     dependencies:
-      lru.min: 1.1.3
+      lru.min: 1.1.4
 
   negotiator@0.6.3: {}
 
