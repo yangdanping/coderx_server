@@ -1,5 +1,5 @@
 const connection = require('@/app/database');
-const Utils = require('@/utils');
+const SqlUtils = require('@/utils/SqlUtils');
 
 /**
  * 视频服务层
@@ -187,12 +187,31 @@ class VideoService {
   };
 
   /**
+   * 过滤合法的视频ID
+   * @param {Array<number>} videoIds - 视频ID数组
+   * @returns {Promise<Array<number>>} 合法视频ID数组
+   */
+  filterValidVideoIds = async (videoIds) => {
+    if (!videoIds || videoIds.length === 0) return [];
+
+    try {
+      const statement = `SELECT id FROM file WHERE ${SqlUtils.queryIn('id', videoIds)} AND file_type = 'video';`;
+      const [rows] = await connection.execute(statement, videoIds);
+      return rows.map((item) => item.id);
+    } catch (error) {
+      console.error('filterValidVideoIds error:', error);
+      throw error;
+    }
+  };
+
+  /**
    * 关联视频到文章
    * @param {number} articleId - 文章ID
    * @param {Array<number>} videoIds - 视频ID数组
    * @returns {Promise} 操作结果
    */
   updateVideoArticle = async (articleId, videoIds) => {
+    const uniqueVideoIds = Array.from(new Set(videoIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)));
     const conn = await connection.getConnection();
     try {
       await conn.beginTransaction();
@@ -210,14 +229,14 @@ class VideoService {
       console.log(`✅ 步骤2 - 清除原有关联: ${result2.affectedRows} 条记录`);
 
       // 3. 关联新的视频到该文章
-      if (videoIds.length > 0) {
-        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE ${SqlUtils.queryIn('id', videoIds)} AND file_type = 'video';`;
-        const [result3] = await conn.execute(updateArticleStatement, [articleId, ...videoIds]);
+      if (uniqueVideoIds.length > 0) {
+        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE ${SqlUtils.queryIn('id', uniqueVideoIds)} AND file_type = 'video';`;
+        const [result3] = await conn.execute(updateArticleStatement, [articleId, ...uniqueVideoIds]);
         console.log(`✅ 步骤3 - 关联新视频: ${result3.affectedRows} 条记录`);
       }
 
       // 4. 找出被删除的视频
-      const deletedVideoIds = oldVideoIds.filter((id) => !videoIds.includes(id));
+      const deletedVideoIds = oldVideoIds.filter((id) => !uniqueVideoIds.includes(id));
       if (deletedVideoIds.length > 0) {
         console.log(`🗑️ 步骤4 - 检测到被删除的视频ID:`, deletedVideoIds);
       }
@@ -227,7 +246,7 @@ class VideoService {
 
       return {
         success: true,
-        affectedRows: videoIds.length,
+        affectedRows: uniqueVideoIds.length,
         deletedCount: deletedVideoIds.length,
       };
     } catch (error) {

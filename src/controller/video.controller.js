@@ -5,6 +5,8 @@ const path = require('path');
 const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 
+const MAX_ARTICLE_VIDEO_COUNT = 2;
+
 /**
  * 视频控制器
  * 处理视频上传、删除、关联等业务逻辑
@@ -122,8 +124,25 @@ class VideoController {
       return;
     }
 
-    const result = await videoService.updateVideoArticle(articleId, videoIds);
-    console.log(`关联 ${videoIds.length} 个视频到文章 ${articleId}`, result);
+    const normalizedVideoIds = Array.from(new Set(videoIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)));
+    if (normalizedVideoIds.length === 0) {
+      ctx.body = Result.fail('参数错误: videoIds 必须是有效的正整数数组');
+      return;
+    }
+
+    if (normalizedVideoIds.length > MAX_ARTICLE_VIDEO_COUNT) {
+      ctx.body = Result.fail(`每篇文章最多只能关联 ${MAX_ARTICLE_VIDEO_COUNT} 个视频`);
+      return;
+    }
+
+    const validVideoIds = await videoService.filterValidVideoIds(normalizedVideoIds);
+    if (validVideoIds.length !== normalizedVideoIds.length) {
+      ctx.body = Result.fail('参数错误: videoIds 中包含无效视频ID');
+      return;
+    }
+
+    const result = await videoService.updateVideoArticle(articleId, validVideoIds);
+    console.log(`关联 ${validVideoIds.length} 个视频到文章 ${articleId}`, result);
     ctx.body = Result.success(result);
   };
 
