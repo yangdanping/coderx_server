@@ -20,7 +20,7 @@ class SqlUtils {
    * @param {string} direction 排序方向："DESC" 或 "ASC"
    * @returns {object} { condition: string, params: array }
    */
-  static buildCursorCondition = (cursor, direction = 'DESC') => {
+  static buildTimeCursorCondition = (cursor, direction = 'DESC') => {
     if (!cursor) return { condition: '', params: [] };
 
     const [cursorTime, cursorId] = cursor.split('_'); // 解析游标格式
@@ -31,6 +31,36 @@ class SqlUtils {
     return {
       condition: isDesc ? `AND (c.create_at < ? OR (c.create_at = ? AND c.id < ?))` : `AND (c.create_at > ? OR (c.create_at = ? AND c.id > ?))`,
       params: [formatCursorTime, formatCursorTime, cursorId], // condition中对应的三个占位符参数
+    };
+  };
+
+  static buildCursorCondition = (cursor, direction = 'DESC') => {
+    return SqlUtils.buildTimeCursorCondition(cursor, direction);
+  };
+
+  /**
+   * 构造热门排序的游标查询条件
+   * 排序规则：likes DESC -> replyCount DESC -> createAt DESC -> id DESC
+   * @param {string} cursor 游标格式："likes_replyCount_timestamp_id"
+   * @returns {object} { condition: string, params: array }
+   */
+  static buildHotCursorCondition = (cursor) => {
+    if (!cursor) return { condition: '', params: [] };
+
+    const [likes, replyCount, cursorTime, cursorId] = cursor.split('_');
+    const formatCursorTime = dayjs(cursorTime).format('YYYY-MM-DD HH:mm:ss.SSS');
+    const cursorLikes = Number(likes);
+    const cursorReplyCount = Number(replyCount);
+    const parsedCursorId = Number(cursorId);
+
+    return {
+      condition: `AND (
+        hot_comments.likes < ?
+        OR (hot_comments.likes = ? AND hot_comments.replyCount < ?)
+        OR (hot_comments.likes = ? AND hot_comments.replyCount = ? AND hot_comments.createAt < ?)
+        OR (hot_comments.likes = ? AND hot_comments.replyCount = ? AND hot_comments.createAt = ? AND hot_comments.id < ?)
+      )`,
+      params: [cursorLikes, cursorLikes, cursorReplyCount, cursorLikes, cursorReplyCount, formatCursorTime, cursorLikes, cursorReplyCount, formatCursorTime, parsedCursorId],
     };
   };
 
@@ -45,6 +75,17 @@ class SqlUtils {
     // dayjs 默认使用本地时区，format 方法会输出本地时间
     const createAtStr = dayjs(item.createAt).format('YYYY-MM-DD HH:mm:ss.SSS');
     return `${createAtStr}_${item.id}`;
+  };
+
+  /**
+   * 生成热门排序下一页游标
+   * @param {object} item 列表中的最后一项（需包含 likes、replyCount、createAt 和 id 字段）
+   * @returns {string|null}
+   */
+  static buildHotNextCursor = (item) => {
+    if (!item) return null;
+    const createAtStr = dayjs(item.createAt).format('YYYY-MM-DD HH:mm:ss.SSS');
+    return `${item.likes}_${item.replyCount}_${createAtStr}_${item.id}`;
   };
 }
 

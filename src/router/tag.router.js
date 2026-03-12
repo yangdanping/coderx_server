@@ -1,4 +1,4 @@
-const Router = require('koa-router');
+const Router = require('@koa/router');
 const tagRouter = new Router({ prefix: '/tag' });
 const tagController = require('@/controller/tag.controller');
 const { verifyAuth } = require('@/middleware/auth.middleware');

@@ -13,6 +13,7 @@ node generate-keys.js
 ```
 
 这将在当前目录生成：
+
 - `private.key` - 私钥（用于签署 JWT token）
 - `public.key` - 公钥（用于验证 JWT token）
 
@@ -61,17 +62,20 @@ just deploy-first-time
 当需要更换密钥时（定期维护或安全事件）：
 
 1. **备份旧密钥**（以防回滚）
+
    ```bash
    cp private.key private.key.backup
    cp public.key public.key.backup
    ```
 
 2. **生成新密钥**
+
    ```bash
    node generate-keys.js
    ```
 
 3. **重启应用服务**
+
    ```bash
    pm2 restart ecosystem.config.js
    ```
@@ -96,6 +100,7 @@ just deploy-first-time
 **原因**：密钥文件未生成
 
 **解决**：
+
 ```bash
 cd src/app/keys
 node generate-keys.js
@@ -106,6 +111,7 @@ node generate-keys.js
 **原因**：密钥文件损坏或不匹配
 
 **解决**：
+
 1. 检查密钥文件是否存在且可读
 2. 重新生成密钥对
 3. 重启应用
@@ -133,6 +139,6 @@ node generate-keys.js
 
 建议记录密钥生成和轮换的时间：
 
-- 最近生成时间：_________
-- 下次计划轮换：_________
-- 密钥管理负责人：_________
+- 最近生成时间：****\_****
+- 下次计划轮换：****\_****
+- 密钥管理负责人：****\_****

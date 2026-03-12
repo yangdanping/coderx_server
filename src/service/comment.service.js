@@ -8,6 +8,7 @@ class CommentService {
    * @param {string} articleId 文章ID
    * @param {string|null} cursor 游标（上一页最后一条的 createAt_id）
    * @param {number} limit 每页数量
+   * @param {'latest'|'oldest'|'hot'} sort 排序方式
    * @param {number} replyPreviewLimit 每条评论预览的回复数量
    */
   /**
@@ -15,48 +16,71 @@ class CommentService {
    * 1. 将 LIMIT 的硬拼接改为占位符 ?，彻底消除注入风险。
    * 2. 统一使用参数化查询处理所有动态条件。
    */
-  getCommentList = async (articleId, cursor, limit, replyPreviewLimit = 2) => {
+  getCommentList = async (articleId, cursor, limit, sort = 'latest', replyPreviewLimit = 2) => {
     try {
-      const queryParams = [articleId];
-      const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildCursorCondition(cursor, 'DESC');
-      queryParams.push(...cursorParams);
-      /*
-      为什么要多查一条 (limit + 1)？
-      目的：为了高效地判断“是否还有下一页” (hasMore)。
-      原理：如果不这样做，通常需要额外执行一条 COUNT 查询来计算剩余总数，这会增加数据库负担。
-      逻辑：
-      假设前端请求 10 条数据 (limit = 10)。
-      我们向数据库请求 11 条 (limit + 1)。
-      如果数据库真的返回了 11 条，说明后面肯定还有数据（hasMore = true），我们只把前 10 条返回给前端。
-      如果数据库返回 10 条或更少，说明已经到底了（hasMore = false）。
-      */
-      const limitForHasMore = String(parseInt(limit) + 1);
-      queryParams.push(limitForHasMore);
+      const normalizedLimit = Number(limit) || 5;
+      const limitForHasMore = String(normalizedLimit + 1);
+      let comments = [];
 
-      // 查询一级评论（comment_id IS NULL）
-      const statement = `
-        SELECT
-            c.id,
-            c.content,
-            c.status,
-            c.create_at createAt,
-            JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
-            (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes, -- 点赞数子查询
-            (SELECT COUNT(*) FROM comment r WHERE r.comment_id = c.id) replyCount -- 回复数子查询
-        FROM comment c
-        LEFT JOIN user u ON u.id = c.user_id
-        LEFT JOIN profile p ON u.id = p.user_id
-        WHERE c.article_id = ?
-            AND c.comment_id IS NULL
+      if (sort === 'hot') {
+        const queryParams = [articleId];
+        const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildHotCursorCondition(cursor);
+        queryParams.push(...cursorParams, limitForHasMore);
+
+        const statement = `
+          SELECT hot_comments.*
+          FROM (
+            SELECT
+                c.id,
+                c.content,
+                c.status,
+                c.create_at createAt,
+                JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
+                (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes,
+                (SELECT COUNT(*) FROM comment r WHERE r.comment_id = c.id) replyCount
+            FROM comment c
+            LEFT JOIN user u ON u.id = c.user_id
+            LEFT JOIN profile p ON u.id = p.user_id
+            WHERE c.article_id = ?
+              AND c.comment_id IS NULL
+          ) hot_comments
+          WHERE 1 = 1
             ${cursorCondition}
-        ORDER BY c.create_at DESC, c.id DESC
-        LIMIT ?
-      `;
-      const [comments] = await connection.execute(statement, queryParams);
+          ORDER BY hot_comments.likes DESC, hot_comments.replyCount DESC, hot_comments.createAt DESC, hot_comments.id DESC
+          LIMIT ?
+        `;
+        [comments] = await connection.execute(statement, queryParams);
+      } else {
+        const isOldest = sort === 'oldest';
+        const direction = isOldest ? 'ASC' : 'DESC';
+        const queryParams = [articleId];
+        const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildTimeCursorCondition(cursor, direction);
+        queryParams.push(...cursorParams, limitForHasMore);
+
+        const statement = `
+          SELECT
+              c.id,
+              c.content,
+              c.status,
+              c.create_at createAt,
+              JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
+              (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes,
+              (SELECT COUNT(*) FROM comment r WHERE r.comment_id = c.id) replyCount
+          FROM comment c
+          LEFT JOIN user u ON u.id = c.user_id
+          LEFT JOIN profile p ON u.id = p.user_id
+          WHERE c.article_id = ?
+              AND c.comment_id IS NULL
+              ${cursorCondition}
+          ORDER BY c.create_at ${direction}, c.id ${direction}
+          LIMIT ?
+        `;
+        [comments] = await connection.execute(statement, queryParams);
+      }
 
       // 判断是否有更多
-      const hasMore = comments.length > limit;
-      const items = hasMore ? comments.slice(0, limit) : comments;
+      const hasMore = comments.length > normalizedLimit;
+      const items = hasMore ? comments.slice(0, normalizedLimit) : comments;
 
       // 处理每条评论的内容和状态
       items.forEach((comment) => {
@@ -73,7 +97,7 @@ class CommentService {
       // 计算下一页游标
       let nextCursor = null;
       if (hasMore && items.length > 0) {
-        nextCursor = SqlUtils.buildNextCursor(items[items.length - 1]);
+        nextCursor = sort === 'hot' ? SqlUtils.buildHotNextCursor(items[items.length - 1]) : SqlUtils.buildNextCursor(items[items.length - 1]);
       }
 
       return {

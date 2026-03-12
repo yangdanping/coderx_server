@@ -1,4 +1,4 @@
-const Router = require('koa-router');
+const Router = require('@koa/router');
 const oauthRouter = new Router({ prefix: '/oauth' });
 const oauthController = require('@/controller/oauth.controller');
 

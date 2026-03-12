@@ -1,4 +1,4 @@
-const Router = require('koa-router');
+const Router = require('@koa/router');
 const videoRouter = new Router({ prefix: '/video' });
 const { verifyAuth } = require('@/middleware/auth.middleware');
 const { videoHandler } = require('@/middleware/file.middleware');

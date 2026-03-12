@@ -1,4 +1,4 @@
-const Router = require('koa-router');
+const Router = require('@koa/router');
 const collectRouter = new Router({ prefix: '/collect' });
 const collectController = require('@/controller/collect.controller.js');
 const { verifyAuth, verifyPermission } = require('@/middleware/auth.middleware');

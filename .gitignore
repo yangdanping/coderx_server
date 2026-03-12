@@ -41,7 +41,7 @@ secrets.json
 *.sw?
 
 # Documentation
-*文档*/
+*docs*/
 
 *.conf
 

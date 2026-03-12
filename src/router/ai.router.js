@@ -1,4 +1,4 @@
-const Router = require('koa-router');
+const Router = require('@koa/router');
 const aiController = require('@/controller/ai.controller');
 const { verifyAuth } = require('@/middleware/auth.middleware'); // 引入鉴权中间件
 

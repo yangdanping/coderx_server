@@ -1,4 +1,4 @@
-const Router = require('koa-router');
+const Router = require('@koa/router');
 const historyRouter = new Router({ prefix: '/history' });
 const historyController = require('@/controller/history.controller');
 const { verifyAuth } = require('@/middleware/auth.middleware');

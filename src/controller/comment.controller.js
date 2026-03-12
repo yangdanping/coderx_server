@@ -6,11 +6,13 @@ const Utils = require('@/utils');
 class CommentController {
   /**
    * 获取一级评论列表（分页）
-   * GET /comment?articleId=xxx&cursor=xxx&limit=5
+   * GET /comment?articleId=xxx&cursor=xxx&limit=5&sort=latest|oldest|hot
    */
   getCommentList = async (ctx) => {
-    const { articleId, cursor, userId } = ctx.query;
+    const { articleId, cursor, userId, sort } = ctx.query;
     const { offset, limit } = Utils.getPaginationParams(ctx);
+    const validSorts = new Set(['latest', 'oldest', 'hot']);
+    const normalizedSort = validSorts.has(sort) ? sort : 'latest';
 
     // 情况1：获取用户的评论列表（标准分页）
     if (userId) {
@@ -44,7 +46,7 @@ class CommentController {
     }
 
     try {
-      const result = await commentService.getCommentList(articleId, cursor || null, Number(limit) || 5);
+      const result = await commentService.getCommentList(articleId, cursor || null, Number(limit) || 5, normalizedSort);
 
       // 获取评论总数
       const totalCount = await commentService.getTotalCount(articleId);

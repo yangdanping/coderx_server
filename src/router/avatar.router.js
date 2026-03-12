@@ -1,4 +1,4 @@
-const Router = require('koa-router');
+const Router = require('@koa/router');
 const avatarRouter = new Router({ prefix: '/avatar' });
 const { verifyAuth } = require('@/middleware/auth.middleware');
 const { avatarHandler } = require('@/middleware/file.middleware');
