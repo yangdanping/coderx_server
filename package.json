@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development nodemon ./src/main.js",
-    "dev:socket": "cross-env NODE_ENV=development nodemon ./src/socket_server.js",
-    "start": "cross-env NODE_ENV=production node ./src/main.js",
-    "start:socket": "cross-env NODE_ENV=production node ./src/socket_server.js",
+    "dev": "NODE_ENV=development node --watch ./src/main.js",
+    "dev:socket": "NODE_ENV=development node --watch ./src/socket_server.js",
+    "start": "NODE_ENV=production node ./src/main.js",
+    "start:socket": "NODE_ENV=production node ./src/socket_server.js",
     "prettier": "prettier --write .",
     "update:prettier": "git fetch https://github.com/yangdanping/prettier_config_repo.git main && git checkout FETCH_HEAD -- .prettierrc .prettierignore"
   },
@@ -15,36 +15,36 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.41",
-    "@ai-sdk/openai-compatible": "^2.0.35",
+    "@ai-sdk/openai": "^3.0.50",
+    "@ai-sdk/openai-compatible": "^2.0.38",
     "@koa/cors": "^5.0.0",
     "@koa/multer": "^4.0.0",
-    "@koa/router": "^15.3.1",
-    "ai": "^6.0.116",
+    "@koa/router": "^15.4.0",
+    "ai": "^6.0.146",
     "bcryptjs": "^3.0.3",
-    "dayjs": "^1.11.19",
-    "dotenv": "^17.3.1",
+    "dayjs": "^1.11.20",
+    "dotenv": "^17.4.0",
     "fluent-ffmpeg": "^2.1.3",
-    "google-auth-library": "^10.6.1",
+    "google-auth-library": "^10.6.2",
     "jimp": "^1.6.0",
     "jsonwebtoken": "^9.0.3",
-    "koa": "^3.1.2",
+    "koa": "^3.2.0",
     "koa-bodyparser": "^4.4.1",
     "log4js": "^6.9.1",
     "markdown-it": "^14.1.1",
     "module-alias": "^2.3.4",
     "multer": "^2.1.1",
-    "mysql2": "^3.19.1",
+    "mysql2": "^3.20.0",
     "node-cron": "^4.2.1",
     "socket.io": "^4.8.3",
-    "validator": "^13.15.26"
-  },
-  "_moduleAliases": {
-    "@": "src"
+    "validator": "^13.15.35",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "cross-env": "^10.1.0",
     "prettier": "^3.8.1"
+  },
+  "_moduleAliases": {
+    "@": "src"
   }
 }

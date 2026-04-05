@@ -1,5 +1,7 @@
 const aiService = require('@/service/ai.service');
 const { errorLogger } = require('@/app/logger');
+const { AI_CAPABILITY, AI_ACCESS_POLICY, AI_LIMITS } = require('@/constants/ai');
+const AiValidUtils = require('@/utils/AiValidUtils');
 
 class AiController {
   /**
@@ -14,6 +16,9 @@ class AiController {
         models,
         status: isHealthy ? 'online' : 'offline',
         message: isHealthy ? 'AI service is running' : 'AI service is not available',
+        // capability/accessPolicy 返回给前端后，UI 可以明确当前是助手模式还是工具模式。
+        capability: AI_CAPABILITY,
+        accessPolicy: AI_ACCESS_POLICY,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
@@ -22,6 +27,8 @@ class AiController {
         models: [],
         status: 'offline',
         message: error.message,
+        capability: AI_CAPABILITY,
+        accessPolicy: AI_ACCESS_POLICY,
         timestamp: new Date().toISOString(),
       };
     }
@@ -30,9 +37,15 @@ class AiController {
   chat = async (ctx, next) => {
     // 从请求体中获取消息历史和上下文
     const { messages, model, context } = ctx.request.body;
-    if (!messages || !Array.isArray(messages)) {
+    const validationError = AiValidUtils.validateChatPayload({ messages, model, context });
+    if (validationError) {
       ctx.status = 400;
-      ctx.body = { message: 'Invalid messages format' };
+      ctx.body = {
+        success: false,
+        message: validationError,
+        code: 'INVALID_AI_CHAT_PAYLOAD',
+        timestamp: new Date().toISOString(),
+      };
       return;
     }
 
@@ -43,7 +56,7 @@ class AiController {
       // 获取 AI SDK 的 result 对象
       const result = await aiService.streamChat(messages, model, context);
 
-      // 使用 toUIMessageStreamResponse 将结果转换为带有 UI 消息流的流式响应对象。
+      // 保持 AI SDK 的 UIMessage Stream 协议，前端 Chat 组件可直接消费。
       const res = await result.toUIMessageStreamResponse();
 
       // 禁用 Koa 的自动响应处理
@@ -104,25 +117,24 @@ class AiController {
    */
   completion = async (ctx, next) => {
     const { beforeText, afterText, model, maxSuggestions } = ctx.request.body;
-
-    // 参数验证
-    if (!beforeText || typeof beforeText !== 'string') {
+    const validationError = AiValidUtils.validateCompletionPayload({ beforeText, afterText, model, maxSuggestions });
+    if (validationError) {
       ctx.status = 400;
       ctx.body = {
         success: false,
-        message: 'beforeText is required and must be a string',
+        message: validationError,
+        code: 'INVALID_AI_COMPLETION_PAYLOAD',
+        timestamp: new Date().toISOString(),
       };
       return;
     }
 
-    // 上下文长度限制（熔断机制）
-    const MAX_BEFORE = 500;
-    const MAX_AFTER = 200;
-    const truncatedBefore = beforeText.slice(-MAX_BEFORE);
-    const truncatedAfter = afterText ? afterText.slice(0, MAX_AFTER) : '';
+    // 再次做服务端截断，确保传给模型的上下文窗口可控。
+    const truncatedBefore = beforeText.slice(-AI_LIMITS.maxCompletionBefore);
+    const truncatedAfter = afterText ? afterText.slice(0, AI_LIMITS.maxCompletionAfter) : '';
 
     try {
-      const suggestions = await aiService.getCompletion(truncatedBefore, truncatedAfter, model, maxSuggestions || 3);
+      const suggestions = await aiService.getCompletion(truncatedBefore, truncatedAfter, model, maxSuggestions || AI_LIMITS.maxSuggestions);
 
       ctx.status = 200;
       ctx.body = {
