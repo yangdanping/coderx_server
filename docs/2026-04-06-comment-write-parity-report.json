@@ -1,0 +1,62 @@
+{
+  "isSuccess": true,
+  "userId": 2,
+  "articleId": 21,
+  "commentId": 60,
+  "replyId": 61,
+  "stopConditions": {
+    "missingPersistedRow": false,
+    "structureMismatch": false
+  },
+  "flows": [
+    {
+      "flow": "addComment",
+      "input": {
+        "userId": 2,
+        "articleId": 21
+      },
+      "isMatched": true,
+      "stopConditions": {
+        "missingPersistedRow": false,
+        "structureMismatch": false
+      },
+      "mysqlPersisted": true,
+      "pgPersisted": true
+    },
+    {
+      "flow": "addReply:toComment",
+      "input": {
+        "userId": 2,
+        "articleId": 21,
+        "commentId": 60
+      },
+      "isMatched": true,
+      "stopConditions": {
+        "missingPersistedRow": false,
+        "structureMismatch": false
+      },
+      "mysqlPersisted": true,
+      "pgPersisted": true
+    },
+    {
+      "flow": "addReply:toReply",
+      "input": {
+        "userId": 2,
+        "articleId": 21,
+        "commentId": 60,
+        "replyId": 61
+      },
+      "isMatched": true,
+      "stopConditions": {
+        "missingPersistedRow": false,
+        "structureMismatch": false
+      },
+      "mysqlPersisted": true,
+      "pgPersisted": true
+    }
+  ],
+  "cleanup": {
+    "mysqlDeleted": 3,
+    "pgDeleted": 3
+  }
+}
