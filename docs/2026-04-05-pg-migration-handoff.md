@@ -1,6 +1,6 @@
 # Koa -> PostgreSQL Migration Handoff
 
-Last Updated: `2026-04-06` (Stage 5 parity evidence surface fully expanded)
+Last Updated: `2026-04-06` (PR created, merge-ready)
 
 ## 交接用途
 
@@ -563,21 +563,18 @@ Stage 5 parity evidence 覆盖汇总：
 Stage 5 已于 2026-04-06 全部完成，8 条 parity evidence 工具链全部 PASS。
 详见上方"Stage 5 parity evidence 覆盖汇总"。
 
-### B. 把当前 worktree 整到 merge-ready（当前最高优先级）
+### B. ~~把当前 worktree 整到 merge-ready~~ ✅ 已完成
 
-1. 准备后续合并/PR 时，按阶段组织改动说明：
-  - Stage 1 assets
-  - Stage 2 tooling/schema guard
-  - Stage 3 adapter
-  - Stage 4 SQL helpers
-  - Stage 5 tests/regression + parity evidence
-2. 在准备 merge/PR 之前，至少重跑：
-  - `pnpm run test:migration:phase2`
-  - `pnpm run test:database:stage3`
-  - `pnpm run test:migration:hotspots`
-  - `pnpm run test:migration:phase5`
-  - `pnpm run test:migration:regression`
-3. 最终回归确认：167 tests, 0 failures
+PR 已创建：https://github.com/yangdanping/coderx_server/pull/1
+
+按 Stage 1-5 分阶段组织为 5 个 commit：
+1. `feat(pg): add PostgreSQL schema assets for 17 tables`
+2. `feat(pg): add Phase 2 migration tooling and schema guard`
+3. `feat(pg): add database adapter layer with dialect switching`
+4. `feat(pg): migrate 12 SQL modules to dual-dialect builders with tests`
+5. `feat(pg): add 8 dual-engine parity evidence toolchains and reports`
+
+最终回归确认：167 tests, 0 failures（两次独立运行验证）
 
 ### C. 达到 cutover-ready（Stage 6）
 
@@ -603,11 +600,11 @@ Stage 5 已于 2026-04-06 全部完成，8 条 parity evidence 工具链全部 P
 
 ## 推荐起手任务
 
-- **优先级最高：把 worktree 整到 merge-ready，准备 PR**
-  - 重跑完整回归套件确认 0 failures
-  - 组织 commit 说明（Stage 1–5 分阶段）
-  - 创建 PR
-- 然后：推进 Stage 6 cutover rehearsal
+- ~~**优先级最高：把 worktree 整到 merge-ready，准备 PR**~~ ✅ 已完成
+  - ✅ 重跑完整回归套件确认 0 failures（167 tests）
+  - ✅ 组织 commit 说明（Stage 1–5 分阶段，5 个 commit）
+  - ✅ PR 已创建：https://github.com/yangdanping/coderx_server/pull/1
+- **当前最高优先级：推进 Stage 6 cutover rehearsal**
   - 在 staging 完成一次完整 rehearsal（全量导入 → 切 PG → 冒烟 → 切回 MySQL）
   - 编写并验证 rollback runbook
 
@@ -617,7 +614,7 @@ Stage 5 已于 2026-04-06 全部完成，8 条 parity evidence 工具链全部 P
 - 不要回退当前 dirty baseline 中的既有迁移工作
 - 不要引入 `database/postgresql/005_data_from_mysql_dump.sql`
 - 继续优先走 TDD 和最小改动
-- Stage 5 parity 已完成，下一步目标优先是 merge-ready 和 Stage 6 rehearsal
+- Stage 5 parity 已完成，PR 已创建，下一步目标是 Stage 6 rehearsal
 - 除非测试确实暴露 bug，否则尽量不要顺手改无关生产代码
 - 每完成一个有意义的里程碑，都同步更新这份 handoff 文档
 
@@ -645,7 +642,8 @@ Stage 5 已于 2026-04-06 全部完成，8 条 parity evidence 工具链全部 P
 - Stage 5 controller regression surface covers: `history`, `article`, `comment`
 - 回归测试：**167 tests, 0 failures**
 - 所有 parity 报告已落盘至 `docs/2026-04-06-*-parity-report.json`
-- 下一步：merge-ready → Stage 6 cutover rehearsal
+- PR 已创建：https://github.com/yangdanping/coderx_server/pull/1
+- 下一步：Stage 6 cutover rehearsal
 
 ### 已验证通过
 
@@ -667,10 +665,17 @@ Stage 5 已于 2026-04-06 全部完成，8 条 parity evidence 工具链全部 P
 
 ### 优先继续方向
 
-- **最高优先级：把 worktree 整到 merge-ready，创建 PR**
-- 然后推进 Stage 6 cutover rehearsal（staging 全量导入 → 切 PG → 冒烟 → 切回 MySQL）
+- ~~把 worktree 整到 merge-ready，创建 PR~~ ✅ 已完成 → https://github.com/yangdanping/coderx_server/pull/1
+- **当前最高优先级：推进 Stage 6 cutover rehearsal**（staging 全量导入 → 切 PG → 冒烟 → 切回 MySQL）
 - 编写并验证 rollback runbook
 - 只有 Stage 5 parity + Stage 6 rehearsal 都通过后才考虑切 `DB_DIALECT=pg`
+
+### PostgreSQL 直连信息
+
+```
+psql -h 127.0.0.1 -p 5432 -U postgres -d postgres
+Password: 123456
+```
 
 ### 执行要求
 
@@ -684,4 +689,4 @@ Stage 5 已于 2026-04-06 全部完成，8 条 parity evidence 工具链全部 P
 ### 硬约束
 
 - Do not introduce `database/postgresql/005_data_from_mysql_dump.sql`
-- Keep scope limited to advancing Stage 5/Stage 6 readiness
+- Keep scope limited to advancing Stage 6 readiness
