@@ -1,4 +1,5 @@
 const connection = require('@/app/database');
+const { buildCheckStatusSql } = require('./auth.sql');
 
 class AuthService {
   /* 根据表名/内容id/用户id从数据库中查询该用户是否具备更新/删除<某表>的权限
@@ -26,7 +27,7 @@ class AuthService {
 
   checkStatus = async (userId) => {
     try {
-      const statement = `SELECT status FROM user WHERE id = ?;`;
+      const statement = buildCheckStatusSql(connection.dialect);
       const [result] = await connection.execute(statement, [userId]);
       const { status } = result[0];
       return status;

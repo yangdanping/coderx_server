@@ -1,0 +1,109 @@
+{
+  "isSuccess": true,
+  "articleId": 21,
+  "commentId": 60,
+  "commentLimit": 5,
+  "replyLimit": 10,
+  "replyPreviewLimit": 2,
+  "stopConditions": {
+    "countMismatch": false,
+    "orderMismatch": false,
+    "structureMismatch": false
+  },
+  "flows": [
+    {
+      "flow": "getCommentList:latest",
+      "input": {
+        "articleId": 21,
+        "limit": 5,
+        "sort": "latest",
+        "replyPreviewLimit": 2
+      },
+      "mysqlRowCount": 1,
+      "pgRowCount": 1,
+      "isMatched": true,
+      "stopConditions": {
+        "countMismatch": false,
+        "orderMismatch": false,
+        "structureMismatch": false
+      },
+      "mysqlPreview": [
+        {
+          "items": "[{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/3/avatar\",\"id\":3,\"name\":\"neo\"},\"content\":\"<p>总结得非常不错！</p>\",\"createAt\":\"2023-05-19T09:33:40.000Z\",\"id\":70,\"likes\":0,\"replies\":[{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":70,\"content\":\"<p>谢谢支持！</p>\",\"createAt\":\"2023-05-19T09:33:59.000Z\",\"id\":71,\"likes\":1,\"replyTo\":null,\"rid\":null,\"status\":0}],\"replyCount\":1,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"content\":\"<p><strong>写的不错！！</strong></p>\",\"createAt\":\"2023-05-19T09:28:57.000Z\",\"id\":60,\"likes\":1,\"replies\":[{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>谢谢！！</p>\",\"createAt\":\"2023-05-19T09:29:27.000Z\",\"id\":61,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0},{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"createAt\":\"2023-05-19T09:29:39.000Z\",\"id\":62,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0}],\"replyCount\":10,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"content\":\"<p>沙发</p>\",\"createAt\":\"2023-05-19T09:28:51.000Z\",\"id\":59,\"likes\":0,\"replies\":[],\"replyCount\":0,\"status\":0}]",
+          "hasMore": "false",
+          "nextCursor": null
+        }
+      ],
+      "pgPreview": [
+        {
+          "items": "[{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/3/avatar\",\"id\":3,\"name\":\"neo\"},\"content\":\"<p>总结得非常不错！</p>\",\"createAt\":\"2023-05-19T09:33:40.000Z\",\"id\":70,\"likes\":0,\"replies\":[{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":70,\"content\":\"<p>谢谢支持！</p>\",\"createAt\":\"2023-05-19T09:33:59.000Z\",\"id\":71,\"likes\":1,\"replyTo\":null,\"rid\":null,\"status\":0}],\"replyCount\":1,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"content\":\"<p><strong>写的不错！！</strong></p>\",\"createAt\":\"2023-05-19T09:28:57.000Z\",\"id\":60,\"likes\":1,\"replies\":[{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>谢谢！！</p>\",\"createAt\":\"2023-05-19T09:29:27.000Z\",\"id\":61,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0},{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"createAt\":\"2023-05-19T09:29:39.000Z\",\"id\":62,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0}],\"replyCount\":10,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"content\":\"<p>沙发</p>\",\"createAt\":\"2023-05-19T09:28:51.000Z\",\"id\":59,\"likes\":0,\"replies\":[],\"replyCount\":0,\"status\":0}]",
+          "hasMore": "false",
+          "nextCursor": null
+        }
+      ]
+    },
+    {
+      "flow": "getCommentList:hot",
+      "input": {
+        "articleId": 21,
+        "limit": 5,
+        "sort": "hot",
+        "replyPreviewLimit": 2
+      },
+      "mysqlRowCount": 1,
+      "pgRowCount": 1,
+      "isMatched": true,
+      "stopConditions": {
+        "countMismatch": false,
+        "orderMismatch": false,
+        "structureMismatch": false
+      },
+      "mysqlPreview": [
+        {
+          "items": "[{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"content\":\"<p><strong>写的不错！！</strong></p>\",\"createAt\":\"2023-05-19T09:28:57.000Z\",\"id\":60,\"likes\":1,\"replies\":[{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>谢谢！！</p>\",\"createAt\":\"2023-05-19T09:29:27.000Z\",\"id\":61,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0},{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"createAt\":\"2023-05-19T09:29:39.000Z\",\"id\":62,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0}],\"replyCount\":10,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/3/avatar\",\"id\":3,\"name\":\"neo\"},\"content\":\"<p>总结得非常不错！</p>\",\"createAt\":\"2023-05-19T09:33:40.000Z\",\"id\":70,\"likes\":0,\"replies\":[{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":70,\"content\":\"<p>谢谢支持！</p>\",\"createAt\":\"2023-05-19T09:33:59.000Z\",\"id\":71,\"likes\":1,\"replyTo\":null,\"rid\":null,\"status\":0}],\"replyCount\":1,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"content\":\"<p>沙发</p>\",\"createAt\":\"2023-05-19T09:28:51.000Z\",\"id\":59,\"likes\":0,\"replies\":[],\"replyCount\":0,\"status\":0}]",
+          "hasMore": "false",
+          "nextCursor": null
+        }
+      ],
+      "pgPreview": [
+        {
+          "items": "[{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"content\":\"<p><strong>写的不错！！</strong></p>\",\"createAt\":\"2023-05-19T09:28:57.000Z\",\"id\":60,\"likes\":1,\"replies\":[{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>谢谢！！</p>\",\"createAt\":\"2023-05-19T09:29:27.000Z\",\"id\":61,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0},{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"createAt\":\"2023-05-19T09:29:39.000Z\",\"id\":62,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0}],\"replyCount\":10,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/3/avatar\",\"id\":3,\"name\":\"neo\"},\"content\":\"<p>总结得非常不错！</p>\",\"createAt\":\"2023-05-19T09:33:40.000Z\",\"id\":70,\"likes\":0,\"replies\":[{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":70,\"content\":\"<p>谢谢支持！</p>\",\"createAt\":\"2023-05-19T09:33:59.000Z\",\"id\":71,\"likes\":1,\"replyTo\":null,\"rid\":null,\"status\":0}],\"replyCount\":1,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"content\":\"<p>沙发</p>\",\"createAt\":\"2023-05-19T09:28:51.000Z\",\"id\":59,\"likes\":0,\"replies\":[],\"replyCount\":0,\"status\":0}]",
+          "hasMore": "false",
+          "nextCursor": null
+        }
+      ]
+    },
+    {
+      "flow": "getReplies",
+      "input": {
+        "commentId": 60,
+        "limit": 10,
+        "cursor": null
+      },
+      "mysqlRowCount": 1,
+      "pgRowCount": 1,
+      "isMatched": true,
+      "stopConditions": {
+        "countMismatch": false,
+        "orderMismatch": false,
+        "structureMismatch": false
+      },
+      "mysqlPreview": [
+        {
+          "items": "[{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>谢谢！！</p>\",\"createAt\":\"2023-05-19T09:29:27.000Z\",\"id\":61,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0},{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"createAt\":\"2023-05-19T09:29:39.000Z\",\"id\":62,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/3/avatar\",\"id\":3,\"name\":\"neo\"},\"cid\":60,\"content\":\"<p>关注了！加油！继续！</p>\",\"createAt\":\"2023-05-19T09:30:11.000Z\",\"id\":63,\"likes\":0,\"replyTo\":{\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":62,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"cid\":60,\"content\":\"<p>我也关注了</p>\",\"createAt\":\"2023-05-19T09:30:56.000Z\",\"id\":64,\"likes\":0,\"replyTo\":{\"content\":\"<p>关注了！加油！继续！</p>\",\"id\":3,\"name\":\"neo\"},\"rid\":63,\"status\":0},{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>谢谢！！</p>\",\"createAt\":\"2023-05-19T09:31:05.000Z\",\"id\":65,\"likes\":0,\"replyTo\":{\"content\":\"<p>关注了！加油！继续！</p>\",\"id\":3,\"name\":\"neo\"},\"rid\":63,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"cid\":60,\"content\":\"<p>作者的内容很有帮助！</p>\",\"createAt\":\"2023-05-19T09:31:34.000Z\",\"id\":66,\"likes\":1,\"replyTo\":{\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":62,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"cid\":60,\"content\":\"<p>我看了好多篇，停不下来！！</p>\",\"createAt\":\"2023-05-19T09:31:50.000Z\",\"id\":67,\"likes\":0,\"replyTo\":{\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":62,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"cid\":60,\"content\":\"<p>互关互关！</p>\",\"createAt\":\"2023-05-19T09:32:21.000Z\",\"id\":68,\"likes\":1,\"replyTo\":{\"content\":\"<p>谢谢！！</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":65,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"cid\":60,\"content\":\"<p>催更催更！</p>\",\"createAt\":\"2023-05-19T09:32:46.000Z\",\"id\":69,\"likes\":2,\"replyTo\":{\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":62,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/3/avatar\",\"id\":3,\"name\":\"neo\"},\"cid\":60,\"content\":\"<p>很棒哦</p>\",\"createAt\":\"2023-05-19T09:34:46.000Z\",\"id\":72,\"likes\":0,\"replyTo\":{\"content\":\"<p>谢谢！！</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":65,\"status\":0}]",
+          "hasMore": "false",
+          "nextCursor": null,
+          "replyCount": "10"
+        }
+      ],
+      "pgPreview": [
+        {
+          "items": "[{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>谢谢！！</p>\",\"createAt\":\"2023-05-19T09:29:27.000Z\",\"id\":61,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0},{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"createAt\":\"2023-05-19T09:29:39.000Z\",\"id\":62,\"likes\":0,\"replyTo\":null,\"rid\":null,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/3/avatar\",\"id\":3,\"name\":\"neo\"},\"cid\":60,\"content\":\"<p>关注了！加油！继续！</p>\",\"createAt\":\"2023-05-19T09:30:11.000Z\",\"id\":63,\"likes\":0,\"replyTo\":{\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":62,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"cid\":60,\"content\":\"<p>我也关注了</p>\",\"createAt\":\"2023-05-19T09:30:56.000Z\",\"id\":64,\"likes\":0,\"replyTo\":{\"content\":\"<p>关注了！加油！继续！</p>\",\"id\":3,\"name\":\"neo\"},\"rid\":63,\"status\":0},{\"author\":{\"avatarUrl\":\"http://192.168.3.96:8000/user/1/avatar\",\"id\":1,\"name\":\"ydp\"},\"cid\":60,\"content\":\"<p>谢谢！！</p>\",\"createAt\":\"2023-05-19T09:31:05.000Z\",\"id\":65,\"likes\":0,\"replyTo\":{\"content\":\"<p>关注了！加油！继续！</p>\",\"id\":3,\"name\":\"neo\"},\"rid\":63,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"cid\":60,\"content\":\"<p>作者的内容很有帮助！</p>\",\"createAt\":\"2023-05-19T09:31:34.000Z\",\"id\":66,\"likes\":1,\"replyTo\":{\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":62,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"cid\":60,\"content\":\"<p>我看了好多篇，停不下来！！</p>\",\"createAt\":\"2023-05-19T09:31:50.000Z\",\"id\":67,\"likes\":0,\"replyTo\":{\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":62,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"cid\":60,\"content\":\"<p>互关互关！</p>\",\"createAt\":\"2023-05-19T09:32:21.000Z\",\"id\":68,\"likes\":1,\"replyTo\":{\"content\":\"<p>谢谢！！</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":65,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/2/avatar\",\"id\":2,\"name\":\"daniel\"},\"cid\":60,\"content\":\"<p>催更催更！</p>\",\"createAt\":\"2023-05-19T09:32:46.000Z\",\"id\":69,\"likes\":2,\"replyTo\":{\"content\":\"<p>哈哈哈哈哈哈哈</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":62,\"status\":0},{\"author\":{\"avatarUrl\":\"http://localhost:8000/user/3/avatar\",\"id\":3,\"name\":\"neo\"},\"cid\":60,\"content\":\"<p>很棒哦</p>\",\"createAt\":\"2023-05-19T09:34:46.000Z\",\"id\":72,\"likes\":0,\"replyTo\":{\"content\":\"<p>谢谢！！</p>\",\"id\":1,\"name\":\"ydp\"},\"rid\":65,\"status\":0}]",
+          "hasMore": "false",
+          "nextCursor": null,
+          "replyCount": "10"
+        }
+      ]
+    }
+  ]
+}

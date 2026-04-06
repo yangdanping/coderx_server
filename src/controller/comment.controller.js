@@ -18,6 +18,10 @@ class CommentController {
     if (userId) {
       try {
         const result = await commentService.getUserCommentList(userId, offset, limit);
+        if (!result) {
+          ctx.body = Result.fail('获取用户评论列表失败!');
+          return;
+        }
         result.forEach((comment) => {
           if (!comment.status) {
             // 清理HTML标签并截取内容长度
@@ -30,7 +34,7 @@ class CommentController {
             comment.content = '评论已被封禁';
           }
         });
-        ctx.body = result ? Result.success(result) : Result.fail('获取用户评论列表失败!');
+        ctx.body = Result.success(result);
         return;
       } catch (error) {
         console.error('getUserCommentList error:', error);
@@ -69,9 +73,10 @@ class CommentController {
     const { commentId } = ctx.params;
     const { cursor } = ctx.query;
     const { limit } = Utils.getPaginationParams(ctx);
+    const normalizedLimit = Number(limit) > 0 ? Number(limit) : 10;
 
     try {
-      const result = await commentService.getReplies(commentId, cursor || null, Number(limit) || 10);
+      const result = await commentService.getReplies(commentId, cursor || null, normalizedLimit);
 
       ctx.body = Result.success(result);
     } catch (error) {

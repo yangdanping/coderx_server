@@ -1,5 +1,12 @@
 const { OAuth2Client } = require('google-auth-library');
 const connection = require('@/app/database');
+const {
+  buildCreateOAuthUserSql,
+  buildFindUserByEmailSql,
+  buildFindUserByGitHubIdSql,
+  buildFindUserByGoogleIdSql,
+  buildLinkOAuthAccountSql,
+} = require('./oauth.sql');
 
 /**
  * OAuth 2.0 服务
@@ -96,7 +103,7 @@ class OAuthService {
    * @returns {object|null} 用户信息
    */
   async findUserByGoogleId(googleId) {
-    const statement = 'SELECT * FROM user WHERE google_id = ?;';
+    const statement = buildFindUserByGoogleIdSql(connection.dialect);
     const [result] = await connection.execute(statement, [googleId]);
     return result[0] || null;
   }
@@ -107,12 +114,7 @@ class OAuthService {
    * @returns {object|null} 用户信息
    */
   async findUserByEmail(email) {
-    const statement = `
-      SELECT u.*, p.email as profileEmail
-      FROM user u
-      LEFT JOIN profile p ON u.id = p.user_id
-      WHERE p.email = ?;
-    `;
+    const statement = buildFindUserByEmailSql(connection.dialect);
     const [result] = await connection.execute(statement, [email]);
     return result[0] || null;
   }
@@ -132,7 +134,7 @@ class OAuthService {
       const uniqueName = `${baseName}_${Date.now().toString(36)}`;
 
       // 插入用户表（密码为 NULL，标记 OAuth 来源）
-      const statement1 = 'INSERT INTO user (name, password, google_id, oauth_provider) VALUES (?, NULL, ?, ?);';
+      const statement1 = buildCreateOAuthUserSql(connection.dialect, 'google');
       const [result] = await conn.execute(statement1, [uniqueName, googleUser.googleId, 'google']);
 
       const userId = result.insertId;
@@ -164,7 +166,7 @@ class OAuthService {
    * @param {string} googleId - Google ID
    */
   async linkGoogleAccount(userId, googleId) {
-    const statement = 'UPDATE user SET google_id = ?, oauth_provider = ? WHERE id = ?;';
+    const statement = buildLinkOAuthAccountSql(connection.dialect, 'google');
     await connection.execute(statement, [googleId, 'google', userId]);
   }
 
@@ -281,7 +283,7 @@ class OAuthService {
    * @returns {object|null} 用户信息
    */
   async findUserByGitHubId(githubId) {
-    const statement = 'SELECT * FROM user WHERE github_id = ?;';
+    const statement = buildFindUserByGitHubIdSql(connection.dialect);
     const [result] = await connection.execute(statement, [githubId]);
     return result[0] || null;
   }
@@ -301,7 +303,7 @@ class OAuthService {
       const uniqueName = `${baseName}_${Date.now().toString(36)}`;
 
       // 插入用户表（密码为 NULL，标记 OAuth 来源）
-      const statement1 = 'INSERT INTO user (name, password, github_id, oauth_provider) VALUES (?, NULL, ?, ?);';
+      const statement1 = buildCreateOAuthUserSql(connection.dialect, 'github');
       const [result] = await conn.execute(statement1, [uniqueName, githubUser.githubId, 'github']);
 
       const userId = result.insertId;
@@ -333,7 +335,7 @@ class OAuthService {
    * @param {string} githubId - GitHub ID
    */
   async linkGitHubAccount(userId, githubId) {
-    const statement = 'UPDATE user SET github_id = ?, oauth_provider = ? WHERE id = ?;';
+    const statement = buildLinkOAuthAccountSql(connection.dialect, 'github');
     await connection.execute(statement, [githubId, 'github', userId]);
   }
 }

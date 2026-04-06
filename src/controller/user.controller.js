@@ -48,6 +48,10 @@ class UserContoller {
 
   getLiked = async (ctx, next) => {
     const { userId } = ctx.params;
+    if (!userId || !Number.isFinite(Number(userId))) {
+      ctx.body = Result.success({ articleLiked: [], commentLiked: [] });
+      return;
+    }
     const likedInfo = await userService.getLikedById(userId);
     ctx.body = Result.success(likedInfo);
   };

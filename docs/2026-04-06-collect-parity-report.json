@@ -1,0 +1,121 @@
+{
+  "isSuccess": true,
+  "userId": 1,
+  "collectId": 1,
+  "listOffset": 0,
+  "listLimit": 5,
+  "stopConditions": {
+    "countMismatch": false,
+    "orderMismatch": false,
+    "structureMismatch": false,
+    "missingPersistedRow": false
+  },
+  "flows": [
+    {
+      "flow": "getCollectList",
+      "input": {
+        "userId": 1,
+        "offset": 0,
+        "limit": 5
+      },
+      "mysqlRowCount": 5,
+      "pgRowCount": 5,
+      "isMatched": true,
+      "stopConditions": {
+        "countMismatch": false,
+        "orderMismatch": false,
+        "structureMismatch": false
+      },
+      "mysqlPreview": [
+        {
+          "id": "1",
+          "name": "Vue",
+          "userId": "1",
+          "createAt": "2023-05-05T18:52:29.000Z",
+          "count": "[21,22,40,61]"
+        },
+        {
+          "id": "2",
+          "name": "JavaScript",
+          "userId": "1",
+          "createAt": "2023-05-05T18:58:06.000Z",
+          "count": null
+        },
+        {
+          "id": "3",
+          "name": "CSS",
+          "userId": "1",
+          "createAt": "2023-05-05T18:58:15.000Z",
+          "count": null
+        }
+      ],
+      "pgPreview": [
+        {
+          "id": "1",
+          "name": "Vue",
+          "userId": "1",
+          "createAt": "2023-05-05T18:52:29.000Z",
+          "count": "[21,22,40,61]"
+        },
+        {
+          "id": "2",
+          "name": "JavaScript",
+          "userId": "1",
+          "createAt": "2023-05-05T18:58:06.000Z",
+          "count": null
+        },
+        {
+          "id": "3",
+          "name": "CSS",
+          "userId": "1",
+          "createAt": "2023-05-05T18:58:15.000Z",
+          "count": null
+        }
+      ]
+    },
+    {
+      "flow": "getCollectArticle",
+      "input": {
+        "collectId": 1
+      },
+      "mysqlRowCount": 1,
+      "pgRowCount": 1,
+      "isMatched": true,
+      "stopConditions": {
+        "countMismatch": false,
+        "orderMismatch": false,
+        "structureMismatch": false
+      },
+      "mysqlPreview": [
+        {
+          "collectedArticle": "[21,22,40,61]"
+        }
+      ],
+      "pgPreview": [
+        {
+          "collectedArticle": "[21,22,40,61]"
+        }
+      ]
+    },
+    {
+      "flow": "addCollect",
+      "input": {
+        "userId": 1,
+        "name": "p_462086856"
+      },
+      "isMatched": true,
+      "stopConditions": {
+        "countMismatch": false,
+        "orderMismatch": false,
+        "missingPersistedRow": false,
+        "structureMismatch": false
+      },
+      "mysqlPersisted": true,
+      "pgPersisted": true
+    }
+  ],
+  "cleanup": {
+    "mysqlDeleted": 1,
+    "pgDeleted": 1
+  }
+}
