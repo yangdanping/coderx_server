@@ -1,11 +1,11 @@
 # Koa MySQL → PostgreSQL 迁移：整合收尾指南
 
 Last Updated: `2026-04-06`
-Status: **Cutover-Ready** — 6 个阶段全部完成，等待合并与正式切流
+Status: **Merge-Ready** — 6 阶段 + 实测修复全部完成，等待整合进 main
 
 ## 一句话概要
 
-coderx 应用的 MySQL → PostgreSQL 迁移已完成全部开发、验证和演练。12 个 SQL 模块全部双方言就绪，167 项回归测试 + 8 条双库 parity evidence 全部 PASS，本地切流演练（PG 冒烟 + MySQL 回退）通过。下一步是合并 PR 并正式切流。
+coderx 应用的 MySQL → PostgreSQL 迁移已完成全部开发、验证和演练，并通过了真实前端 + PG 后端的端到端实测。12 个 SQL 模块全部双方言就绪，167 项回归测试 + 8 条双库 parity evidence + 16 个读接口实测全部 PASS。下一步是整合 worktree 到 main 分支并正式切流。
 
 ## 背景
 
@@ -21,6 +21,7 @@ coderx 应用的 MySQL → PostgreSQL 迁移已完成全部开发、验证和演
 | Stage 4 | 12 个 service/task 的 SQL builder 迁移 | ✅ 完成 |
 | Stage 5 | controller 回归 + 8 条双库 parity 对比 | ✅ 完成 |
 | Stage 6 | 切流/回退演练 | ✅ 完成 |
+| Stage 7 | 真实前端 + PG 后端端到端实测 + 3 类 Bug 修复 | ✅ 完成（8 文件待 commit） |
 
 ## PR 与分支
 
@@ -34,6 +35,66 @@ coderx 应用的 MySQL → PostgreSQL 迁移已完成全部开发、验证和演
   4. `feat(pg): migrate 12 SQL modules to dual-dialect builders with tests`
   5. `feat(pg): add 8 dual-engine parity evidence toolchains and reports`
   6. `feat(pg): Stage 6 cutover rehearsal PASS + rollback runbook`
+
+## Stage 7 — 实测验证与修复（2026-04-06）
+
+通过真实前端（`http://192.168.3.96:8080/`）+ PG 后端（`localhost:8000`，`DB_DIALECT=pg`）进行端到端测试，发现并修复了 3 类 Bug。
+
+### 已修复 Bug
+
+| # | Bug | 根因 | 修复 | 涉及文件 |
+|---|-----|------|------|---------|
+| 1 | **PG 别名大小写丢失** — API 返回 `avatarurl` 而非 `avatarUrl`，前端数据无法渲染 | PG 将未加引号的 SQL 别名全部转为小写 | 对所有 camelCase 别名加双引号 `AS "camelCase"` | `comment.sql.js`, `user.sql.js`, `collect.sql.js`, `history.sql.js`, `oauth.sql.js`, `comment.service.js` |
+| 2 | **`userId = "undefined"` 导致 PG 500** — 未登录用户浏览文章详情时前端请求 `/user/undefined/like`，PG 严格类型检查拒绝 `"undefined"` → `BIGINT` 转换 | MySQL 静默返回空结果，PG 抛出 `invalid input syntax for type bigint` | 在 `getLiked` 方法中增加 `userId` 合法性校验 | `user.controller.js` |
+| 3 | **游标分页时区 Bug — 评论无限加载** — PG 模式下评论列表触底加载始终返回相同 5 条结果，形成死循环 | `buildNextCursor` 用 `dayjs` 将 UTC 时间格式化为本地时间（+8h），PG 按 GMT 解释后偏移 8 小时，游标条件匹配所有记录 | ① `_formatTime`: PG 用 `dayjs.utc()` 解析和格式化；② `date_trunc('milliseconds', ...)` 消除微秒精度差异；③ 热门排序引用加双引号 `hot_comments."createAt"` | `SqlUtils.js` |
+
+### 16 个读接口实测结果（全部 PASS）
+
+| 接口 | 状态 |
+|------|------|
+| `GET /article?pageOrder=date` | ✅ |
+| `GET /article?pageOrder=hot` | ✅ |
+| `GET /article/:id` | ✅ |
+| `GET /article/recommend` | ✅ |
+| `GET /article/search?keywords=Vue` | ✅ |
+| `GET /comment?sort=latest` | ✅ |
+| `GET /comment?sort=hot` | ✅ |
+| `GET /comment?sort=oldest` | ✅ |
+| `GET /comment/count` | ✅ |
+| `GET /comment/:id/replies` | ✅ |
+| `GET /user/hot` | ✅ |
+| `GET /user/:id/profile` | ✅ |
+| `GET /user/:id/like` | ✅ |
+| `GET /user/:id/follow` | ✅ |
+| `GET /tag` | ✅ |
+| `GET /collect/:userId` | ✅ |
+
+### 前端页面验证
+
+- 首页 — 正常加载
+- 专栏（文章列表） — 文章卡片、标签、作者、浏览/点赞/评论数全部正确
+- 文章详情 — 标题、正文、目录、标签、评论数、浏览数
+- 评论区 — 一级评论、嵌套回复、"查看更多回复"、三种排序分页均正常无重复
+- 用户主页 — 头像、关注/粉丝数、文章列表
+
+### ⚠️ 待提交文件（8 个）
+
+以下修改已在 worktree 中完成但尚未 commit，下一阶段整合时需先提交：
+
+| 文件 | 修复内容 |
+|------|---------|
+| `src/service/comment.sql.js` | camelCase 别名加双引号 |
+| `src/service/user.sql.js` | camelCase 别名加双引号 |
+| `src/service/collect.sql.js` | camelCase 别名加双引号 |
+| `src/service/history.sql.js` | camelCase 别名加双引号 |
+| `src/service/oauth.sql.js` | camelCase 别名加双引号 |
+| `src/service/comment.service.js` | 内联 SQL 别名加双引号 + 传 dialect 到 SqlUtils |
+| `src/controller/user.controller.js` | `getLiked` 增加 `userId` 校验 |
+| `src/utils/SqlUtils.js` | 游标时区修复 + 微秒精度 + 热门排序引用 |
+
+建议 commit message：`fix(pg): patch alias casing, cursor timezone, and userId validation from e2e testing`
+
+---
 
 ## 验证证据
 
@@ -154,14 +215,63 @@ NODE_ENV=production node ./src/main.js
 - 写入后读不回
 - 事务语义异常
 
-## 合并后的清理建议
+## 下一阶段：整合 Worktree → main
 
-合并 PR 后可考虑：
+### 合并前准备
+
+#### 1. 提交待处理文件
+
+worktree 中有 8 个修改文件尚未 commit（详见上方"待提交文件"表），先提交：
+
+```bash
+cd .worktrees/phase2-pg-bootstrap
+git add src/service/comment.sql.js src/service/user.sql.js src/service/collect.sql.js \
+        src/service/history.sql.js src/service/oauth.sql.js src/service/comment.service.js \
+        src/controller/user.controller.js src/utils/SqlUtils.js
+git commit -m "fix(pg): patch alias casing, cursor timezone, and userId validation from e2e testing"
+```
+
+#### 2. 归档 MySQL 原始 SQL 快照
+
+合并后，`main` 分支上原始的纯 MySQL 内联 SQL 写法将被双方言 Builder 覆盖。
+为便于日后学习 MySQL vs PostgreSQL 方言差异，**在合并前**从 `main` 分支导出原始 service 文件作为快照：
+
+```bash
+# 在项目根目录执行
+mkdir -p docs/mysql-sql-snapshot
+
+# 从 main 分支导出包含原始 MySQL SQL 的 service 文件
+git show main:src/service/article.service.js  > docs/mysql-sql-snapshot/article.service.js
+git show main:src/service/comment.service.js  > docs/mysql-sql-snapshot/comment.service.js
+git show main:src/service/user.service.js     > docs/mysql-sql-snapshot/user.service.js
+git show main:src/service/collect.service.js  > docs/mysql-sql-snapshot/collect.service.js
+git show main:src/service/history.service.js  > docs/mysql-sql-snapshot/history.service.js
+git show main:src/service/oauth.service.js    > docs/mysql-sql-snapshot/oauth.service.js
+git show main:src/service/image.service.js    > docs/mysql-sql-snapshot/image.service.js
+git show main:src/service/video.service.js    > docs/mysql-sql-snapshot/video.service.js
+git show main:src/service/tag.service.js      > docs/mysql-sql-snapshot/tag.service.js
+git show main:src/service/auth.service.js     > docs/mysql-sql-snapshot/auth.service.js
+git show main:src/service/avatar.service.js   > docs/mysql-sql-snapshot/avatar.service.js
+git show main:src/tasks/cleanOrphanFiles.js   > docs/mysql-sql-snapshot/cleanOrphanFiles.js
+git show main:src/utils/SqlUtils.js           > docs/mysql-sql-snapshot/SqlUtils.js
+```
+
+> **用途**：这些文件保留了迁移前纯 MySQL 内联 SQL 的写法，可与迁移后的 `*.sql.js` 双方言 Builder 对照学习。合并后的 `*.sql.js` 文件中同时包含 MySQL 和 PG 两种方言的实现，配合这份快照可以清晰对比"迁移前（单 MySQL）→ 迁移后（双方言 Builder）"的演变。
+
+#### 3. 合并分支
+
+```bash
+git checkout main
+git merge phase2-pg-bootstrap
+```
+
+### 合并后清理
 
 1. **删除 worktree**: `git worktree remove .worktrees/phase2-pg-bootstrap`
-2. **清理迁移工具**（可选）: `scripts/migration/` 和 `test/migration/` 中的 parity evidence 工具在正式切流完成后可归档或删除
-3. **移除 MySQL 兼容层**（可选，正式切流稳定后）: 当确认不再需要 MySQL 回退时，可移除 `src/app/database/mysql.client.js` 和各 `*.sql.js` 中的 mysql 分支
-4. **更新旧评估文档**: `docs/04_项目优化沙盒推演/02_MySQL 到 PostgreSQL 迁移评估.md` 结论应从"暂不建议迁移"更新为"已完成迁移"
+2. **删除远程分支**（可选）: `git push origin --delete phase2-pg-bootstrap`
+3. **清理迁移工具**（可选）: `scripts/migration/` 和 `test/migration/` 中的 parity evidence 工具在正式切流完成后可归档或删除
+4. **移除 MySQL 兼容层**（可选，正式切流稳定后）: 当确认不再需要 MySQL 回退时，可移除 `src/app/database/mysql.client.js` 和各 `*.sql.js` 中的 mysql 分支
+5. **更新旧评估文档**: `docs/04_项目优化沙盒推演/02_MySQL 到 PostgreSQL 迁移评估.md` 结论应从"暂不建议迁移"更新为"已完成迁移"
 
 ## 连接信息
 
