@@ -22,8 +22,8 @@ function buildGetCollectListSql(dialect) {
       SELECT
           c.id,
           c.name,
-          c.user_id userId,
-          c.create_at createAt,
+          c.user_id AS "userId",
+          c.create_at AS "createAt",
           CASE WHEN COUNT(ac.article_id) > 0 THEN jsonb_agg(ac.article_id) ELSE NULL END count
       FROM collect c
       LEFT JOIN article_collect ac ON c.id = ac.collect_id
@@ -56,7 +56,7 @@ function buildGetCollectArticleSql(dialect) {
   if (dialect === 'pg') {
     return `
       SELECT
-          jsonb_agg(ac.article_id) collectedArticle
+          jsonb_agg(ac.article_id) AS "collectedArticle"
       FROM article_collect ac
       WHERE ac.collect_id = ?;
     `;

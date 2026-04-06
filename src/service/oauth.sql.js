@@ -24,8 +24,9 @@ function buildFindUserByGitHubIdSql(dialect) {
 }
 
 function buildFindUserByEmailSql(dialect) {
+  const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
   return `
-      SELECT u.*, p.email as profileEmail
+      SELECT u.*, p.email as ${q('profileEmail')}
       FROM ${getUserTable(dialect)} u
       LEFT JOIN profile p ON u.id = p.user_id
       WHERE p.email = ?;

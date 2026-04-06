@@ -32,26 +32,27 @@ function buildGetUserHistorySql(dialect, baseURL, redirectURL) {
   const author = authorSelectExpr(dialect);
   const limitClause = paginationClause(dialect);
   const userTable = userTableExpr(dialect);
+  const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
   return `
         SELECT
             ah.id,
-            ah.create_at createAt,
-            ah.update_at updateAt,
-            a.id articleId,
+            ah.create_at AS ${q('createAt')},
+            ah.update_at AS ${q('updateAt')},
+            a.id AS ${q('articleId')},
             a.title,
             a.content,
             a.views,
             a.status,
-            a.create_at articleCreateAt,
+            a.create_at AS ${q('articleCreateAt')},
             ${author},
-            (SELECT COUNT(al.user_id) FROM article_like al WHERE al.article_id = a.id) likes, -- 点赞数子查询
-            (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) commentCount, -- 评论数子查询
+            (SELECT COUNT(al.user_id) FROM article_like al WHERE al.article_id = a.id) likes,
+            (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) AS ${q('commentCount')},
             (SELECT CONCAT('${baseURL}/article/images/', f.filename, '?type=small')
                 FROM file f
                 LEFT JOIN image_meta im ON f.id = im.file_id
                 WHERE f.article_id = a.id AND f.file_type = 'image' AND im.is_cover = TRUE
-                LIMIT 1) cover, -- 封面图片子查询
-            CONCAT('${redirectURL}/article/', a.id) articleUrl
+                LIMIT 1) cover,
+            CONCAT('${redirectURL}/article/', a.id) AS ${q('articleUrl')}
         FROM article_history ah
         LEFT JOIN article a ON ah.article_id = a.id
         LEFT JOIN ${userTable} u ON a.user_id = u.id

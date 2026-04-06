@@ -33,7 +33,7 @@ class CommentService {
 
       if (sort === 'hot') {
         const queryParams = [articleId];
-        const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildHotCursorCondition(cursor);
+        const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildHotCursorCondition(cursor, connection.dialect);
         queryParams.push(...cursorParams, limitForHasMore);
 
         const statement = buildGetCommentListSql(connection.dialect, {
@@ -45,7 +45,7 @@ class CommentService {
         const isOldest = sort === 'oldest';
         const direction = isOldest ? 'ASC' : 'DESC';
         const queryParams = [articleId];
-        const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildTimeCursorCondition(cursor, direction);
+        const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildTimeCursorCondition(cursor, direction, connection.dialect);
         queryParams.push(...cursorParams, limitForHasMore);
 
         const statement = buildGetCommentListSql(connection.dialect, {
@@ -75,7 +75,7 @@ class CommentService {
       // 计算下一页游标
       let nextCursor = null;
       if (hasMore && items.length > 0) {
-        nextCursor = sort === 'hot' ? SqlUtils.buildHotNextCursor(items[items.length - 1]) : SqlUtils.buildNextCursor(items[items.length - 1]);
+        nextCursor = sort === 'hot' ? SqlUtils.buildHotNextCursor(items[items.length - 1], connection.dialect) : SqlUtils.buildNextCursor(items[items.length - 1], connection.dialect);
       }
 
       return {
@@ -157,7 +157,7 @@ class CommentService {
     try {
       const normalizedLimit = Number(limit) || 10;
       const queryParams = [commentId];
-      const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildCursorCondition(cursor, 'ASC');
+      const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildCursorCondition(cursor, 'ASC', connection.dialect);
       queryParams.push(...cursorParams);
 
       const limitForHasMore = String(normalizedLimit + 1);
@@ -179,11 +179,11 @@ class CommentService {
       });
 
       // 获取该评论下的总回复数
-      const [[{ replyCount }]] = await connection.execute('SELECT COUNT(*) AS replyCount FROM comment WHERE comment_id = ?', [commentId]);
+      const [[{ replyCount }]] = await connection.execute('SELECT COUNT(*) AS "replyCount" FROM comment WHERE comment_id = ?', [commentId]);
 
       let nextCursor = null;
       if (hasMore && items.length > 0) {
-        nextCursor = SqlUtils.buildNextCursor(items[items.length - 1]);
+        nextCursor = SqlUtils.buildNextCursor(items[items.length - 1], connection.dialect);
       }
 
       return {
@@ -203,7 +203,7 @@ class CommentService {
    */
   getTotalCount = async (articleId) => {
     try {
-      const statement = `SELECT COUNT(*) AS totalCount FROM comment WHERE article_id = ?`;
+      const statement = `SELECT COUNT(*) AS "totalCount" FROM comment WHERE article_id = ?`;
       const [[result]] = await connection.execute(statement, [articleId]);
       return result.totalCount;
     } catch (error) {

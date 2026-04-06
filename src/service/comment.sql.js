@@ -22,7 +22,7 @@ function replyToSelectExpr(dialect) {
     return `(SELECT jsonb_build_object('id', ru.id, 'name', ru.name, 'content', rc.content)
         FROM comment rc
         LEFT JOIN ${userTable} ru ON ru.id = rc.user_id
-        WHERE rc.id = c.reply_id) replyTo`;
+        WHERE rc.id = c.reply_id) AS "replyTo"`;
   }
   return `(SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content)
       FROM comment rc
@@ -37,6 +37,7 @@ function paginationClause(dialect) {
 function buildGetCommentListSql(dialect, { sort, cursorCondition = '', direction = 'DESC' }) {
   const author = authorSelectExpr(dialect);
   const userTable = userTableExpr(dialect);
+  const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
 
   if (sort === 'hot') {
     return `
@@ -46,10 +47,10 @@ function buildGetCommentListSql(dialect, { sort, cursorCondition = '', direction
             c.id,
             c.content,
             c.status,
-            c.create_at createAt,
+            c.create_at AS ${q('createAt')},
             ${author},
             (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes,
-            (SELECT COUNT(*) FROM comment r WHERE r.comment_id = c.id) replyCount
+            (SELECT COUNT(*) FROM comment r WHERE r.comment_id = c.id) AS ${q('replyCount')}
         FROM comment c
         LEFT JOIN ${userTable} u ON u.id = c.user_id
         LEFT JOIN profile p ON u.id = p.user_id
@@ -58,7 +59,7 @@ function buildGetCommentListSql(dialect, { sort, cursorCondition = '', direction
       ) hot_comments
       WHERE 1 = 1
         ${cursorCondition}
-      ORDER BY hot_comments.likes DESC, hot_comments.replyCount DESC, hot_comments.createAt DESC, hot_comments.id DESC
+      ORDER BY hot_comments.likes DESC, hot_comments.${q('replyCount')} DESC, hot_comments.${q('createAt')} DESC, hot_comments.id DESC
       LIMIT ?
     `;
   }
@@ -68,10 +69,10 @@ function buildGetCommentListSql(dialect, { sort, cursorCondition = '', direction
         c.id,
         c.content,
         c.status,
-        c.create_at createAt,
+        c.create_at AS ${q('createAt')},
         ${author},
         (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes,
-        (SELECT COUNT(*) FROM comment r WHERE r.comment_id = c.id) replyCount
+        (SELECT COUNT(*) FROM comment r WHERE r.comment_id = c.id) AS ${q('replyCount')}
     FROM comment c
     LEFT JOIN ${userTable} u ON u.id = c.user_id
     LEFT JOIN profile p ON u.id = p.user_id
@@ -88,16 +89,17 @@ function buildGetUserCommentListSql(dialect) {
   const article = articleSelectExpr(dialect);
   const userTable = userTableExpr(dialect);
   const limitClause = paginationClause(dialect);
+  const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
 
   return `
     SELECT
         c.id,
         c.content,
         c.status,
-        c.create_at createAt,
-        c.update_at updateAt,
-        c.article_id articleId,
-        a.title articleTitle,
+        c.create_at AS ${q('createAt')},
+        c.update_at AS ${q('updateAt')},
+        c.article_id AS ${q('articleId')},
+        a.title AS ${q('articleTitle')},
         ${author},
         ${article},
         (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes
@@ -122,6 +124,7 @@ function buildGetReplyPreviewSql(dialect) {
   const author = authorSelectExpr(dialect);
   const userTable = userTableExpr(dialect);
   const replyTo = replyToSelectExpr(dialect);
+  const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
 
   return `
     SELECT
@@ -130,7 +133,7 @@ function buildGetReplyPreviewSql(dialect) {
         c.status,
         c.comment_id cid,
         c.reply_id rid,
-        c.create_at createAt,
+        c.create_at AS ${q('createAt')},
         ${author},
         (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes,
         ${replyTo}
@@ -147,6 +150,7 @@ function buildGetRepliesSql(dialect, { cursorCondition = '' }) {
   const author = authorSelectExpr(dialect);
   const userTable = userTableExpr(dialect);
   const replyTo = replyToSelectExpr(dialect);
+  const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
 
   return `
     SELECT
@@ -155,7 +159,7 @@ function buildGetRepliesSql(dialect, { cursorCondition = '' }) {
         c.status,
         c.comment_id cid,
         c.reply_id rid,
-        c.create_at createAt,
+        c.create_at AS ${q('createAt')},
         ${author},
         (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes,
         ${replyTo}
@@ -173,6 +177,7 @@ function buildGetCommentByIdSql(dialect) {
   const author = authorSelectExpr(dialect);
   const userTable = userTableExpr(dialect);
   const replyTo = replyToSelectExpr(dialect);
+  const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
 
   return `
     SELECT
@@ -181,8 +186,8 @@ function buildGetCommentByIdSql(dialect) {
         c.status,
         c.comment_id cid,
         c.reply_id rid,
-        c.article_id articleId,
-        c.create_at createAt,
+        c.article_id AS ${q('articleId')},
+        c.create_at AS ${q('createAt')},
         ${author},
         (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes,
         ${replyTo}

@@ -19,19 +19,20 @@ function buildGetUserByNameSql(dialect) {
 
 function buildGetProfileByIdSql(dialect) {
   const userTable = userTableExpr(dialect);
+  const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
   return `
       SELECT
           u.id,
           u.name,
           u.status,
-          p.avatar_url avatarUrl,
+          p.avatar_url AS ${q('avatarUrl')},
           p.age,
           p.sex,
           p.email,
           p.career,
           p.address,
-          (SELECT COUNT(*) FROM article a WHERE a.user_id = u.id) articleCount,
-          (SELECT COUNT(*) FROM comment c WHERE c.user_id = u.id) commentCount
+          (SELECT COUNT(*) FROM article a WHERE a.user_id = u.id) AS ${q('articleCount')},
+          (SELECT COUNT(*) FROM comment c WHERE c.user_id = u.id) AS ${q('commentCount')}
       FROM ${userTable} u
       LEFT JOIN profile p ON u.id = p.user_id
       WHERE u.id = ?;
@@ -41,7 +42,7 @@ function buildGetProfileByIdSql(dialect) {
 function buildGetCommentByIdSql(dialect) {
   if (dialect === 'pg') {
     return `
-    SELECT c.id, a.title,c.content, c.comment_id commentId, c.create_at createAt,
+    SELECT c.id, a.title,c.content, c.comment_id AS "commentId", c.create_at AS "createAt",
     jsonb_build_object('id', u.id, 'name', u.name,'avatarUrl',p.avatar_url) AS "user",
     (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes
     FROM comment c
@@ -82,10 +83,10 @@ function buildGetLikedByIdSql(dialect) {
             u.name,
             (SELECT jsonb_agg(al.article_id)
                 FROM article_like al
-                WHERE al.user_id = u.id) articleLiked,
+                WHERE al.user_id = u.id) AS "articleLiked",
             (SELECT jsonb_agg(cl.comment_id)
                 FROM comment_like cl
-                WHERE cl.user_id = u.id) commentLiked
+                WHERE cl.user_id = u.id) AS "commentLiked"
         FROM "user" u
         WHERE u.id = ?;
       `;
@@ -171,8 +172,9 @@ function buildGetFollowInfoSql(dialect) {
 
 function buildGetArticleByCollectIdSql(dialect) {
   const limitClause = paginationClause(dialect);
+  const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
   return `
-      SELECT a.id,a.title,a.content,a.create_at createAt
+      SELECT a.id,a.title,a.content,a.create_at AS ${q('createAt')}
       FROM article_collect ac
       LEFT JOIN collect c ON ac.collect_id = c.id
       LEFT JOIN article a ON ac.article_id = a.id
@@ -191,7 +193,7 @@ function buildGetHotUsersSql(dialect) {
         SELECT
             u.id,
             u.name,
-            p.avatar_url avatarUrl,
+            p.avatar_url AS "avatarUrl",
             p.age,
             p.sex,
             p.email,
@@ -200,7 +202,7 @@ function buildGetHotUsersSql(dialect) {
             (SELECT jsonb_build_object('totalLikes', COUNT(al.article_id), 'totalViews', SUM(a.views))
                 FROM article a
                 LEFT JOIN article_like al ON a.id = al.article_id
-                WHERE a.user_id = u.id) articleInfo
+                WHERE a.user_id = u.id) AS "articleInfo"
         FROM "user" u
         LEFT JOIN profile p ON u.id = p.user_id
         ORDER BY u.id
