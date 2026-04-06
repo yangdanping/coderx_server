@@ -1,5 +1,13 @@
 const connection = require('@/app/database');
 const SqlUtils = require('@/utils/SqlUtils');
+const {
+  buildAddVideoFileSql,
+  buildVideoMetadataValues,
+  buildUpdateTranscodeStatusSql,
+  buildUpdateVideoMetadataSql,
+  buildUpdateVideoPosterSql,
+  buildVideoMetadataAssignments,
+} = require('./video.sql');
 
 /**
  * 视频服务层
@@ -21,7 +29,7 @@ class VideoService {
       await conn.beginTransaction();
 
       // 1. 插入文件基础信息
-      const fileStatement = `INSERT INTO file (user_id, filename, mimetype, size, file_type) VALUES (?,?,?,?,'video');`;
+      const fileStatement = buildAddVideoFileSql(connection.dialect);
       const [fileResult] = await conn.execute(fileStatement, [userId, filename, mimetype, size]);
       const fileId = fileResult.insertId;
 
@@ -114,7 +122,7 @@ class VideoService {
    */
   updateVideoPoster = async (videoId, posterFilename) => {
     try {
-      const statement = `UPDATE video_meta vm INNER JOIN file f ON vm.file_id = f.id SET vm.poster = ? WHERE f.id = ?;`;
+      const statement = buildUpdateVideoPosterSql(connection.dialect);
       const [result] = await connection.execute(statement, [posterFilename, videoId]);
       return result;
     } catch (error) {
@@ -131,36 +139,15 @@ class VideoService {
    */
   updateVideoMetadata = async (videoId, metadata) => {
     try {
-      const fields = [];
-      const values = [];
-
-      if (metadata.duration !== undefined) {
-        fields.push('vm.duration = ?');
-        values.push(metadata.duration);
-      }
-      if (metadata.width !== undefined) {
-        fields.push('vm.width = ?');
-        values.push(metadata.width);
-      }
-      if (metadata.height !== undefined) {
-        fields.push('vm.height = ?');
-        values.push(metadata.height);
-      }
-      if (metadata.bitrate !== undefined) {
-        fields.push('vm.bitrate = ?');
-        values.push(metadata.bitrate);
-      }
-      if (metadata.format !== undefined) {
-        fields.push('vm.format = ?');
-        values.push(metadata.format);
-      }
+      const fields = buildVideoMetadataAssignments(connection.dialect, metadata);
+      const values = buildVideoMetadataValues(metadata);
 
       if (fields.length === 0) {
         return null;
       }
 
       values.push(videoId);
-      const statement = `UPDATE video_meta vm INNER JOIN file f ON vm.file_id = f.id SET ${fields.join(', ')} WHERE f.id = ?;`;
+      const statement = buildUpdateVideoMetadataSql(connection.dialect, fields);
       const [result] = await connection.execute(statement, values);
       return result;
     } catch (error) {
@@ -177,7 +164,7 @@ class VideoService {
    */
   updateTranscodeStatus = async (videoId, status) => {
     try {
-      const statement = `UPDATE video_meta vm INNER JOIN file f ON vm.file_id = f.id SET vm.transcode_status = ? WHERE f.id = ?;`;
+      const statement = buildUpdateTranscodeStatusSql(connection.dialect);
       const [result] = await connection.execute(statement, [status, videoId]);
       return result;
     } catch (error) {

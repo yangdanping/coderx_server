@@ -15,6 +15,7 @@ const connection = require('@/app/database');
 const fs = require('fs');
 const path = require('path');
 const SqlUtils = require('@/utils/SqlUtils');
+const { buildFindOrphanFilesSql } = require('./cleanOrphanFiles.sql');
 
 // 配置：通过环境变量控制执行频率
 // 测试模式：export CLEAN_CRON_MODE=test  （每3s执行，3秒后清理）
@@ -136,42 +137,16 @@ const cleanOrphanFiles = async (fileType, method = 'cron') => {
 
     if (fileType === 'image') {
       // 图片孤儿：未关联文章 且 未被视频封面引用
+      const statement = buildFindOrphanFilesSql(connection.dialect, 'image', threshold.unit);
       [orphanFiles] = await conn.execute(
-        `
-        SELECT
-          f.id,
-          f.filename,
-          f.mimetype,
-          f.size,
-          f.create_at as createTime,
-          TIMESTAMPDIFF(${threshold.unit}, f.create_at, NOW()) as age_in_units
-        FROM file f
-        LEFT JOIN video_meta vm ON f.filename = vm.poster
-        WHERE f.article_id IS NULL
-          AND vm.poster IS NULL
-          AND f.file_type = ?
-          AND f.create_at < DATE_SUB(NOW(), INTERVAL ? ${threshold.unit})
-        ORDER BY f.create_at ASC
-        `,
+        statement,
         [fileType, threshold.interval],
       );
     } else if (fileType === 'video') {
       // 视频孤儿：未关联文章
+      const statement = buildFindOrphanFilesSql(connection.dialect, 'video', threshold.unit);
       [orphanFiles] = await conn.execute(
-        `
-        SELECT
-          f.id,
-          f.filename,
-          f.mimetype,
-          f.size,
-          f.create_at as createTime,
-          TIMESTAMPDIFF(${threshold.unit}, f.create_at, NOW()) as age_in_units
-        FROM file f
-        WHERE f.article_id IS NULL
-          AND f.file_type = ?
-          AND f.create_at < DATE_SUB(NOW(), INTERVAL ? ${threshold.unit})
-        ORDER BY f.create_at ASC
-        `,
+        statement,
         [fileType, threshold.interval],
       );
     } else {

@@ -1,8 +1,9 @@
 const connection = require('@/app/database');
+const { buildAddTagSql, buildGetTagListExecuteParams, buildGetTagListSql } = require('./tag.sql');
 
 class TagService {
   addTag = async (name) => {
-    const statement = `INSERT INTO tag (name) VALUES (?);`;
+    const statement = buildAddTagSql(connection.dialect);
     const [result] = await connection.execute(statement, [name]);
     return result;
   };
@@ -14,9 +15,9 @@ class TagService {
   };
 
   getTagList = async (offset, limit) => {
-    console.log('getTagList offset, limit', offset, limit);
-    const statement = `SELECT * FROM tag LIMIT ?,?;`;
-    const [result] = await connection.execute(statement, [offset, limit]);
+    const statement = buildGetTagListSql(connection.dialect);
+    const executeParams = buildGetTagListExecuteParams(connection.dialect, offset, limit);
+    const [result] = await connection.execute(statement, executeParams);
     return result;
   };
 }

@@ -1,6 +1,15 @@
 const connection = require('@/app/database');
-const { baseURL, redirectURL } = require('@/constants/urls');
 const SqlUtils = require('@/utils/SqlUtils');
+const {
+  buildAddCommentSql,
+  buildAddReplySql,
+  buildGetCommentListSql,
+  buildGetCommentByIdSql,
+  buildGetRepliesSql,
+  buildGetReplyPreviewSql,
+  buildGetUserCommentListSql,
+  buildUserCommentListExecuteParams,
+} = require('./comment.sql');
 
 class CommentService {
   /**
@@ -27,28 +36,10 @@ class CommentService {
         const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildHotCursorCondition(cursor);
         queryParams.push(...cursorParams, limitForHasMore);
 
-        const statement = `
-          SELECT hot_comments.*
-          FROM (
-            SELECT
-                c.id,
-                c.content,
-                c.status,
-                c.create_at createAt,
-                JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
-                (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes,
-                (SELECT COUNT(*) FROM comment r WHERE r.comment_id = c.id) replyCount
-            FROM comment c
-            LEFT JOIN user u ON u.id = c.user_id
-            LEFT JOIN profile p ON u.id = p.user_id
-            WHERE c.article_id = ?
-              AND c.comment_id IS NULL
-          ) hot_comments
-          WHERE 1 = 1
-            ${cursorCondition}
-          ORDER BY hot_comments.likes DESC, hot_comments.replyCount DESC, hot_comments.createAt DESC, hot_comments.id DESC
-          LIMIT ?
-        `;
+        const statement = buildGetCommentListSql(connection.dialect, {
+          sort: 'hot',
+          cursorCondition,
+        });
         [comments] = await connection.execute(statement, queryParams);
       } else {
         const isOldest = sort === 'oldest';
@@ -57,24 +48,11 @@ class CommentService {
         const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildTimeCursorCondition(cursor, direction);
         queryParams.push(...cursorParams, limitForHasMore);
 
-        const statement = `
-          SELECT
-              c.id,
-              c.content,
-              c.status,
-              c.create_at createAt,
-              JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
-              (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes,
-              (SELECT COUNT(*) FROM comment r WHERE r.comment_id = c.id) replyCount
-          FROM comment c
-          LEFT JOIN user u ON u.id = c.user_id
-          LEFT JOIN profile p ON u.id = p.user_id
-          WHERE c.article_id = ?
-              AND c.comment_id IS NULL
-              ${cursorCondition}
-          ORDER BY c.create_at ${direction}, c.id ${direction}
-          LIMIT ?
-        `;
+        const statement = buildGetCommentListSql(connection.dialect, {
+          sort,
+          cursorCondition,
+          direction,
+        });
         [comments] = await connection.execute(statement, queryParams);
       }
 
@@ -119,32 +97,9 @@ class CommentService {
    */
   getUserCommentList = async (userId, offset, limit) => {
     try {
-      const statement = `
-        SELECT
-            c.id,
-            c.content,
-            c.status,
-            c.create_at createAt,
-            c.update_at updateAt,
-            c.article_id articleId,
-            a.title articleTitle,
-            JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
-            JSON_OBJECT('id', a.id, 'title', a.title) article,
-            (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes
-        FROM comment c
-        LEFT JOIN user u ON u.id = c.user_id
-        LEFT JOIN profile p ON u.id = p.user_id
-        LEFT JOIN article a ON a.id = c.article_id
-        WHERE c.user_id = ?
-        ORDER BY c.create_at DESC
-        LIMIT ?, ?
-      `;
-
-      const [comments] = await connection.execute(statement, [userId, String(offset), String(limit)]);
-
-      // 获取总数
-      const countStatement = `SELECT COUNT(*) total FROM comment WHERE user_id = ?`;
-      const [[{ total }]] = await connection.execute(countStatement, [userId]);
+      const statement = buildGetUserCommentListSql(connection.dialect);
+      const executeParams = buildUserCommentListExecuteParams(connection.dialect, userId, String(offset), String(limit));
+      const [comments] = await connection.execute(statement, executeParams);
 
       // 处理数据格式
       const items = comments.map((item) => {
@@ -177,27 +132,7 @@ class CommentService {
    */
   getReplyPreview = async (commentId, limit) => {
     try {
-      const statement = `
-        SELECT
-            c.id,
-            c.content,
-            c.status,
-            c.comment_id cid,
-            c.reply_id rid,
-            c.create_at createAt,
-            JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
-            (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes, -- 点赞数子查询
-            (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content)
-                FROM comment rc
-                LEFT JOIN user ru ON ru.id = rc.user_id
-                WHERE rc.id = c.reply_id) replyTo -- 被回复的内容子查询
-        FROM comment c
-        LEFT JOIN user u ON u.id = c.user_id
-        LEFT JOIN profile p ON u.id = p.user_id
-        WHERE c.comment_id = ?
-        ORDER BY c.create_at ASC
-        LIMIT ?
-      `;
+      const statement = buildGetReplyPreviewSql(connection.dialect);
 
       const [replies] = await connection.execute(statement, [commentId, limit]);
 
@@ -220,40 +155,22 @@ class CommentService {
    */
   getReplies = async (commentId, cursor, limit) => {
     try {
+      const normalizedLimit = Number(limit) || 10;
       const queryParams = [commentId];
       const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildCursorCondition(cursor, 'ASC');
       queryParams.push(...cursorParams);
 
-      const limitForHasMore = String(parseInt(limit) + 1);
+      const limitForHasMore = String(normalizedLimit + 1);
       queryParams.push(limitForHasMore);
 
-      const statement = `
-        SELECT
-            c.id,
-            c.content,
-            c.status,
-            c.comment_id cid,
-            c.reply_id rid,
-            c.create_at createAt,
-            JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
-            (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes, -- 点赞数子查询
-            (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content)
-                FROM comment rc
-                LEFT JOIN user ru ON ru.id = rc.user_id
-                WHERE rc.id = c.reply_id) replyTo -- 被回复的内容子查询
-        FROM comment c
-        LEFT JOIN user u ON u.id = c.user_id
-        LEFT JOIN profile p ON u.id = p.user_id
-        WHERE c.comment_id = ?
-            ${cursorCondition}
-        ORDER BY c.create_at ASC, c.id ASC
-        LIMIT ?
-      `;
+      const statement = buildGetRepliesSql(connection.dialect, {
+        cursorCondition,
+      });
 
       const [replies] = await connection.execute(statement, queryParams);
 
-      const hasMore = replies.length > limit;
-      const items = hasMore ? replies.slice(0, limit) : replies;
+      const hasMore = replies.length > normalizedLimit;
+      const items = hasMore ? replies.slice(0, normalizedLimit) : replies;
 
       items.forEach((reply) => {
         if (reply.status) {
@@ -300,7 +217,7 @@ class CommentService {
    */
   addComment = async (userId, articleId, content) => {
     try {
-      const statement = `INSERT INTO comment (user_id, article_id, content) VALUES (?, ?, ?)`;
+      const statement = buildAddCommentSql(connection.dialect);
       const [result] = await connection.execute(statement, [userId, articleId, content]);
 
       if (result.insertId) {
@@ -324,19 +241,17 @@ class CommentService {
    */
   addReply = async (userId, articleId, commentId, replyId, content) => {
     try {
-      let statement;
       let queryParams;
 
       if (replyId) {
         // 回复的回复
-        statement = `INSERT INTO comment (user_id, article_id, comment_id, reply_id, content) VALUES (?, ?, ?, ?, ?)`;
         queryParams = [userId, articleId, commentId, replyId, content];
       } else {
         // 回复一级评论
-        statement = `INSERT INTO comment (user_id, article_id, comment_id, content) VALUES (?, ?, ?, ?)`;
         queryParams = [userId, articleId, commentId, content];
       }
 
+      const statement = buildAddReplySql(connection.dialect, !!replyId);
       const [result] = await connection.execute(statement, queryParams);
 
       if (result.insertId) {
@@ -354,26 +269,7 @@ class CommentService {
    */
   getCommentById = async (commentId) => {
     try {
-      const statement = `
-        SELECT
-            c.id,
-            c.content,
-            c.status,
-            c.comment_id cid,
-            c.reply_id rid,
-            c.article_id articleId,
-            c.create_at createAt,
-            JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
-            (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes, -- 点赞数子查询
-            (SELECT JSON_OBJECT('id', ru.id, 'name', ru.name, 'content', rc.content)
-                FROM comment rc
-                LEFT JOIN user ru ON ru.id = rc.user_id
-                WHERE rc.id = c.reply_id) replyTo -- 被回复的内容子查询
-        FROM comment c
-        LEFT JOIN user u ON u.id = c.user_id
-        LEFT JOIN profile p ON u.id = p.user_id
-        WHERE c.id = ?
-      `;
+      const statement = buildGetCommentByIdSql(connection.dialect);
 
       const [[comment]] = await connection.execute(statement, [commentId]);
 

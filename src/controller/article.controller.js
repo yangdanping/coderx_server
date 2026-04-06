@@ -83,8 +83,8 @@ class ArticleController {
       }
     }
 
-    // 封禁文章的处理（这是正常业务逻辑，不是错误）
-    if (result.status === 1) {
+    // 与列表/历史链路保持一致：任何 truthy 状态都视为需要屏蔽
+    if (result.status) {
       result.title = result.content = '文章已被封禁';
     }
 
@@ -97,9 +97,11 @@ class ArticleController {
     console.log('getList ctx.query', ctx.query);
     const { offset, limit } = Utils.getPaginationParams(ctx);
     const { tagId, userId, pageOrder, idList, keywords } = ctx.query;
+    const validPageOrders = new Set(['date', 'hot']);
+    const normalizedPageOrder = validPageOrders.has(pageOrder) ? pageOrder : 'date';
     const userCollectedIds = idList?.length ? JSON.parse(idList) : [];
 
-    const result = await articleService.getArticleList(offset, limit, tagId, userId, pageOrder, userCollectedIds, keywords);
+    const result = await articleService.getArticleList(offset, limit, tagId, userId, normalizedPageOrder, userCollectedIds, keywords);
 
     // 处理文章内容（清理HTML标签、截取长度、封禁提示）
     result.forEach((article) => {

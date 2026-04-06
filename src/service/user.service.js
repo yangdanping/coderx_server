@@ -1,8 +1,20 @@
 const connection = require('@/app/database');
+const BusinessError = require('@/errors/BusinessError');
+const {
+  buildGetArticleByCollectIdExecuteParams,
+  buildGetArticleByCollectIdSql,
+  buildGetCommentByIdExecuteParams,
+  buildGetCommentByIdSql,
+  buildGetFollowInfoSql,
+  buildGetHotUsersSql,
+  buildGetLikedByIdSql,
+  buildGetProfileByIdSql,
+  buildGetUserByNameSql,
+} = require('./user.sql');
 
 class UserService {
   getUserByName = async (name) => {
-    const statement = 'SELECT * FROM user WHERE name = ?;';
+    const statement = buildGetUserByNameSql(connection.dialect);
     const [result] = await connection.execute(statement, [name]);
     return result[0];
   };
@@ -14,9 +26,11 @@ class UserService {
       await conn.beginTransaction();
 
       const { name, password } = user;
+      const userTable = connection.dialect === 'pg' ? '"user"' : 'user';
+      const insertSuffix = connection.dialect === 'pg' ? ' RETURNING id' : '';
 
       // 第一步：插入用户表
-      const statement1 = 'INSERT INTO user (name, password) VALUES (?, ?);';
+      const statement1 = `INSERT INTO ${userTable} (name, password) VALUES (?, ?)${insertSuffix};`;
       const [result] = await conn.execute(statement1, [name, password]);
 
       // 第二步：插入用户信息表，关联新用户ID
@@ -61,23 +75,7 @@ class UserService {
     return result;
   };
   getProfileById = async (userId) => {
-    const statement = `
-      SELECT
-          u.id,
-          u.name,
-          u.status,
-          p.avatar_url avatarUrl,
-          p.age,
-          p.sex,
-          p.email,
-          p.career,
-          p.address,
-          (SELECT COUNT(*) FROM article a WHERE a.user_id = u.id) articleCount, -- 文章数子查询
-          (SELECT COUNT(*) FROM comment c WHERE c.user_id = u.id) commentCount -- 评论数子查询
-      FROM user u
-      LEFT JOIN profile p ON u.id = p.user_id
-      WHERE u.id = ?;
-    `;
+    const statement = buildGetProfileByIdSql(connection.dialect);
     const [result] = await connection.execute(statement, [userId]);
     return result[0];
   };
@@ -125,21 +123,9 @@ class UserService {
   // };
 
   getCommentById = async (userId, offset, limit) => {
-    const statement = `
-    SELECT c.id, a.title,c.content, c.comment_id commentId, c.create_at createAt,
-    JSON_OBJECT('id', u.id, 'name', u.name,'avatarUrl',p.avatar_url) user,
-    COUNT(cl.user_id) likes
-    FROM comment c
-    LEFT JOIN article a ON c.article_id = a.id
-    LEFT JOIN user u ON u.id = c.user_id
-    LEFT JOIN profile p ON u.id = p.user_id
-    LEFT JOIN comment_like cl ON c.id = cl.comment_id
-    WHERE u.id = ?
-    GROUP BY c.id
-    ORDER BY c.update_at DESC
-    LIMIT ?,?;
-    `;
-    const [result] = await connection.execute(statement, [userId, offset, limit]);
+    const statement = buildGetCommentByIdSql(connection.dialect);
+    const executeParams = buildGetCommentByIdExecuteParams(connection.dialect, userId, String(offset), String(limit));
+    const [result] = await connection.execute(statement, executeParams);
     return result;
   };
 
@@ -187,21 +173,7 @@ class UserService {
 
   getLikedById = async (userId) => {
     try {
-      const statement = `
-        SELECT
-            u.id,
-            u.name,
-            JSON_ARRAYAGG(al.article_id) articleLiked, -- 点赞文章ID列表子查询
-            (SELECT JSON_ARRAYAGG(cl.comment_id)
-                FROM user
-                LEFT JOIN comment_like cl ON user.id = cl.user_id
-                WHERE user.id = u.id
-                GROUP BY user.id) commentLiked -- 点赞评论ID列表子查询
-        FROM user u
-        LEFT JOIN article_like al ON u.id = al.user_id
-        WHERE u.id = ?
-        GROUP BY u.id;
-      `;
+      const statement = buildGetLikedByIdSql(connection.dialect);
       const [result] = await connection.execute(statement, [userId]);
       return result[0];
     } catch (error) {
@@ -246,29 +218,7 @@ class UserService {
 
   getFollowInfo = async (userId) => {
     try {
-      const statement = `
-        SELECT
-            u.id,
-            u.name,
-            IF(COUNT(uf.follower_id),
-                JSON_ARRAYAGG(JSON_OBJECT('id', uf.user_id, 'name',
-                    (SELECT user.name FROM user WHERE user.id = uf.user_id), -- 被关注者名称子查询
-                    'avatarUrl', p.avatar_url, 'sex', p.sex, 'career', p.career
-                )),
-                NULL) following, -- 被关注列表子查询
-            (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', ufo.follower_id,
-                'name', us.name, 'avatarUrl', pf.avatar_url, 'sex', pf.sex, 'career', pf.career))
-                FROM user us
-                LEFT JOIN user_follow ufo ON us.id = ufo.follower_id
-                LEFT JOIN profile pf ON us.id = pf.user_id
-                WHERE ufo.user_id = u.id
-                GROUP BY ufo.user_id) follower -- 粉丝列表子查询
-        FROM user u
-        LEFT JOIN user_follow uf ON u.id = uf.follower_id
-        LEFT JOIN profile p ON uf.user_id = p.user_id
-        WHERE u.id = ?
-        GROUP BY u.id;
-      `;
+      const statement = buildGetFollowInfoSql(connection.dialect);
       const [result] = await connection.execute(statement, [userId]);
       return result[0];
     } catch (error) {
@@ -278,15 +228,9 @@ class UserService {
 
   getArticleByCollectId = async (userId, collectId, offset, limit) => {
     try {
-      const statement = `
-      SELECT a.id,a.title,a.content,a.create_at createAt
-      FROM article_collect ac
-      LEFT JOIN collect c ON ac.collect_id = c.id
-      LEFT JOIN article a ON ac.article_id = a.id
-      WHERE c.user_id = ? AND c.id = ?
-      LIMIT ?,?;
-      `;
-      const [result] = await connection.execute(statement, [userId, collectId, offset, limit]);
+      const statement = buildGetArticleByCollectIdSql(connection.dialect);
+      const executeParams = buildGetArticleByCollectIdExecuteParams(connection.dialect, userId, collectId, String(offset), String(limit));
+      const [result] = await connection.execute(statement, executeParams);
       return result;
     } catch (error) {
       console.log(error);
@@ -330,25 +274,7 @@ class UserService {
   // };
   getHotUsers = async () => {
     try {
-      const statement = `
-        SELECT
-            u.id,
-            u.name,
-            p.avatar_url avatarUrl,
-            p.age,
-            p.sex,
-            p.email,
-            p.career,
-            p.address,
-            (SELECT JSON_OBJECT('totalLikes', COUNT(al.article_id), 'totalViews', SUM(a.views))
-                FROM article a
-                LEFT JOIN article_like al ON a.id = al.article_id
-                WHERE a.user_id = u.id) articleInfo -- 文章统计信息子查询
-        FROM user u
-        LEFT JOIN profile p ON u.id = p.user_id
-        ORDER BY u.id
-        LIMIT 0, 5;
-      `;
+      const statement = buildGetHotUsersSql(connection.dialect);
       const [result] = await connection.execute(statement);
       return result;
     } catch (error) {

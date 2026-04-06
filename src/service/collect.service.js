@@ -1,10 +1,16 @@
 const connection = require('@/app/database');
 const SqlUtils = require('@/utils/SqlUtils');
 const BusinessError = require('@/errors/BusinessError');
+const {
+  buildAddCollectSql,
+  buildGetCollectArticleSql,
+  buildGetCollectListExecuteParams,
+  buildGetCollectListSql,
+} = require('./collect.sql');
 
 class CollectService {
   addCollect = async (userId, name) => {
-    const statement = `INSERT INTO collect (user_id,name) VALUES (?,?);`;
+    const statement = buildAddCollectSql(connection.dialect);
     const [result] = await connection.execute(statement, [userId, name]);
     return result;
   };
@@ -16,20 +22,9 @@ class CollectService {
   };
 
   getCollectList = async (userId, offset, limit) => {
-    const statement = `
-      SELECT
-          c.id,
-          c.name,
-          c.user_id userId,
-          c.create_at createAt,
-          IF(COUNT(ac.article_id), JSON_ARRAYAGG(ac.article_id), NULL) count -- 文章ID列表子查询
-      FROM collect c
-      LEFT JOIN article_collect ac ON c.id = ac.collect_id
-      WHERE user_id = ?
-      GROUP BY c.id
-      LIMIT ?, ?;
-    `;
-    const [result] = await connection.execute(statement, [userId, offset, limit]);
+    const statement = buildGetCollectListSql(connection.dialect);
+    const executeParams = buildGetCollectListExecuteParams(connection.dialect, userId, String(offset), String(limit));
+    const [result] = await connection.execute(statement, executeParams);
     return result;
   };
 
@@ -70,12 +65,7 @@ class CollectService {
   };
 
   getCollectArticle = async (collectId) => {
-    const statement = `
-      SELECT
-          JSON_ARRAYAGG(ac.article_id) collectedArticle -- 文章ID列表子查询
-      FROM article_collect ac
-      WHERE ac.collect_id = ?;
-    `;
+    const statement = buildGetCollectArticleSql(connection.dialect);
     const [result] = await connection.execute(statement, [collectId]);
     return result[0];
   };

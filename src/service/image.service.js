@@ -1,7 +1,6 @@
 const connection = require('@/app/database');
-const { baseURL, redirectURL } = require('@/constants/urls');
-const Utils = require('@/utils');
 const SqlUtils = require('@/utils/SqlUtils');
+const { buildAddImageFileSql, buildClearImageCoverSql, buildSetImageCoverSql } = require('./image.sql');
 
 /**
  * 图片服务层
@@ -24,7 +23,7 @@ class ImageService {
       await conn.beginTransaction();
 
       // 1. 插入文件基础信息
-      const fileStatement = `INSERT INTO file (user_id, filename, mimetype, size, file_type) VALUES (?,?,?,?,'image');`;
+      const fileStatement = buildAddImageFileSql(connection.dialect);
       const [fileResult] = await conn.execute(fileStatement, [userId, filename, mimetype, size]);
       const fileId = fileResult.insertId;
 
@@ -83,12 +82,7 @@ class ImageService {
       console.log('🔄 开始事务 - 更新文章图片关联');
 
       // 1. 清空该文章所有图片的封面标识
-      const clearCoverStatement = `
-        UPDATE image_meta im
-        INNER JOIN file f ON im.file_id = f.id
-        SET im.is_cover = FALSE
-        WHERE f.article_id = ? AND f.file_type = 'image';
-      `;
+      const clearCoverStatement = buildClearImageCoverSql(connection.dialect);
       await conn.execute(clearCoverStatement, [articleId]);
       console.log('✅ 步骤1 - 清空旧封面标识');
 
@@ -124,12 +118,7 @@ class ImageService {
 
       // 5. 设置封面图片
       if (coverImageId) {
-        const setCoverStatement = `
-          UPDATE image_meta im
-          INNER JOIN file f ON im.file_id = f.id
-          SET im.is_cover = TRUE
-          WHERE f.id = ? AND f.article_id = ? AND f.file_type = 'image';
-        `;
+        const setCoverStatement = buildSetImageCoverSql(connection.dialect);
         const [result5] = await conn.execute(setCoverStatement, [coverImageId, articleId]);
         console.log(`✅ 步骤5 - 设置封面: 图片ID ${coverImageId}, 影响行数 ${result5.affectedRows}`);
       }
