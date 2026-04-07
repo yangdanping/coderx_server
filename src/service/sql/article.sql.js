@@ -1,4 +1,4 @@
-const SqlUtils = require('../utils/SqlUtils');
+const SqlUtils = require('../../utils/SqlUtils');
 
 function userTableExpr(dialect) {
   return dialect === 'pg' ? '"user"' : 'user';
