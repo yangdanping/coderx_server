@@ -6,7 +6,7 @@ const {
   buildFindUserByGitHubIdSql,
   buildFindUserByGoogleIdSql,
   buildLinkOAuthAccountSql,
-} = require('./oauth.sql');
+} = require('./sql/oauth.sql');
 
 /**
  * OAuth 2.0 服务

@@ -10,7 +10,7 @@ const {
   buildGetLikedByIdSql,
   buildGetProfileByIdSql,
   buildGetUserByNameSql,
-} = require('./user.sql');
+} = require('./sql/user.sql');
 
 class UserService {
   getUserByName = async (name) => {

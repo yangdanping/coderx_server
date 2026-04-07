@@ -1,5 +1,5 @@
 const connection = require('@/app/database');
-const { buildAddTagSql, buildGetTagListExecuteParams, buildGetTagListSql } = require('./tag.sql');
+const { buildAddTagSql, buildGetTagListExecuteParams, buildGetTagListSql } = require('./sql/tag.sql');
 
 class TagService {
   addTag = async (name) => {

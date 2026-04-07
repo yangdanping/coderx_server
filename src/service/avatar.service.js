@@ -1,5 +1,5 @@
 const connection = require('@/app/database');
-const { buildAddAvatarSql } = require('./avatar.sql');
+const { buildAddAvatarSql } = require('./sql/avatar.sql');
 
 /**
  * 头像服务层

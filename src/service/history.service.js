@@ -4,7 +4,7 @@ const {
   buildAddHistorySql,
   buildGetUserHistorySql,
   buildUserHistoryExecuteParams,
-} = require('./history.sql');
+} = require('./sql/history.sql');
 
 class HistoryService {
   // 添加浏览记录

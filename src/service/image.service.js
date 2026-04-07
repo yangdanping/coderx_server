@@ -1,6 +1,6 @@
 const connection = require('@/app/database');
 const SqlUtils = require('@/utils/SqlUtils');
-const { buildAddImageFileSql, buildClearImageCoverSql, buildSetImageCoverSql } = require('./image.sql');
+const { buildAddImageFileSql, buildClearImageCoverSql, buildSetImageCoverSql } = require('./sql/image.sql');
 
 /**
  * 图片服务层

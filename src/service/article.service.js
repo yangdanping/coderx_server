@@ -13,7 +13,7 @@ const {
   buildGetArticlesByKeyWordsSql,
   buildGetRecommendArticleListExecuteParams,
   buildGetRecommendArticleListSql,
-} = require('./article.sql');
+} = require('./sql/article.sql');
 
 class ArticleService {
   /**

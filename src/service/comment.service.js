@@ -9,7 +9,7 @@ const {
   buildGetReplyPreviewSql,
   buildGetUserCommentListSql,
   buildUserCommentListExecuteParams,
-} = require('./comment.sql');
+} = require('./sql/comment.sql');
 
 class CommentService {
   /**

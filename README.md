@@ -43,26 +43,36 @@ coderx_server/
 ### 1. 环境要求
 
 - Node.js >= 16
-- MySQL >= 8.0
+- PostgreSQL >= 15（默认）或 MySQL >= 8.0
 - Ollama (可选，用于 AI 功能)
 
 ### 2. 安装依赖
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 3. 配置环境
 
-复制 `.env.example` 为 `.env` 并修改配置：
+复制 `.env.example` 为 `.env.development` 并修改配置：
 
 ```env
 APP_PORT=8000
-MYSQL_HOST=localhost
-MYSQL_DATABASE=coderx
-MYSQL_USER=root
-MYSQL_PASSWORD=your_password
-# ...
+DB_DIALECT=pg          # pg (默认) 或 mysql
+
+# MySQL 连接（DB_DIALECT=mysql 时使用）
+DB_HOST=localhost
+DB_PORT=3306
+DB_DATABASE=coderx
+DB_USER=root
+DB_PASSWORD=your_password
+
+# PostgreSQL 连接（DB_DIALECT=pg 时使用）
+PGHOST=127.0.0.1
+PGPORT=5432
+PGDATABASE=coderx
+PGUSER=postgres
+PGPASSWORD=your_password
 ```
 
 ### 4. 启动服务

@@ -6,7 +6,7 @@ const {
   buildGetCollectArticleSql,
   buildGetCollectListExecuteParams,
   buildGetCollectListSql,
-} = require('./collect.sql');
+} = require('./sql/collect.sql');
 
 class CollectService {
   addCollect = async (userId, name) => {

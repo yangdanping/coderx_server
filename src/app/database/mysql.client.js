@@ -3,11 +3,11 @@ const config = require('../config');
 const { sqlLogger } = require('../logger');
 
 const connections = mysql.createPool({
-  host: config.MYSQL_HOST,
-  port: config.MYSQL_PORT,
-  database: config.MYSQL_DATABASE,
-  user: config.MYSQL_USER,
-  password: config.MYSQL_PASSWORD,
+  host: config.DB_HOST,
+  port: config.DB_PORT,
+  database: config.DB_DATABASE,
+  user: config.DB_USER,
+  password: config.DB_PASSWORD,
   connectionLimit: 10,
 });
 
@@ -21,7 +21,7 @@ connections.getConnection((err, con) => {
     if (connectError) {
       console.error('❌ 数据库连接失败:', connectError.message);
     } else {
-      console.log(`✅ ${config.MYSQL_DATABASE} 数据库连接成功!`);
+      console.log(`✅ ${config.DB_DATABASE} 数据库连接成功!`);
       con.release();
     }
   });

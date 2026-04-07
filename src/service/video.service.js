@@ -7,7 +7,7 @@ const {
   buildUpdateVideoMetadataSql,
   buildUpdateVideoPosterSql,
   buildVideoMetadataAssignments,
-} = require('./video.sql');
+} = require('./sql/video.sql');
 
 /**
  * 视频服务层
