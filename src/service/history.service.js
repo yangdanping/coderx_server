@@ -10,7 +10,7 @@ class HistoryService {
   // 添加浏览记录
   addHistory = async (userId, articleId) => {
     try {
-      const statement = buildAddHistorySql(connection.dialect);
+      const statement = buildAddHistorySql();
       const [result] = await connection.execute(statement, [userId, articleId]);
       return result;
     } catch (error) {
@@ -22,8 +22,8 @@ class HistoryService {
   // 获取用户浏览历史
   getUserHistory = async (userId, offset, limit) => {
     try {
-      const statement = buildGetUserHistorySql(connection.dialect, baseURL, redirectURL);
-      const params = buildUserHistoryExecuteParams(connection.dialect, userId, offset, limit);
+      const statement = buildGetUserHistorySql(baseURL, redirectURL);
+      const params = buildUserHistoryExecuteParams(userId, offset, limit);
       const [result] = await connection.execute(statement, params);
       return result;
     } catch (error) {

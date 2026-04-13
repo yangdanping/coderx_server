@@ -18,9 +18,54 @@
 const Result = require('@/app/Result');
 const BusinessError = require('@/errors/BusinessError');
 const { errorLogger } = require('@/app/logger');
+const {
+  IMAGE_BATCH_COUNT_LIMIT_MESSAGE,
+  IMAGE_SIZE_LIMIT_MESSAGE,
+  IMAGE_TYPE_LIMIT_MESSAGE,
+  VIDEO_SIZE_LIMIT_MESSAGE,
+  VIDEO_TYPE_LIMIT_MESSAGE,
+} = require('@/constants/upload');
 
 // 判断是否为开发环境
 const isDev = process.env.NODE_ENV !== 'production';
+
+const resolveUploadError = (error, ctx) => {
+  if (error.code === 'LIMIT_FILE_SIZE') {
+    if (error.field === 'video' || ctx.path?.startsWith('/video')) {
+      return {
+        httpStatus: 400,
+        bizCode: 400,
+        message: VIDEO_SIZE_LIMIT_MESSAGE,
+      };
+    }
+
+    if (error.field === 'img' || ctx.path?.startsWith('/img')) {
+      return {
+        httpStatus: 400,
+        bizCode: 400,
+        message: IMAGE_SIZE_LIMIT_MESSAGE,
+      };
+    }
+  }
+
+  if (error.code === 'LIMIT_UNEXPECTED_FILE' && (error.field === 'img' || ctx.path?.startsWith('/img'))) {
+    return {
+      httpStatus: 400,
+      bizCode: 400,
+      message: IMAGE_BATCH_COUNT_LIMIT_MESSAGE,
+    };
+  }
+
+  if (error.message === IMAGE_TYPE_LIMIT_MESSAGE || error.message === VIDEO_TYPE_LIMIT_MESSAGE) {
+    return {
+      httpStatus: 400,
+      bizCode: 400,
+      message: error.message,
+    };
+  }
+
+  return null;
+};
 
 const errorMiddleware = async (ctx, next) => {
   try {
@@ -28,10 +73,11 @@ const errorMiddleware = async (ctx, next) => {
   } catch (error) {
     // 1. 判断是业务异常还是系统异常
     const isBusinessError = error instanceof BusinessError;
+    const uploadError = isBusinessError ? null : resolveUploadError(error, ctx);
 
     // 2. 确定 HTTP 状态码和错误信息
-    const httpStatus = error.httpStatus || 500;
-    const bizCode = error.bizCode || httpStatus;
+    const httpStatus = error.httpStatus || uploadError?.httpStatus || 500;
+    const bizCode = error.bizCode || uploadError?.bizCode || httpStatus;
 
     // 3. 根据环境决定返回的错误信息
     // - 业务异常：始终返回具体信息（如"文章不存在"）
@@ -39,6 +85,8 @@ const errorMiddleware = async (ctx, next) => {
     let message;
     if (isBusinessError) {
       message = error.message;
+    } else if (uploadError) {
+      message = uploadError.message;
     } else {
       message = isDev ? `[DEV] ${error.message}` : '服务器内部错误';
     }

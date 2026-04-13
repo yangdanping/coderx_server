@@ -13,13 +13,7 @@ const PUBLIC_KEY = fs.readFileSync(path.resolve(__dirname, './keys/public.key'))
 module.exports = {
   APP_HOST,
   APP_PORT,
-  DB_DIALECT,
   DATABASE_URL,
-  DB_HOST,
-  DB_PORT,
-  DB_DATABASE,
-  DB_USER,
-  DB_PASSWORD,
   PGHOST,
   PGPORT,
   PGDATABASE,

@@ -3,7 +3,7 @@ const config = require('./config');
 // 2.验证数据的第三方库
 const validator = require('validator');
 
-// 3.用于给service层使用的mysql2操作库
+// 3.数据库连接在 service 层按需加载
 /*
 ❌ 避免在入口文件中加载重量级模块，应在 service 层按需加载
 require() 的机制是：首次加载模块时，会运行模块内的所有代码（包括变量声明、函数定义等），然后缓存模块的 exports 对象

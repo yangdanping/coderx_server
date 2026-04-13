@@ -11,37 +11,35 @@ function getOauthProviderColumn(provider) {
   return column;
 }
 
-function getUserTable(dialect) {
-  return dialect === 'pg' ? '"user"' : 'user';
+function getUserTable() {
+  return '"user"';
 }
 
-function buildFindUserByGoogleIdSql(dialect) {
-  return `SELECT * FROM ${getUserTable(dialect)} WHERE google_id = ?;`;
+function buildFindUserByGoogleIdSql() {
+  return `SELECT * FROM ${getUserTable()} WHERE google_id = ?;`;
 }
 
-function buildFindUserByGitHubIdSql(dialect) {
-  return `SELECT * FROM ${getUserTable(dialect)} WHERE github_id = ?;`;
+function buildFindUserByGitHubIdSql() {
+  return `SELECT * FROM ${getUserTable()} WHERE github_id = ?;`;
 }
 
-function buildFindUserByEmailSql(dialect) {
-  const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
+function buildFindUserByEmailSql() {
   return `
-      SELECT u.*, p.email as ${q('profileEmail')}
-      FROM ${getUserTable(dialect)} u
+      SELECT u.*, p.email as "profileEmail"
+      FROM ${getUserTable()} u
       LEFT JOIN profile p ON u.id = p.user_id
       WHERE p.email = ?;
     `;
 }
 
-function buildCreateOAuthUserSql(dialect, provider) {
+function buildCreateOAuthUserSql(provider) {
   const providerColumn = getOauthProviderColumn(provider);
-  const insertSuffix = dialect === 'pg' ? ' RETURNING id' : '';
-  return `INSERT INTO ${getUserTable(dialect)} (name, password, ${providerColumn}, oauth_provider) VALUES (?, NULL, ?, ?)${insertSuffix};`;
+  return `INSERT INTO ${getUserTable()} (name, password, ${providerColumn}, oauth_provider) VALUES (?, NULL, ?, ?) RETURNING id;`;
 }
 
-function buildLinkOAuthAccountSql(dialect, provider) {
+function buildLinkOAuthAccountSql(provider) {
   const providerColumn = getOauthProviderColumn(provider);
-  return `UPDATE ${getUserTable(dialect)} SET ${providerColumn} = ?, oauth_provider = ? WHERE id = ?;`;
+  return `UPDATE ${getUserTable()} SET ${providerColumn} = ?, oauth_provider = ? WHERE id = ?;`;
 }
 
 module.exports = {

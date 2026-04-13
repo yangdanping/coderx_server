@@ -292,3 +292,122 @@ test('getList: sanitizes list items, masks banned items, parses idList, and fall
     }),
   );
 });
+
+test('addArticle: forwards optional draftId to service (strict positive int)', async () => {
+  const calls = [];
+  const articleService = {
+    async addArticle(userId, title, content, draftId) {
+      calls.push({ method: 'addArticle', userId, title, content, draftId });
+      return { insertId: 1, affectedRows: 1 };
+    },
+  };
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const raw = '# x';
+  const ctx = {
+    user: { id: 42 },
+    request: { body: { title: 'T', content: raw, draftId: 15 } },
+  };
+
+  await controller.addArticle(ctx, noopNext);
+
+  assert.deepEqual(calls, [
+    {
+      method: 'addArticle',
+      userId: 42,
+      title: 'T',
+      content: MdUtils.renderHtml(raw),
+      draftId: 15,
+    },
+  ]);
+  assert.deepEqual(ctx.body, Result.success({ insertId: 1, affectedRows: 1 }));
+});
+
+test('addArticle: missing draftId passes null to service', async () => {
+  const calls = [];
+  const articleService = {
+    async addArticle(userId, title, content, draftId) {
+      calls.push({ method: 'addArticle', userId, title, content, draftId });
+      return { insertId: 2, affectedRows: 1 };
+    },
+  };
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const raw = 'c';
+  const ctx = {
+    user: { id: 1 },
+    request: { body: { title: 'T', content: raw } },
+  };
+
+  await controller.addArticle(ctx, noopNext);
+
+  assert.deepEqual(calls, [{ method: 'addArticle', userId: 1, title: 'T', content: MdUtils.renderHtml(raw), draftId: null }]);
+});
+
+test('addArticle: invalid draftId returns Result.fail without calling service', async () => {
+  let called = false;
+  const articleService = {
+    async addArticle() {
+      called = true;
+    },
+  };
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const ctx = {
+    user: { id: 1 },
+    request: { body: { title: 'T', content: 'x', draftId: 'oops' } },
+  };
+
+  await controller.addArticle(ctx, noopNext);
+
+  assert.equal(called, false);
+  assert.deepEqual(ctx.body, Result.fail('参数错误: draftId 必须是正整数'));
+});
+
+test('update: forwards userId, articleId, optional draftId to service', async () => {
+  const calls = [];
+  const articleService = {
+    async update(userId, title, content, articleId, draftId) {
+      calls.push({ method: 'update', userId, title, content, articleId, draftId });
+      return { affectedRows: 1 };
+    },
+  };
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const raw = '**b**';
+  const ctx = {
+    user: { id: 99 },
+    params: { articleId: '200' },
+    request: { body: { title: 'T2', content: raw, draftId: 3 } },
+  };
+
+  await controller.update(ctx, noopNext);
+
+  assert.deepEqual(calls, [
+    {
+      method: 'update',
+      userId: 99,
+      title: 'T2',
+      content: MdUtils.renderHtml(raw),
+      articleId: '200',
+      draftId: 3,
+    },
+  ]);
+  assert.deepEqual(ctx.body, Result.success({ affectedRows: 1 }));
+});
+
+test('update: invalid draftId returns Result.fail without calling service', async () => {
+  let called = false;
+  const articleService = {
+    async update() {
+      called = true;
+    },
+  };
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const ctx = {
+    user: { id: 99 },
+    params: { articleId: '200' },
+    request: { body: { title: 'T2', content: 'x', draftId: 'oops' } },
+  };
+
+  await controller.update(ctx, noopNext);
+
+  assert.equal(called, false);
+  assert.deepEqual(ctx.body, Result.fail('参数错误: draftId 必须是正整数'));
+});

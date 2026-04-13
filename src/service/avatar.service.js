@@ -18,7 +18,7 @@ class AvatarService {
    */
   addAvatar = async (userId, filename, mimetype, size, conn = null) => {
     try {
-      const statement = buildAddAvatarSql(connection.dialect);
+      const statement = buildAddAvatarSql();
       const execute = conn ? conn.execute.bind(conn) : connection.execute.bind(connection);
       const [result] = await execute(statement, [userId, filename, mimetype, size]);
       return result;

@@ -1,58 +1,47 @@
-function buildAddHistorySql(dialect) {
-  if (dialect === 'pg') {
-    return `
+function buildAddHistorySql() {
+  return `
         INSERT INTO article_history (user_id, article_id)
         VALUES (?, ?)
         ON CONFLICT (user_id, article_id) DO UPDATE SET update_at = CURRENT_TIMESTAMP;
       `;
-  }
-  return `
-        INSERT INTO article_history (user_id, article_id)
-        VALUES (?, ?)
-        ON DUPLICATE KEY UPDATE update_at = CURRENT_TIMESTAMP;
-      `;
 }
 
-function authorSelectExpr(dialect) {
-  if (dialect === 'pg') {
-    return `jsonb_build_object('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author`;
-  }
-  return `JSON_OBJECT('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author`;
+function authorSelectExpr() {
+  return `jsonb_build_object('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author`;
 }
 
-function paginationClause(dialect) {
-  return dialect === 'pg' ? 'LIMIT ? OFFSET ?' : 'LIMIT ?, ?';
+function paginationClause() {
+  return 'LIMIT ? OFFSET ?';
 }
 
-function userTableExpr(dialect) {
-  return dialect === 'pg' ? '"user"' : 'user';
+function userTableExpr() {
+  return '"user"';
 }
 
-function buildGetUserHistorySql(dialect, baseURL, redirectURL) {
-  const author = authorSelectExpr(dialect);
-  const limitClause = paginationClause(dialect);
-  const userTable = userTableExpr(dialect);
-  const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
+function buildGetUserHistorySql(baseURL, redirectURL) {
+  const author = authorSelectExpr();
+  const limitClause = paginationClause();
+  const userTable = userTableExpr();
   return `
         SELECT
             ah.id,
-            ah.create_at AS ${q('createAt')},
-            ah.update_at AS ${q('updateAt')},
-            a.id AS ${q('articleId')},
+            ah.create_at AS "createAt",
+            ah.update_at AS "updateAt",
+            a.id AS "articleId",
             a.title,
             a.content,
             a.views,
             a.status,
-            a.create_at AS ${q('articleCreateAt')},
+            a.create_at AS "articleCreateAt",
             ${author},
             (SELECT COUNT(al.user_id) FROM article_like al WHERE al.article_id = a.id) likes,
-            (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) AS ${q('commentCount')},
+            (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) AS "commentCount",
             (SELECT CONCAT('${baseURL}/article/images/', f.filename, '?type=small')
                 FROM file f
                 LEFT JOIN image_meta im ON f.id = im.file_id
                 WHERE f.article_id = a.id AND f.file_type = 'image' AND im.is_cover = TRUE
                 LIMIT 1) cover,
-            CONCAT('${redirectURL}/article/', a.id) AS ${q('articleUrl')}
+            CONCAT('${redirectURL}/article/', a.id) AS "articleUrl"
         FROM article_history ah
         LEFT JOIN article a ON ah.article_id = a.id
         LEFT JOIN ${userTable} u ON a.user_id = u.id
@@ -63,11 +52,8 @@ function buildGetUserHistorySql(dialect, baseURL, redirectURL) {
       `;
 }
 
-function buildUserHistoryExecuteParams(dialect, userId, offset, limit) {
-  if (dialect === 'pg') {
-    return [userId, limit, offset];
-  }
-  return [userId, offset, limit];
+function buildUserHistoryExecuteParams(userId, offset, limit) {
+  return [userId, limit, offset];
 }
 
 module.exports = {

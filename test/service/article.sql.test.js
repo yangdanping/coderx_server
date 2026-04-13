@@ -3,167 +3,145 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const helperPath = path.resolve(__dirname, '../../src/service/article.sql.js');
+const helperPath = path.resolve(__dirname, '../../src/service/sql/article.sql.js');
 
 const loadHelper = () => {
   assert.equal(fs.existsSync(helperPath), true, 'Expected article.sql helper module to exist');
   return require(helperPath);
 };
 
-test('buildGetArticleByIdSql: pg uses jsonb_build_object/jsonb_agg, quoted user table; mysql keeps JSON_*', () => {
+test('buildGetArticleByIdSql: uses jsonb_build_object/jsonb_agg and quoted user table', () => {
   const { buildGetArticleByIdSql } = loadHelper();
   const base = 'https://api.example';
   const redirect = 'https://app.example';
 
-  const pgSql = buildGetArticleByIdSql('pg', base, redirect);
-  assert.match(pgSql, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
-  assert.match(pgSql, /jsonb_agg\s*\(\s*jsonb_build_object/i);
-  assert.match(pgSql, /a\.create_at\s+AS\s+"createAt"/i);
-  assert.match(pgSql, /a\.update_at\s+AS\s+"updateAt"/i);
-  assert.match(pgSql, /\)\s+AS\s+"commentCount"/i);
-  assert.match(pgSql, /CONCAT\('[^']*\/article\/',\s*a\.id\)\s+AS\s+"articleUrl"/i);
-  assert.doesNotMatch(pgSql, /JSON_OBJECT/i);
-  assert.doesNotMatch(pgSql, /JSON_ARRAYAGG/i);
-  assert.match(pgSql, /LEFT JOIN\s+"user"\s+u\s+ON\s+a\.user_id\s*=\s*u\.id/i);
-  assert.doesNotMatch(pgSql, /LEFT JOIN\s+user\s+u\s+ON\s+a\.user_id\s*=\s*u\.id/i);
-
-  const mysqlSql = buildGetArticleByIdSql('mysql', base, redirect);
-  assert.match(mysqlSql, /JSON_OBJECT\s*\(\s*'id',\s*u\.id/i);
-  assert.match(mysqlSql, /JSON_ARRAYAGG\s*\(\s*JSON_OBJECT/i);
-  assert.match(mysqlSql, /LEFT JOIN\s+user\s+u\s+ON\s+a\.user_id\s*=\s*u\.id/i);
+  const sql = buildGetArticleByIdSql(base, redirect);
+  assert.match(sql, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
+  assert.match(sql, /jsonb_agg\s*\(\s*jsonb_build_object/i);
+  assert.match(sql, /a\.create_at\s+AS\s+"createAt"/i);
+  assert.match(sql, /a\.update_at\s+AS\s+"updateAt"/i);
+  assert.match(sql, /\)\s+AS\s+"commentCount"/i);
+  assert.match(sql, /CONCAT\('[^']*\/article\/',\s*a\.id\)\s+AS\s+"articleUrl"/i);
+  assert.doesNotMatch(sql, /JSON_OBJECT/i);
+  assert.doesNotMatch(sql, /JSON_ARRAYAGG/i);
+  assert.match(sql, /LEFT JOIN\s+"user"\s+u\s+ON\s+a\.user_id\s*=\s*u\.id/i);
+  assert.doesNotMatch(sql, /LEFT JOIN\s+user\s+u\s+ON\s+a\.user_id\s*=\s*u\.id/i);
 });
 
-test('buildGetArticleListSql: pg uses optimized-style shape (no GROUP BY), jsonb_*, LIMIT ? OFFSET ?', () => {
+test('buildGetArticleListSql: uses optimized-style shape (no GROUP BY), jsonb_*, LIMIT ? OFFSET ?', () => {
   const { buildGetArticleListSql } = loadHelper();
   const base = 'https://api.example';
   const redirect = 'https://app.example';
 
-  const pgSql = buildGetArticleListSql('pg', base, redirect, {
+  const sql = buildGetArticleListSql(base, redirect, {
     tagId: '',
     userId: '',
     idList: [],
     keywords: '',
     pageOrder: 'date',
   });
-  assert.doesNotMatch(pgSql, /\bGROUP BY\s+a\.id\b/i);
-  assert.match(pgSql, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
-  assert.match(pgSql, /jsonb_agg\s*\(\s*jsonb_build_object/i);
-  assert.match(pgSql, /a\.create_at\s+AS\s+"createAt"/i);
-  assert.match(pgSql, /a\.update_at\s+AS\s+"updateAt"/i);
-  assert.match(pgSql, /COALESCE\(comment_agg\.commentCount,\s*0\)\s+AS\s+"commentCount"/i);
-  assert.match(pgSql, /CONCAT\('[^']*\/article\/',\s*a\.id\)\s+AS\s+"articleUrl"/i);
-  assert.match(pgSql, /LIMIT\s+\?\s+OFFSET\s+\?/i);
-  assert.doesNotMatch(pgSql, /LIMIT\s+\?\s*,\s*\?/);
-  assert.match(pgSql, /LEFT JOIN\s+"user"\s+u\s+ON\s+a\.user_id\s*=\s*u\.id/i);
-
-  const mysqlSql = buildGetArticleListSql('mysql', base, redirect, {
-    tagId: '',
-    userId: '',
-    idList: [],
-    keywords: '',
-    pageOrder: 'date',
-  });
-  assert.match(mysqlSql, /\bGROUP BY\s+a\.id\b/i);
-  assert.match(mysqlSql, /JSON_OBJECT/i);
-  assert.match(mysqlSql, /LIMIT\s+\?\s*,\s*\?/);
+  assert.doesNotMatch(sql, /\bGROUP BY\s+a\.id\b/i);
+  assert.match(sql, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
+  assert.match(sql, /jsonb_agg\s*\(\s*jsonb_build_object/i);
+  assert.match(sql, /a\.create_at\s+AS\s+"createAt"/i);
+  assert.match(sql, /a\.update_at\s+AS\s+"updateAt"/i);
+  assert.match(sql, /COALESCE\(comment_agg\.commentCount,\s*0\)\s+AS\s+"commentCount"/i);
+  assert.match(sql, /CONCAT\('[^']*\/article\/',\s*a\.id\)\s+AS\s+"articleUrl"/i);
+  assert.match(sql, /LIMIT\s+\?\s+OFFSET\s+\?/i);
+  assert.doesNotMatch(sql, /LIMIT\s+\?\s*,\s*\?/);
+  assert.match(sql, /LEFT JOIN\s+"user"\s+u\s+ON\s+a\.user_id\s*=\s*u\.id/i);
 });
 
-test('buildGetArticleListOptimizedSql: pg matches list pg branch dialect markers', () => {
+test('buildGetArticleListOptimizedSql: matches list SQL output', () => {
   const { buildGetArticleListOptimizedSql, buildGetArticleListSql } = loadHelper();
   const base = 'https://api.example';
   const redirect = 'https://app.example';
   const opts = { tagId: '', userId: '', idList: [], keywords: '', pageOrder: 'date' };
 
-  const a = buildGetArticleListOptimizedSql('pg', base, redirect, opts);
-  const b = buildGetArticleListSql('pg', base, redirect, opts);
+  const a = buildGetArticleListOptimizedSql(base, redirect, opts);
+  const b = buildGetArticleListSql(base, redirect, opts);
   assert.equal(a.replace(/\s+/g, ' ').trim(), b.replace(/\s+/g, ' ').trim());
 });
 
-test('buildArticleListExecuteParams: pg orders limit before offset', () => {
+test('buildArticleListExecuteParams: orders limit before offset', () => {
   const { buildArticleListExecuteParams } = loadHelper();
-  assert.deepEqual(buildArticleListExecuteParams('mysql', [1, 2], 20, 10), [1, 2, 20, 10]);
-  assert.deepEqual(buildArticleListExecuteParams('pg', [1, 2], 20, 10), [1, 2, 10, 20]);
+  assert.deepEqual(buildArticleListExecuteParams([1, 2], 20, 10), [1, 2, 10, 20]);
 });
 
-test('buildGetArticlesByKeyWordsSql: pg uses LIMIT ? OFFSET ?; mysql keeps LIMIT 0,10', () => {
+test('buildGetArticlesByKeyWordsSql: uses LIMIT ? OFFSET ?', () => {
   const { buildGetArticlesByKeyWordsSql } = loadHelper();
   const redirect = 'https://app.example';
 
-  const pgSql = buildGetArticlesByKeyWordsSql('pg', redirect);
-  assert.match(pgSql, /LIMIT\s+\?\s+OFFSET\s+\?/i);
-  assert.match(pgSql, /CONCAT\('[^']*\/article\/',\s*a\.id\)\s+AS\s+"articleUrl"/i);
-  assert.doesNotMatch(pgSql, /LIMIT\s+0\s*,\s*10/i);
-
-  const mysqlSql = buildGetArticlesByKeyWordsSql('mysql', redirect);
-  assert.match(mysqlSql, /LIMIT\s+0\s*,\s*10/i);
+  const sql = buildGetArticlesByKeyWordsSql(redirect);
+  assert.match(sql, /LIMIT\s+\?\s+OFFSET\s+\?/i);
+  assert.match(sql, /CONCAT\('[^']*\/article\/',\s*a\.id\)\s+AS\s+"articleUrl"/i);
+  assert.doesNotMatch(sql, /LIMIT\s+0\s*,\s*10/i);
 });
 
-test('buildGetArticlesByKeyWordsExecuteParams: pg appends limit and offset after pattern', () => {
+test('buildGetArticlesByKeyWordsExecuteParams: appends limit and offset after pattern', () => {
   const { buildGetArticlesByKeyWordsExecuteParams } = loadHelper();
-  assert.deepEqual(buildGetArticlesByKeyWordsExecuteParams('mysql', 'kw'), ['%kw%']);
-  assert.deepEqual(buildGetArticlesByKeyWordsExecuteParams('pg', 'kw'), ['%kw%', 10, 0]);
+  assert.deepEqual(buildGetArticlesByKeyWordsExecuteParams('kw'), ['%kw%', 10, 0]);
 });
 
-test('buildGetRecommendArticleListSql: pg uses LIMIT ? OFFSET ?', () => {
+test('buildGetRecommendArticleListSql: uses LIMIT ? OFFSET ?', () => {
   const { buildGetRecommendArticleListSql } = loadHelper();
   const redirect = 'https://app.example';
 
-  const pgSql = buildGetRecommendArticleListSql('pg', redirect);
-  assert.match(pgSql, /LIMIT\s+\?\s+OFFSET\s+\?/i);
-  assert.match(pgSql, /CONCAT\('[^']*\/article\/',\s*a\.id\)\s+AS\s+"articleUrl"/i);
-
-  const mysqlSql = buildGetRecommendArticleListSql('mysql', redirect);
-  assert.match(mysqlSql, /LIMIT\s+\?\s*,\s*\?/i);
+  const sql = buildGetRecommendArticleListSql(redirect);
+  assert.match(sql, /LIMIT\s+\?\s+OFFSET\s+\?/i);
+  assert.match(sql, /CONCAT\('[^']*\/article\/',\s*a\.id\)\s+AS\s+"articleUrl"/i);
 });
 
-test('buildGetRecommendArticleListExecuteParams: pg orders limit before offset', () => {
+test('buildGetRecommendArticleListExecuteParams: orders limit before offset', () => {
   const { buildGetRecommendArticleListExecuteParams } = loadHelper();
-  assert.deepEqual(buildGetRecommendArticleListExecuteParams('mysql', 5, 15), [5, 15]);
-  assert.deepEqual(buildGetRecommendArticleListExecuteParams('pg', 5, 15), [15, 5]);
+  assert.deepEqual(buildGetRecommendArticleListExecuteParams(5, 15), [15, 5]);
 });
 
-test('buildGetArticleByIdSql: pg does not coerce empty tags/images to jsonb [] (MySQL NULL parity)', () => {
+test('buildGetArticleByIdSql: does not coerce empty tags/images to jsonb []', () => {
   const { buildGetArticleByIdSql } = loadHelper();
-  const pgSql = buildGetArticleByIdSql('pg', 'https://api.example', 'https://app.example');
-  assert.doesNotMatch(pgSql, /'\[\]'::jsonb/);
+  const sql = buildGetArticleByIdSql('https://api.example', 'https://app.example');
+  assert.doesNotMatch(sql, /'\[\]'::jsonb/);
 });
 
-test('buildGetArticleListSql: pg does not coerce empty tags to jsonb [] (MySQL NULL parity)', () => {
+test('buildGetArticleByIdSql: separates image and video aggregates for detail payload', () => {
+  const { buildGetArticleByIdSql } = loadHelper();
+  const sql = buildGetArticleByIdSql('https://api.example', 'https://app.example');
+  assert.match(sql, /WHERE\s+f\.article_id\s*=\s*a\.id\s+AND\s*\(\s*f\.file_type\s*=\s*'image'\s+OR\s+f\.file_type\s+IS\s+NULL\s*\)/i);
+  assert.match(sql, /jsonb_agg\s*\(\s*jsonb_build_object\s*\(\s*'id',\s*f\.id,\s*'url',\s*CONCAT\('https:\/\/api\.example\/article\/video\/',\s*f\.filename\)\s*\)\s*\)[\s\S]*?WHERE\s+f\.article_id\s*=\s*a\.id\s+AND\s+f\.file_type\s*=\s*'video'[\s\S]*?\)\s+videos/i);
+});
+
+test('buildGetArticleListSql: does not coerce empty tags to jsonb []', () => {
   const { buildGetArticleListSql } = loadHelper();
-  const pgSql = buildGetArticleListSql('pg', 'https://api.example', 'https://app.example', {
+  const sql = buildGetArticleListSql('https://api.example', 'https://app.example', {
     tagId: '',
     userId: '',
     idList: [],
     keywords: '',
     pageOrder: 'date',
   });
-  assert.doesNotMatch(pgSql, /'\[\]'::jsonb/);
-  assert.doesNotMatch(pgSql, /COALESCE\s*\(\s*tags_agg\.tags/i);
+  assert.doesNotMatch(sql, /'\[\]'::jsonb/);
+  assert.doesNotMatch(sql, /COALESCE\s*\(\s*tags_agg\.tags/i);
 });
 
-test('buildGetArticleListSql: pg cover uses LATERAL + LIMIT 1 instead of MAX(f.filename)', () => {
+test('buildGetArticleListSql: cover uses LATERAL + LIMIT 1 instead of MAX(f.filename)', () => {
   const { buildGetArticleListSql } = loadHelper();
-  const pgSql = buildGetArticleListSql('pg', 'https://api.example', 'https://app.example', {
+  const sql = buildGetArticleListSql('https://api.example', 'https://app.example', {
     tagId: '',
     userId: '',
     idList: [],
     keywords: '',
     pageOrder: 'date',
   });
-  assert.doesNotMatch(pgSql, /MAX\s*\(\s*f\.filename\s*\)/i);
-  assert.match(pgSql, /LEFT JOIN\s+LATERAL\s*\(/i);
-  assert.match(pgSql, /im\.is_cover\s*=\s*TRUE[\s\S]*?LIMIT\s+1/i);
+  assert.doesNotMatch(sql, /MAX\s*\(\s*f\.filename\s*\)/i);
+  assert.match(sql, /LEFT JOIN\s+LATERAL\s*\(/i);
+  assert.match(sql, /im\.is_cover\s*=\s*TRUE[\s\S]*?LIMIT\s+1/i);
 });
 
-test('buildAddArticleSql: pg appends RETURNING id while mysql keeps legacy insert', () => {
+test('buildAddArticleSql: appends RETURNING id', () => {
   const { buildAddArticleSql } = loadHelper();
 
-  assert.equal(
-    buildAddArticleSql('mysql'),
-    'INSERT INTO article (user_id,title, content) VALUES (?,?,?);'
-  );
   assert.match(
-    buildAddArticleSql('pg'),
+    buildAddArticleSql(),
     /INSERT INTO article \(user_id,title, content\) VALUES \(\?,\?,\?\) RETURNING id;$/i
   );
 });

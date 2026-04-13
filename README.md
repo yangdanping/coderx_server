@@ -58,21 +58,15 @@ pnpm install
 
 ```env
 APP_PORT=8000
-DB_DIALECT=pg          # pg (默认) 或 mysql
-
-# MySQL 连接（DB_DIALECT=mysql 时使用）
-DB_HOST=localhost
-DB_PORT=3306
-DB_DATABASE=coderx
-DB_USER=root
-DB_PASSWORD=your_password
-
-# PostgreSQL 连接（DB_DIALECT=pg 时使用）
+# PostgreSQL 连接
 PGHOST=127.0.0.1
 PGPORT=5432
 PGDATABASE=coderx
 PGUSER=postgres
 PGPASSWORD=your_password
+
+# 或使用统一连接串
+# DATABASE_URL=postgresql://postgres:${PGPASSWORD}@127.0.0.1:5432/coderx
 ```
 
 ### 4. 启动服务

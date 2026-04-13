@@ -33,10 +33,10 @@ class CommentService {
 
       if (sort === 'hot') {
         const queryParams = [articleId];
-        const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildHotCursorCondition(cursor, connection.dialect);
+        const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildHotCursorCondition(cursor);
         queryParams.push(...cursorParams, limitForHasMore);
 
-        const statement = buildGetCommentListSql(connection.dialect, {
+        const statement = buildGetCommentListSql({
           sort: 'hot',
           cursorCondition,
         });
@@ -45,10 +45,10 @@ class CommentService {
         const isOldest = sort === 'oldest';
         const direction = isOldest ? 'ASC' : 'DESC';
         const queryParams = [articleId];
-        const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildTimeCursorCondition(cursor, direction, connection.dialect);
+        const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildTimeCursorCondition(cursor, direction);
         queryParams.push(...cursorParams, limitForHasMore);
 
-        const statement = buildGetCommentListSql(connection.dialect, {
+        const statement = buildGetCommentListSql({
           sort,
           cursorCondition,
           direction,
@@ -75,7 +75,7 @@ class CommentService {
       // 计算下一页游标
       let nextCursor = null;
       if (hasMore && items.length > 0) {
-        nextCursor = sort === 'hot' ? SqlUtils.buildHotNextCursor(items[items.length - 1], connection.dialect) : SqlUtils.buildNextCursor(items[items.length - 1], connection.dialect);
+        nextCursor = sort === 'hot' ? SqlUtils.buildHotNextCursor(items[items.length - 1]) : SqlUtils.buildNextCursor(items[items.length - 1]);
       }
 
       return {
@@ -97,8 +97,8 @@ class CommentService {
    */
   getUserCommentList = async (userId, offset, limit) => {
     try {
-      const statement = buildGetUserCommentListSql(connection.dialect);
-      const executeParams = buildUserCommentListExecuteParams(connection.dialect, userId, String(offset), String(limit));
+      const statement = buildGetUserCommentListSql();
+      const executeParams = buildUserCommentListExecuteParams(userId, String(offset), String(limit));
       const [comments] = await connection.execute(statement, executeParams);
 
       // 处理数据格式
@@ -132,7 +132,7 @@ class CommentService {
    */
   getReplyPreview = async (commentId, limit) => {
     try {
-      const statement = buildGetReplyPreviewSql(connection.dialect);
+      const statement = buildGetReplyPreviewSql();
 
       const [replies] = await connection.execute(statement, [commentId, limit]);
 
@@ -157,13 +157,13 @@ class CommentService {
     try {
       const normalizedLimit = Number(limit) || 10;
       const queryParams = [commentId];
-      const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildCursorCondition(cursor, 'ASC', connection.dialect);
+      const { condition: cursorCondition, params: cursorParams } = SqlUtils.buildCursorCondition(cursor, 'ASC');
       queryParams.push(...cursorParams);
 
       const limitForHasMore = String(normalizedLimit + 1);
       queryParams.push(limitForHasMore);
 
-      const statement = buildGetRepliesSql(connection.dialect, {
+      const statement = buildGetRepliesSql({
         cursorCondition,
       });
 
@@ -183,7 +183,7 @@ class CommentService {
 
       let nextCursor = null;
       if (hasMore && items.length > 0) {
-        nextCursor = SqlUtils.buildNextCursor(items[items.length - 1], connection.dialect);
+        nextCursor = SqlUtils.buildNextCursor(items[items.length - 1]);
       }
 
       return {
@@ -217,7 +217,7 @@ class CommentService {
    */
   addComment = async (userId, articleId, content) => {
     try {
-      const statement = buildAddCommentSql(connection.dialect);
+      const statement = buildAddCommentSql();
       const [result] = await connection.execute(statement, [userId, articleId, content]);
 
       if (result.insertId) {
@@ -251,7 +251,7 @@ class CommentService {
         queryParams = [userId, articleId, commentId, content];
       }
 
-      const statement = buildAddReplySql(connection.dialect, !!replyId);
+      const statement = buildAddReplySql(!!replyId);
       const [result] = await connection.execute(statement, queryParams);
 
       if (result.insertId) {
@@ -269,7 +269,7 @@ class CommentService {
    */
   getCommentById = async (commentId) => {
     try {
-      const statement = buildGetCommentByIdSql(connection.dialect);
+      const statement = buildGetCommentByIdSql();
 
       const [[comment]] = await connection.execute(statement, [commentId]);
 

@@ -103,7 +103,7 @@ class OAuthService {
    * @returns {object|null} 用户信息
    */
   async findUserByGoogleId(googleId) {
-    const statement = buildFindUserByGoogleIdSql(connection.dialect);
+    const statement = buildFindUserByGoogleIdSql();
     const [result] = await connection.execute(statement, [googleId]);
     return result[0] || null;
   }
@@ -114,7 +114,7 @@ class OAuthService {
    * @returns {object|null} 用户信息
    */
   async findUserByEmail(email) {
-    const statement = buildFindUserByEmailSql(connection.dialect);
+    const statement = buildFindUserByEmailSql();
     const [result] = await connection.execute(statement, [email]);
     return result[0] || null;
   }
@@ -134,7 +134,7 @@ class OAuthService {
       const uniqueName = `${baseName}_${Date.now().toString(36)}`;
 
       // 插入用户表（密码为 NULL，标记 OAuth 来源）
-      const statement1 = buildCreateOAuthUserSql(connection.dialect, 'google');
+      const statement1 = buildCreateOAuthUserSql('google');
       const [result] = await conn.execute(statement1, [uniqueName, googleUser.googleId, 'google']);
 
       const userId = result.insertId;
@@ -166,7 +166,7 @@ class OAuthService {
    * @param {string} googleId - Google ID
    */
   async linkGoogleAccount(userId, googleId) {
-    const statement = buildLinkOAuthAccountSql(connection.dialect, 'google');
+    const statement = buildLinkOAuthAccountSql('google');
     await connection.execute(statement, [googleId, 'google', userId]);
   }
 
@@ -283,7 +283,7 @@ class OAuthService {
    * @returns {object|null} 用户信息
    */
   async findUserByGitHubId(githubId) {
-    const statement = buildFindUserByGitHubIdSql(connection.dialect);
+    const statement = buildFindUserByGitHubIdSql();
     const [result] = await connection.execute(statement, [githubId]);
     return result[0] || null;
   }
@@ -303,7 +303,7 @@ class OAuthService {
       const uniqueName = `${baseName}_${Date.now().toString(36)}`;
 
       // 插入用户表（密码为 NULL，标记 OAuth 来源）
-      const statement1 = buildCreateOAuthUserSql(connection.dialect, 'github');
+      const statement1 = buildCreateOAuthUserSql('github');
       const [result] = await conn.execute(statement1, [uniqueName, githubUser.githubId, 'github']);
 
       const userId = result.insertId;
@@ -335,7 +335,7 @@ class OAuthService {
    * @param {string} githubId - GitHub ID
    */
   async linkGitHubAccount(userId, githubId) {
-    const statement = buildLinkOAuthAccountSql(connection.dialect, 'github');
+    const statement = buildLinkOAuthAccountSql('github');
     await connection.execute(statement, [githubId, 'github', userId]);
   }
 }

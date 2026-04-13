@@ -54,3 +54,6 @@ public/video/*
 !public/avatar/.gitkeep
 !public/img/.gitkeep
 !public/video/.gitkeep
+
+# Local git worktrees
+.worktrees/

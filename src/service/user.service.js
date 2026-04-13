@@ -14,7 +14,7 @@ const {
 
 class UserService {
   getUserByName = async (name) => {
-    const statement = buildGetUserByNameSql(connection.dialect);
+    const statement = buildGetUserByNameSql();
     const [result] = await connection.execute(statement, [name]);
     return result[0];
   };
@@ -26,11 +26,9 @@ class UserService {
       await conn.beginTransaction();
 
       const { name, password } = user;
-      const userTable = connection.dialect === 'pg' ? '"user"' : 'user';
-      const insertSuffix = connection.dialect === 'pg' ? ' RETURNING id' : '';
 
       // 第一步：插入用户表
-      const statement1 = `INSERT INTO ${userTable} (name, password) VALUES (?, ?)${insertSuffix};`;
+      const statement1 = 'INSERT INTO "user" (name, password) VALUES (?, ?) RETURNING id;';
       const [result] = await conn.execute(statement1, [name, password]);
 
       // 第二步：插入用户信息表，关联新用户ID
@@ -75,7 +73,7 @@ class UserService {
     return result;
   };
   getProfileById = async (userId) => {
-    const statement = buildGetProfileByIdSql(connection.dialect);
+    const statement = buildGetProfileByIdSql();
     const [result] = await connection.execute(statement, [userId]);
     return result[0];
   };
@@ -123,8 +121,8 @@ class UserService {
   // };
 
   getCommentById = async (userId, offset, limit) => {
-    const statement = buildGetCommentByIdSql(connection.dialect);
-    const executeParams = buildGetCommentByIdExecuteParams(connection.dialect, userId, String(offset), String(limit));
+    const statement = buildGetCommentByIdSql();
+    const executeParams = buildGetCommentByIdExecuteParams(userId, String(offset), String(limit));
     const [result] = await connection.execute(statement, executeParams);
     return result;
   };
@@ -173,7 +171,7 @@ class UserService {
 
   getLikedById = async (userId) => {
     try {
-      const statement = buildGetLikedByIdSql(connection.dialect);
+      const statement = buildGetLikedByIdSql();
       const [result] = await connection.execute(statement, [userId]);
       return result[0];
     } catch (error) {
@@ -218,7 +216,7 @@ class UserService {
 
   getFollowInfo = async (userId) => {
     try {
-      const statement = buildGetFollowInfoSql(connection.dialect);
+      const statement = buildGetFollowInfoSql();
       const [result] = await connection.execute(statement, [userId]);
       return result[0];
     } catch (error) {
@@ -228,8 +226,8 @@ class UserService {
 
   getArticleByCollectId = async (userId, collectId, offset, limit) => {
     try {
-      const statement = buildGetArticleByCollectIdSql(connection.dialect);
-      const executeParams = buildGetArticleByCollectIdExecuteParams(connection.dialect, userId, collectId, String(offset), String(limit));
+      const statement = buildGetArticleByCollectIdSql();
+      const executeParams = buildGetArticleByCollectIdExecuteParams(userId, collectId, String(offset), String(limit));
       const [result] = await connection.execute(statement, executeParams);
       return result;
     } catch (error) {
@@ -274,7 +272,7 @@ class UserService {
   // };
   getHotUsers = async () => {
     try {
-      const statement = buildGetHotUsersSql(connection.dialect);
+      const statement = buildGetHotUsersSql();
       const [result] = await connection.execute(statement);
       return result;
     } catch (error) {

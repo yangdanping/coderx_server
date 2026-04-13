@@ -1,7 +1,7 @@
 /**
  * 孤儿文件定时清理任务
  *
- * 功能：每天凌晨 2 点清理超过 24 小时未关联到文章的文件（图片、视频等）
+ * 功能：按当前模式先清理过期 lifecycle draft，再清理超过阈值仍未关联到文章的文件（图片、视频等）
  *
  * 使用方法：
  * 1. 安装 node-cron: npm install node-cron
@@ -15,16 +15,20 @@ const connection = require('@/app/database');
 const fs = require('fs');
 const path = require('path');
 const SqlUtils = require('@/utils/SqlUtils');
-const { buildFindOrphanFilesSql } = require('./cleanOrphanFiles.sql');
+const {
+  buildDeleteConsumedDraftsSql,
+  buildDeleteDiscardedDraftsSql,
+  buildDeleteExpiredActiveDraftsSql,
+  buildFindOrphanFilesSql,
+} = require('./cleanOrphanFiles.sql');
 
 // 配置：通过环境变量控制执行频率
-// 测试模式：export CLEAN_CRON_MODE=test  （每3s执行，3秒后清理）
-// 生产模式：export CLEAN_CRON_MODE=prod  （每天凌晨2点执行，24小时后清理，默认）
+// 测试模式：export CLEAN_CRON_MODE=test
+// 生产模式：export CLEAN_CRON_MODE=prod （默认）
 const CRON_MODE = process.env.CLEAN_CRON_MODE || 'prod';
 
-// SQL语句清理时间阈值配置（根据模式自动调整,超过时间后,sql将执行清理）
-// 注意：生产环境设置为 7 天，给用户足够时间处理草稿（草稿文件 ID 存储在前端 localStorage）
-const CLEANUP_THRESHOLDS = {
+// 文件清理阈值：active 草稿释放出的文件仍沿用较长 TTL，避免误删正在编辑中的资源
+const FILE_CLEANUP_THRESHOLDS = {
   test: {
     interval: 10, // 自定义文件过期时间(秒)
     unit: 'SECOND',
@@ -32,6 +36,20 @@ const CLEANUP_THRESHOLDS = {
   prod: {
     interval: 7, // 自定义文件过期时间(天) - 延长至 7 天以保护草稿中的文件
     unit: 'DAY',
+  },
+};
+
+// draft lifecycle 清理阈值：consumed/discarded 更短，active 继续沿用较长 TTL
+const DRAFT_CLEANUP_THRESHOLDS = {
+  test: {
+    consumed: { interval: 3, unit: 'SECOND' },
+    discarded: { interval: 3, unit: 'SECOND' },
+    active: { interval: 10, unit: 'SECOND' },
+  },
+  prod: {
+    consumed: { interval: 1, unit: 'DAY' },
+    discarded: { interval: 1, unit: 'DAY' },
+    active: { interval: 7, unit: 'DAY' },
   },
 };
 
@@ -52,6 +70,8 @@ const FILE_TYPE_CONFIG = {
     uploadDir: 'public/video',
   },
 };
+
+const unitTextMap = { SECOND: '秒', HOUR: '小时', DAY: '天' };
 
 /**
  * 删除物理文件（通用）
@@ -108,13 +128,72 @@ const deletePhysicalFile = (filename, uploadDir = 'public/img') => {
   }
 };
 
+const getMutationCount = (result) => {
+  if (Array.isArray(result)) {
+    return result.length;
+  }
+
+  if (result && typeof result === 'object') {
+    return Number(result.affectedRows ?? result.rowCount ?? 0);
+  }
+
+  return 0;
+};
+
+const cleanLifecycleDrafts = async (conn, draftThresholds) => {
+  const cleanupSteps = [
+    {
+      key: 'consumed',
+      buildSql: buildDeleteConsumedDraftsSql,
+    },
+    {
+      key: 'discarded',
+      buildSql: buildDeleteDiscardedDraftsSql,
+    },
+    {
+      key: 'active',
+      buildSql: buildDeleteExpiredActiveDraftsSql,
+    },
+  ];
+
+  const deletedCounts = {};
+
+  for (const step of cleanupSteps) {
+    const threshold = draftThresholds[step.key];
+    const statement = step.buildSql(threshold.unit);
+    const [deleteResult] = await conn.execute(statement, [threshold.interval]);
+    deletedCounts[step.key] = getMutationCount(deleteResult);
+    console.log(`📝 已清理 ${step.key} 草稿: ${deletedCounts[step.key]} 条`);
+  }
+
+  return deletedCounts;
+};
+
+const cleanLifecycleDraftsOnce = async () => {
+  const conn = await connection.getConnection();
+  const draftThresholds = DRAFT_CLEANUP_THRESHOLDS[CRON_MODE];
+
+  try {
+    await conn.beginTransaction();
+    await cleanLifecycleDrafts(conn, draftThresholds);
+    await conn.commit();
+  } catch (error) {
+    await conn.rollback();
+    console.error('❌ 清理 draft lifecycle 失败:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+};
+
 /**
  * 通用清理孤儿文件函数
  * @param {string} fileType - 文件类型 ('image' | 'video')
  * @param {string} method - 清理方式 ('cron' | 'manual')
  */
-const cleanOrphanFiles = async (fileType, method = 'cron') => {
+const cleanOrphanFiles = async (fileType, method = 'cron', options = {}) => {
   const config = FILE_TYPE_CONFIG[fileType];
+  const { skipDraftCleanup = false } = options;
   if (!config) {
     throw new Error(`不支持的文件类型: ${fileType}`);
   }
@@ -125,29 +204,34 @@ const cleanOrphanFiles = async (fileType, method = 'cron') => {
   const conn = await connection.getConnection();
 
   // 获取当前模式的清理阈值
-  const threshold = CLEANUP_THRESHOLDS[CRON_MODE];
-  const unitTextMap = { SECOND: '秒', HOUR: '小时', DAY: '天' };
-  console.log(`🔍 清理阈值: ${threshold.interval}${unitTextMap[threshold.unit] || threshold.unit}前创建的文件`);
+  const fileThreshold = FILE_CLEANUP_THRESHOLDS[CRON_MODE];
+  console.log(`🔍 清理阈值: ${fileThreshold.interval}${unitTextMap[fileThreshold.unit] || fileThreshold.unit}前创建的文件`);
 
   try {
     await conn.beginTransaction();
+
+    // 0. 默认先清 lifecycle draft；由外层调度统一执行时可跳过，避免重复写库
+    if (!skipDraftCleanup) {
+      const draftThresholds = DRAFT_CLEANUP_THRESHOLDS[CRON_MODE];
+      await cleanLifecycleDrafts(conn, draftThresholds);
+    }
 
     // 1. 查找孤儿文件（创建时间超过阈值且未关联到文章的文件）
     let orphanFiles;
 
     if (fileType === 'image') {
       // 图片孤儿：未关联文章 且 未被视频封面引用
-      const statement = buildFindOrphanFilesSql(connection.dialect, 'image', threshold.unit);
+      const statement = buildFindOrphanFilesSql('image', fileThreshold.unit);
       [orphanFiles] = await conn.execute(
         statement,
-        [fileType, threshold.interval],
+        [fileType, fileThreshold.interval],
       );
     } else if (fileType === 'video') {
       // 视频孤儿：未关联文章
-      const statement = buildFindOrphanFilesSql(connection.dialect, 'video', threshold.unit);
+      const statement = buildFindOrphanFilesSql('video', fileThreshold.unit);
       [orphanFiles] = await conn.execute(
         statement,
-        [fileType, threshold.interval],
+        [fileType, fileThreshold.interval],
       );
     } else {
       throw new Error(`不支持的文件类型: ${fileType}`);
@@ -162,7 +246,7 @@ const cleanOrphanFiles = async (fileType, method = 'cron') => {
     console.log(`📊 找到 ${orphanFiles.length} 个孤儿${config.name}需要清理:`);
 
     // 2. 打印详细信息
-    const unitText = unitTextMap[threshold.unit] || threshold.unit;
+    const unitText = unitTextMap[fileThreshold.unit] || fileThreshold.unit;
     orphanFiles.forEach((file, index) => {
       console.log(`   ${index + 1}. ID: ${file.id}, 文件: ${file.filename}, 创建于: ${file.age_in_units} ${unitText}前`);
     });
@@ -231,9 +315,10 @@ const cronExpression = CRON_EXPRESSIONS[CRON_MODE];
 const task = cron.schedule(
   cronExpression,
   async () => {
-    // 依次清理各类孤儿文件
-    await cleanOrphanImages();
-    await cleanOrphanVideos();
+    // 整次任务只清一次 draft lifecycle，再依次清理各类孤儿文件
+    await cleanLifecycleDraftsOnce();
+    await cleanOrphanFiles('image', 'cron', { skipDraftCleanup: true });
+    await cleanOrphanFiles('video', 'cron', { skipDraftCleanup: true });
   },
   {
     scheduled: false, // 默认不启动，需要手动调用 task.start()

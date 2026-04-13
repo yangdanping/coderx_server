@@ -23,7 +23,7 @@ class ImageService {
       await conn.beginTransaction();
 
       // 1. 插入文件基础信息
-      const fileStatement = buildAddImageFileSql(connection.dialect);
+      const fileStatement = buildAddImageFileSql();
       const [fileResult] = await conn.execute(fileStatement, [userId, filename, mimetype, size]);
       const fileId = fileResult.insertId;
 
@@ -69,10 +69,10 @@ class ImageService {
   };
 
   /**
-   * 关联图片到文章，并设置封面
+   * 关联图片到文章，并按显式传入的封面 ID 设置封面
    * @param {number} articleId - 文章ID
    * @param {Array<number>} imageIds - 图片ID数组
-   * @param {number|null} coverImageId - 封面图片ID
+   * @param {number|null} coverImageId - 显式指定的封面图片ID；未传时不设置封面
    * @returns {Promise} 操作结果
    */
   updateImageArticle = async (articleId, imageIds, coverImageId = null) => {
@@ -82,7 +82,7 @@ class ImageService {
       console.log('🔄 开始事务 - 更新文章图片关联');
 
       // 1. 清空该文章所有图片的封面标识
-      const clearCoverStatement = buildClearImageCoverSql(connection.dialect);
+      const clearCoverStatement = buildClearImageCoverSql();
       await conn.execute(clearCoverStatement, [articleId]);
       console.log('✅ 步骤1 - 清空旧封面标识');
 
@@ -109,7 +109,7 @@ class ImageService {
       if (imageIds.length > 0) {
         const updateArticleStatement = `
           UPDATE file
-          SET article_id = ?
+          SET article_id = ?, draft_id = NULL
           WHERE ${SqlUtils.queryIn('id', imageIds)} AND file_type = 'image';
         `;
         const [result4] = await conn.execute(updateArticleStatement, [articleId, ...imageIds]);
@@ -118,7 +118,7 @@ class ImageService {
 
       // 5. 设置封面图片
       if (coverImageId) {
-        const setCoverStatement = buildSetImageCoverSql(connection.dialect);
+        const setCoverStatement = buildSetImageCoverSql();
         const [result5] = await conn.execute(setCoverStatement, [coverImageId, articleId]);
         console.log(`✅ 步骤5 - 设置封面: 图片ID ${coverImageId}, 影响行数 ${result5.affectedRows}`);
       }

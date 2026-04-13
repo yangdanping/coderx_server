@@ -10,18 +10,49 @@ const Result = require('@/app/Result');
 const deleteFile = require('@/utils/deleteFile');
 const MdUtils = require('@/utils/MdUtils');
 
+function parsePositiveInt(raw) {
+  if (typeof raw === 'number') {
+    return Number.isSafeInteger(raw) && raw > 0 ? raw : null;
+  }
+
+  if (typeof raw === 'string' && /^[1-9]\d*$/.test(raw)) {
+    const parsed = Number(raw);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function parseOptionalDraftId(raw) {
+  if (raw === undefined || raw === null || raw === '') {
+    return { value: null, invalid: false };
+  }
+
+  const value = parsePositiveInt(raw);
+  return {
+    value,
+    invalid: value === null,
+  };
+}
+
 class ArticleController {
   /**
    * 发布文章
    */
   addArticle = async (ctx, next) => {
     const userId = ctx.user.id;
-    let { title, content } = ctx.request.body;
+    let { title, content, draftId: rawDraftId } = ctx.request.body;
+    const draftIdResult = parseOptionalDraftId(rawDraftId);
+
+    if (draftIdResult.invalid) {
+      ctx.body = Result.fail('参数错误: draftId 必须是正整数');
+      return;
+    }
 
     // 自动转换 Markdown 为 HTML 以保证详情页兼容性 (兼容旧版或第三方输入)
     content = MdUtils.renderHtml(content);
 
-    const result = await articleService.addArticle(userId, title, content);
+    const result = await articleService.addArticle(userId, title, content, draftIdResult.value);
     ctx.body = Result.success(result);
   };
 
@@ -127,13 +158,20 @@ class ArticleController {
     ctx.body = Result.success(result);
   };
   update = async (ctx, next) => {
-    let { title, content } = ctx.request.body;
+    const userId = ctx.user.id;
+    let { title, content, draftId: rawDraftId } = ctx.request.body;
     const { articleId } = ctx.params;
+    const draftIdResult = parseOptionalDraftId(rawDraftId);
+
+    if (draftIdResult.invalid) {
+      ctx.body = Result.fail('参数错误: draftId 必须是正整数');
+      return;
+    }
 
     // 自动转换 Markdown 为 HTML 以保证详情页兼容性
     content = MdUtils.renderHtml(content);
 
-    const result = await articleService.update(title, content, articleId);
+    const result = await articleService.update(userId, title, content, articleId, draftIdResult.value);
     ctx.body = Result.success(result);
   };
   /**

@@ -1,3 +1,9 @@
+const {
+  buildDeleteConsumedDraftsSql: buildDeleteConsumedDraftsSqlFromDraftSql,
+  buildDeleteDiscardedDraftsSql: buildDeleteDiscardedDraftsSqlFromDraftSql,
+  buildDeleteExpiredActiveDraftsSql: buildDeleteExpiredActiveDraftsSqlFromDraftSql,
+} = require('../service/sql/draft.sql');
+
 function normalizeThresholdUnit(unit) {
   const normalized = String(unit || '').toUpperCase();
   if (!['SECOND', 'HOUR', 'DAY'].includes(normalized)) {
@@ -6,7 +12,7 @@ function normalizeThresholdUnit(unit) {
   return normalized;
 }
 
-function buildPgAgeExpression(unit) {
+function buildAgeExpression(unit) {
   switch (unit) {
     case 'SECOND':
       return 'FLOOR(EXTRACT(EPOCH FROM (NOW() - f.create_at)))::integer';
@@ -15,11 +21,11 @@ function buildPgAgeExpression(unit) {
     case 'DAY':
       return 'FLOOR(EXTRACT(EPOCH FROM (NOW() - f.create_at)) / 86400)::integer';
     default:
-      throw new Error(`Unsupported PG threshold unit: ${unit}`);
+      throw new Error(`Unsupported threshold unit: ${unit}`);
   }
 }
 
-function buildPgCutoffExpression(unit) {
+function buildCutoffExpression(unit) {
   switch (unit) {
     case 'SECOND':
       return "NOW() - (? * INTERVAL '1 second')";
@@ -28,28 +34,14 @@ function buildPgCutoffExpression(unit) {
     case 'DAY':
       return "NOW() - (? * INTERVAL '1 day')";
     default:
-      throw new Error(`Unsupported PG threshold unit: ${unit}`);
+      throw new Error(`Unsupported threshold unit: ${unit}`);
   }
 }
 
-function buildAgeExpression(dialect, unit) {
-  if (dialect === 'pg') {
-    return `${buildPgAgeExpression(unit)} as age_in_units`;
-  }
-  return `TIMESTAMPDIFF(${unit}, f.create_at, NOW()) as age_in_units`;
-}
-
-function buildCutoffExpression(dialect, unit) {
-  if (dialect === 'pg') {
-    return buildPgCutoffExpression(unit);
-  }
-  return `DATE_SUB(NOW(), INTERVAL ? ${unit})`;
-}
-
-function buildFindOrphanFilesSql(dialect, fileType, unit) {
+function buildFindOrphanFilesSql(fileType, unit) {
   const normalizedUnit = normalizeThresholdUnit(unit);
-  const ageExpression = buildAgeExpression(dialect, normalizedUnit);
-  const cutoffExpression = buildCutoffExpression(dialect, normalizedUnit);
+  const ageExpression = `${buildAgeExpression(normalizedUnit)} as age_in_units`;
+  const cutoffExpression = buildCutoffExpression(normalizedUnit);
 
   if (fileType === 'image') {
     return `
@@ -63,6 +55,7 @@ function buildFindOrphanFilesSql(dialect, fileType, unit) {
         FROM file f
         LEFT JOIN video_meta vm ON f.filename = vm.poster
         WHERE f.article_id IS NULL
+          AND f.draft_id IS NULL
           AND vm.poster IS NULL
           AND f.file_type = ?
           AND f.create_at < ${cutoffExpression}
@@ -81,6 +74,7 @@ function buildFindOrphanFilesSql(dialect, fileType, unit) {
           ${ageExpression}
         FROM file f
         WHERE f.article_id IS NULL
+          AND f.draft_id IS NULL
           AND f.file_type = ?
           AND f.create_at < ${cutoffExpression}
         ORDER BY f.create_at ASC
@@ -90,6 +84,21 @@ function buildFindOrphanFilesSql(dialect, fileType, unit) {
   throw new Error(`不支持的文件类型: ${fileType}`);
 }
 
+function buildDeleteConsumedDraftsSql(unit = 'DAY') {
+  return buildDeleteConsumedDraftsSqlFromDraftSql('?', unit);
+}
+
+function buildDeleteDiscardedDraftsSql(unit = 'DAY') {
+  return buildDeleteDiscardedDraftsSqlFromDraftSql('?', unit);
+}
+
+function buildDeleteExpiredActiveDraftsSql(unit = 'DAY') {
+  return buildDeleteExpiredActiveDraftsSqlFromDraftSql('?', unit);
+}
+
 module.exports = {
   buildFindOrphanFilesSql,
+  buildDeleteConsumedDraftsSql,
+  buildDeleteDiscardedDraftsSql,
+  buildDeleteExpiredActiveDraftsSql,
 };

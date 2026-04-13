@@ -11,12 +11,12 @@ const imageController = require('@/controller/image.controller');
 
 // ★上传图片接口
 // POST /img
-// 支持批量上传（最多9张）
+// 支持批量上传（当前接口最多 20 张）
 imageRouter.post('/', verifyAuth, imgHandler, imgResize, imageController.saveImgInfo);
 
 // ★关联图片到文章接口
 // POST /img/:articleId
-// 用于发布/编辑文章时，将上传的图片与文章关联，并设置封面
+// 用于发布/编辑文章时，将上传的图片与文章关联；仅显式标记时才设置封面
 imageRouter.post('/:articleId', verifyAuth, imageController.updateFile);
 
 // ★删除图片接口

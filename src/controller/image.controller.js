@@ -11,10 +11,10 @@ const deleteFile = require('@/utils/deleteFile');
 class ImageController {
   /**
    * 保存图片信息
-   * 处理批量图片上传（最多9张）
+   * 处理批量图片上传（当前接口最多 20 张）
    */
   saveImgInfo = async (ctx, next) => {
-    // 1.获取图像数据,由于那边是multer({ ... }).array('img', 9),所以这里是返回数组,是files
+    // 1.获取图像数据,由于那边是 multer({ ... }).array('img', 20),所以这里返回数组 files
     const userId = ctx.user.id;
     const files = ctx.files;
 
@@ -47,7 +47,8 @@ class ImageController {
 
   /**
    * 关联图片到文章
-   * 用于发布/编辑文章时，将上传的图片与文章关联，并设置封面
+   * 用于发布/编辑文章时，将上传的图片与文章关联
+   * 仅当前端显式传入封面标记时才设置封面
    */
   updateFile = async (ctx, next) => {
     const { articleId } = ctx.params;
@@ -56,9 +57,15 @@ class ImageController {
     console.log('📝 updateFile - 接收到的数据:', { articleId, uploaded });
     console.log('🔍 updateFile - uploaded 数组详情:', JSON.stringify(uploaded, null, 2));
 
-    if (!uploaded || !Array.isArray(uploaded) || uploaded.length === 0) {
-      console.error('❌ updateFile - uploaded 数组为空或格式错误');
+    if (!Array.isArray(uploaded)) {
+      console.error('❌ updateFile - uploaded 不是数组');
       ctx.body = Result.fail('上传数据格式错误');
+      return;
+    }
+
+    if (uploaded.length === 0) {
+      const result = await imageService.updateImageArticle(articleId, [], null);
+      ctx.body = Result.success(result);
       return;
     }
 

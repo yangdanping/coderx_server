@@ -120,6 +120,66 @@ test('updateImageArticle: pg uses update-from SQL for cover reset and cover set'
     assert.match(setCoverExecute.statement, /FROM file AS f/i);
     assert.doesNotMatch(setCoverExecute.statement, /INNER JOIN/i);
     assert.deepEqual(setCoverExecute.params, [6, 9]);
+
+    const bindImagesExecute = executeCalls.find((call) => /SET article_id = \?,\s*draft_id = NULL/i.test(call.statement));
+    assert.ok(bindImagesExecute, 'Expected image binding SQL to clear draft_id');
+    assert.deepEqual(bindImagesExecute.params, [9, 5, 6]);
+  } finally {
+    console.log = originalConsoleLog;
+  }
+});
+
+test('updateImageArticle: empty imageIds still clears old article image links without rebinding', async () => {
+  const calls = [];
+  const originalConsoleLog = console.log;
+  const service = loadServiceWithConnection({
+    dialect: 'pg',
+    async getConnection() {
+      return {
+        async beginTransaction() {
+          calls.push({ type: 'beginTransaction' });
+        },
+        async execute(statement, params) {
+          calls.push({ type: 'execute', statement, params });
+
+          if (/SELECT id\s+FROM file\s+WHERE article_id = \? AND file_type = 'image'/i.test(statement)) {
+            return [[{ id: 7 }, { id: 8 }], []];
+          }
+
+          return [{ affectedRows: 2 }, []];
+        },
+        async commit() {
+          calls.push({ type: 'commit' });
+        },
+        async rollback() {
+          calls.push({ type: 'rollback' });
+        },
+        release() {
+          calls.push({ type: 'release' });
+        },
+      };
+    },
+  });
+
+  console.log = () => {};
+
+  try {
+    const result = await service.updateImageArticle(9, [], null);
+
+    assert.deepEqual(result, {
+      success: true,
+      affectedRows: 0,
+      deletedCount: 2,
+      coverSet: false,
+    });
+
+    const executeCalls = calls.filter((call) => call.type === 'execute');
+    const clearArticleExecute = executeCalls.find((call) => /SET article_id = NULL/i.test(call.statement));
+    assert.ok(clearArticleExecute, 'Expected image clearing SQL to run');
+    assert.deepEqual(clearArticleExecute.params, [9]);
+
+    const bindImagesExecute = executeCalls.find((call) => /SET article_id = \?,\s*draft_id = NULL/i.test(call.statement));
+    assert.equal(bindImagesExecute, undefined);
   } finally {
     console.log = originalConsoleLog;
   }

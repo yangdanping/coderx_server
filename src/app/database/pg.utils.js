@@ -68,7 +68,7 @@ const convertQuestionPlaceholders = (sql) => {
   return result;
 };
 
-const buildMysqlLikeResult = (result) => {
+const buildMutationResult = (result) => {
   const firstRow = result.rows[0] || {};
   const insertId = firstRow.id ?? firstRow.insertId ?? 0;
 
@@ -87,7 +87,7 @@ const adaptPgResult = (result) => {
   }
 
   if (result.command === 'INSERT' || result.command === 'UPDATE' || result.command === 'DELETE') {
-    return [buildMysqlLikeResult(result), result.fields];
+    return [buildMutationResult(result), result.fields];
   }
 
   return [result.rows, result.fields];

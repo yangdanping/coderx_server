@@ -27,7 +27,7 @@ class AuthService {
 
   checkStatus = async (userId) => {
     try {
-      const statement = buildCheckStatusSql(connection.dialect);
+      const statement = buildCheckStatusSql();
       const [result] = await connection.execute(statement, [userId]);
       const { status } = result[0];
       return status;

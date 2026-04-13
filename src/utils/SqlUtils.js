@@ -16,35 +16,26 @@ class SqlUtils {
     return `${prefix} ${column} IN (${placeholders})`;
   };
 
-  /**
-   * MySQL 用本地时间，PG（session timezone = GMT）用 UTC，
-   * 确保游标时间戳与数据库内部表示匹配。
-   *
-   * 注意：必须用 dayjs.utc(input) 而非 dayjs(input).utc()，
-   * 前者直接按 UTC 解析，后者先按本地时区解析再转 UTC 会偏移 8 小时。
-   */
-  static _formatTime = (timeInput, dialect) => {
-    const d = dialect === 'pg' ? dayjs.utc(timeInput) : dayjs(timeInput);
-    return d.format('YYYY-MM-DD HH:mm:ss.SSS');
+  // PG 统一按 UTC 解析游标时间，避免本地时区造成翻页偏移。
+  static _formatTime = (timeInput) => {
+    return dayjs.utc(timeInput).format('YYYY-MM-DD HH:mm:ss.SSS');
   };
 
   /**
    * 构造游标查询条件（用于分页）
    * @param {string} cursor 游标格式："timestamp_id" 例如 "2024-01-01T00:00:00.000Z_123"
    * @param {string} direction 排序方向："DESC" 或 "ASC"
-   * @param {string} dialect 数据库方言 "mysql" | "pg"
    * @returns {object} { condition: string, params: array }
    */
-  static buildTimeCursorCondition = (cursor, direction = 'DESC', dialect = 'mysql') => {
+  static buildTimeCursorCondition = (cursor, direction = 'DESC') => {
     if (!cursor) return { condition: '', params: [] };
 
     const [cursorTime, cursorId] = cursor.split('_');
-    const formatCursorTime = SqlUtils._formatTime(cursorTime, dialect);
+    const formatCursorTime = SqlUtils._formatTime(cursorTime);
     const isDesc = direction.toUpperCase() === 'DESC';
 
-    // PG 存储微秒精度，JS Date 只有毫秒精度，直接比较会导致跨页重复。
-    // 用 date_trunc 将 PG 端也截断到毫秒，确保双方精度一致。
-    const col = dialect === 'pg' ? "date_trunc('milliseconds', c.create_at)" : 'c.create_at';
+    // PG 存储微秒精度，JS Date 只有毫秒精度，用 date_trunc 保持一致。
+    const col = "date_trunc('milliseconds', c.create_at)";
 
     return {
       condition: isDesc ? `AND (${col} < ? OR (${col} = ? AND c.id < ?))` : `AND (${col} > ? OR (${col} = ? AND c.id > ?))`,
@@ -52,35 +43,33 @@ class SqlUtils {
     };
   };
 
-  static buildCursorCondition = (cursor, direction = 'DESC', dialect = 'mysql') => {
-    return SqlUtils.buildTimeCursorCondition(cursor, direction, dialect);
+  static buildCursorCondition = (cursor, direction = 'DESC') => {
+    return SqlUtils.buildTimeCursorCondition(cursor, direction);
   };
 
   /**
    * 构造热门排序的游标查询条件
    * 排序规则：likes DESC -> replyCount DESC -> createAt DESC -> id DESC
    * @param {string} cursor 游标格式："likes_replyCount_timestamp_id"
-   * @param {string} dialect 数据库方言 "mysql" | "pg"
    * @returns {object} { condition: string, params: array }
    */
-  static buildHotCursorCondition = (cursor, dialect = 'mysql') => {
+  static buildHotCursorCondition = (cursor) => {
     if (!cursor) return { condition: '', params: [] };
 
     const [likes, replyCount, cursorTime, cursorId] = cursor.split('_');
-    const formatCursorTime = SqlUtils._formatTime(cursorTime, dialect);
+    const formatCursorTime = SqlUtils._formatTime(cursorTime);
     const cursorLikes = Number(likes);
     const cursorReplyCount = Number(replyCount);
     const parsedCursorId = Number(cursorId);
 
-    const q = (name) => (dialect === 'pg' ? `"${name}"` : name);
-    const timeCol = dialect === 'pg' ? `date_trunc('milliseconds', hot_comments."createAt")` : 'hot_comments.createAt';
+    const timeCol = `date_trunc('milliseconds', hot_comments."createAt")`;
 
     return {
       condition: `AND (
         hot_comments.likes < ?
-        OR (hot_comments.likes = ? AND hot_comments.${q('replyCount')} < ?)
-        OR (hot_comments.likes = ? AND hot_comments.${q('replyCount')} = ? AND ${timeCol} < ?)
-        OR (hot_comments.likes = ? AND hot_comments.${q('replyCount')} = ? AND ${timeCol} = ? AND hot_comments.id < ?)
+        OR (hot_comments.likes = ? AND hot_comments."replyCount" < ?)
+        OR (hot_comments.likes = ? AND hot_comments."replyCount" = ? AND ${timeCol} < ?)
+        OR (hot_comments.likes = ? AND hot_comments."replyCount" = ? AND ${timeCol} = ? AND hot_comments.id < ?)
       )`,
       params: [cursorLikes, cursorLikes, cursorReplyCount, cursorLikes, cursorReplyCount, formatCursorTime, cursorLikes, cursorReplyCount, formatCursorTime, parsedCursorId],
     };
@@ -89,24 +78,22 @@ class SqlUtils {
   /**
    * 生成下一页游标
    * @param {object} item 列表中的最后一项（需包含 createAt 和 id 字段）
-   * @param {string} dialect 数据库方言 "mysql" | "pg"
    * @returns {string|null} 游标字符串(格式类似"timestamp_id")或 null
    */
-  static buildNextCursor = (item, dialect = 'mysql') => {
+  static buildNextCursor = (item) => {
     if (!item) return null;
-    const createAtStr = SqlUtils._formatTime(item.createAt, dialect);
+    const createAtStr = SqlUtils._formatTime(item.createAt);
     return `${createAtStr}_${item.id}`;
   };
 
   /**
    * 生成热门排序下一页游标
    * @param {object} item 列表中的最后一项（需包含 likes、replyCount、createAt 和 id 字段）
-   * @param {string} dialect 数据库方言 "mysql" | "pg"
    * @returns {string|null}
    */
-  static buildHotNextCursor = (item, dialect = 'mysql') => {
+  static buildHotNextCursor = (item) => {
     if (!item) return null;
-    const createAtStr = SqlUtils._formatTime(item.createAt, dialect);
+    const createAtStr = SqlUtils._formatTime(item.createAt);
     return `${item.likes}_${item.replyCount}_${createAtStr}_${item.id}`;
   };
 }

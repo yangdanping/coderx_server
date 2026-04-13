@@ -1,11 +1,10 @@
 const videoService = require('@/service/video.service');
 const Result = require('@/app/Result');
 const { baseURL } = require('@/constants/urls');
+const { MAX_ARTICLE_VIDEO_COUNT, VIDEO_COUNT_LIMIT_MESSAGE } = require('@/constants/upload');
 const path = require('path');
 const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
-
-const MAX_ARTICLE_VIDEO_COUNT = 2;
 
 /**
  * 视频控制器
@@ -119,8 +118,15 @@ class VideoController {
     const { articleId } = ctx.params;
     const { videoIds } = ctx.request.body;
 
-    if (!videoIds || !Array.isArray(videoIds) || videoIds.length === 0) {
-      ctx.body = Result.fail('参数错误: videoIds 必须是非空数组');
+    if (!Array.isArray(videoIds)) {
+      ctx.body = Result.fail('参数错误: videoIds 必须是数组');
+      return;
+    }
+
+    if (videoIds.length === 0) {
+      const result = await videoService.updateVideoArticle(articleId, []);
+      console.log(`清空文章 ${articleId} 的视频关联`, result);
+      ctx.body = Result.success(result);
       return;
     }
 
@@ -131,7 +137,7 @@ class VideoController {
     }
 
     if (normalizedVideoIds.length > MAX_ARTICLE_VIDEO_COUNT) {
-      ctx.body = Result.fail(`每篇文章最多只能关联 ${MAX_ARTICLE_VIDEO_COUNT} 个视频`);
+      ctx.body = Result.fail(VIDEO_COUNT_LIMIT_MESSAGE);
       return;
     }
 

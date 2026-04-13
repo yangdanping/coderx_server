@@ -2,6 +2,14 @@ const multer = require('@koa/multer'); //解析form-data数据的第三方依赖
 const { Jimp } = require('jimp');
 const path = require('path');
 const { AVATAR_PATH, IMG_PATH, VIDEO_PATH } = require('@/constants/filePaths');
+const BusinessError = require('@/errors/BusinessError');
+const {
+  MAX_IMAGE_BATCH_COUNT,
+  MAX_IMAGE_FILE_SIZE,
+  MAX_VIDEO_FILE_SIZE,
+  IMAGE_TYPE_LIMIT_MESSAGE,
+  VIDEO_TYPE_LIMIT_MESSAGE,
+} = require('@/constants/upload');
 // // 要实现用户上传头像,则先做解析form-data的准备工作--------------
 
 function setStorage(resourcePath) {
@@ -18,20 +26,33 @@ const imgStorage = setStorage(IMG_PATH);
 const videoStorage = setStorage(VIDEO_PATH);
 
 const avatarHandler = multer({ storage: avatarStorage }).single('avatar'); //因为我只保存单个文件所以用single,且对应avatar字段
-const imgHandler = multer({ storage: imgStorage }).array('img', 20); //普通图片可以是多个,可以用img,一篇文章可上传20张图
+const isExpectedMimeType = (file, prefix) => typeof file?.mimetype === 'string' && file.mimetype.startsWith(prefix);
+const imgHandler = multer({
+  storage: imgStorage,
+  limits: {
+    fileSize: MAX_IMAGE_FILE_SIZE,
+  },
+  fileFilter: (req, file, cb) => {
+    if (isExpectedMimeType(file, 'image/')) {
+      cb(null, true);
+      return;
+    }
+
+    cb(new BusinessError(IMAGE_TYPE_LIMIT_MESSAGE, 400, 400));
+  },
+}).array('img', MAX_IMAGE_BATCH_COUNT); // 普通图片接口最多接收 20 张图片,当前编辑器仍按单张串行上传
 
 // 视频上传处理器
 const videoHandler = multer({
   storage: videoStorage,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 限制视频大小为 100MB
+    fileSize: MAX_VIDEO_FILE_SIZE,
   },
   fileFilter: (req, file, cb) => {
-    // 只允许视频格式
-    if (file.mimetype.startsWith('video/')) {
+    if (isExpectedMimeType(file, 'video/')) {
       cb(null, true);
     } else {
-      cb(new Error('只能上传视频文件!'));
+      cb(new BusinessError(VIDEO_TYPE_LIMIT_MESSAGE, 400, 400));
     }
   },
 }).single('video'); // 一次只上传一个视频
@@ -46,7 +67,7 @@ const imgResize = async (ctx, next) => {
   console.log('获取所有的图像信息', files);
   //2.对图像进行处理(利用第三方库jimp)
   if (files.length) {
-    const cover = files[0]; // 仅取第一张图片为封面,进行裁切
+    const cover = files[0]; // 仅基于本次批量上传的第一张图片生成 -small 缩略图
     const destPath = path.join(cover.destination, cover.filename);
     const processedCover = await Jimp.read(cover.path);
     processedCover.resize({ w: 320 });

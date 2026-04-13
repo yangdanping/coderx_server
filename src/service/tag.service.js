@@ -3,7 +3,7 @@ const { buildAddTagSql, buildGetTagListExecuteParams, buildGetTagListSql } = req
 
 class TagService {
   addTag = async (name) => {
-    const statement = buildAddTagSql(connection.dialect);
+    const statement = buildAddTagSql();
     const [result] = await connection.execute(statement, [name]);
     return result;
   };
@@ -15,8 +15,8 @@ class TagService {
   };
 
   getTagList = async (offset, limit) => {
-    const statement = buildGetTagListSql(connection.dialect);
-    const executeParams = buildGetTagListExecuteParams(connection.dialect, offset, limit);
+    const statement = buildGetTagListSql();
+    const executeParams = buildGetTagListExecuteParams(offset, limit);
     const [result] = await connection.execute(statement, executeParams);
     return result;
   };

@@ -14,16 +14,77 @@ const {
   buildGetRecommendArticleListExecuteParams,
   buildGetRecommendArticleListSql,
 } = require('./sql/article.sql');
+const { buildFindDraftForConsumeSql, buildConsumeDraftSql } = require('./sql/draft.sql');
+
+function normalizePositiveId(value) {
+  if (typeof value === 'number') {
+    return Number.isSafeInteger(value) && value > 0 ? value : null;
+  }
+
+  if (typeof value === 'string' && /^[1-9]\d*$/.test(value)) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function normalizeOptionalDraftId(draftId) {
+  if (draftId === undefined || draftId === null || draftId === '') {
+    return null;
+  }
+
+  const normalizedDraftId = normalizePositiveId(draftId);
+  if (normalizedDraftId === null) {
+    throw new BusinessError('参数错误: draftId 必须是正整数', 400);
+  }
+
+  return normalizedDraftId;
+}
+
+async function lockDraftForConsume(conn, { draftId, userId, articleId }) {
+  const hasArticleId = articleId != null && articleId !== '';
+  const statement = buildFindDraftForConsumeSql({ hasArticleId });
+  const params = hasArticleId ? [draftId, userId, articleId] : [draftId, userId];
+  const [rows] = await conn.execute(statement, params);
+  if (!rows[0]) {
+    throw new BusinessError('草稿不存在', 404);
+  }
+}
+
+async function consumeDraftInTx(conn, draftId, userId, consumedArticleId) {
+  const statement = buildConsumeDraftSql();
+  const [meta] = await conn.execute(statement, [draftId, userId, consumedArticleId]);
+  if (!meta || meta.affectedRows < 1) {
+    throw new BusinessError('草稿不存在', 404);
+  }
+}
 
 class ArticleService {
   /**
-   * 新增文章
-   * 重构说明：移除 try-catch，让数据库错误自然抛出，由全局中间件统一处理
+   * 新增文章（可选在同一事务内消费 standalone active 草稿）
    */
-  addArticle = async (userId, title, content) => {
-    const statement = buildAddArticleSql(connection.dialect);
-    const [result] = await connection.execute(statement, [userId, title, content]);
-    return result;
+  addArticle = async (userId, title, content, draftId = null) => {
+    const normalizedDraftId = normalizeOptionalDraftId(draftId);
+    const conn = await connection.getConnection();
+    try {
+      await conn.beginTransaction();
+      if (normalizedDraftId != null) {
+        await lockDraftForConsume(conn, { draftId: normalizedDraftId, userId, articleId: null });
+      }
+      const statement = buildAddArticleSql();
+      const [insertResult] = await conn.execute(statement, [userId, title, content]);
+      if (normalizedDraftId != null) {
+        await consumeDraftInTx(conn, normalizedDraftId, userId, insertResult.insertId);
+      }
+      await conn.commit();
+      return insertResult;
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
+    }
   };
 
   /**
@@ -49,7 +110,7 @@ class ArticleService {
    * 重构说明：查询结果为空时抛出 BusinessError，便于 Controller 统一处理
    */
   getArticleById = async (articleId) => {
-    const statement = buildGetArticleByIdSql(connection.dialect, baseURL, redirectURL);
+    const statement = buildGetArticleByIdSql(baseURL, redirectURL);
     const [result] = await connection.execute(statement, [articleId]);
 
     if (!result[0]) {
@@ -64,14 +125,14 @@ class ArticleService {
     // return await this.getArticleListOptimized(offset, limit, tagId, userId, pageOrder, idList, keywords); // 🔧 取消注释以使用优化版本
 
     const queryParams = buildArticleListQueryParams(tagId, userId, idList, keywords);
-    const statement = buildGetArticleListSql(connection.dialect, baseURL, redirectURL, {
+    const statement = buildGetArticleListSql(baseURL, redirectURL, {
       tagId,
       userId,
       idList,
       keywords,
       pageOrder,
     });
-    const executeParams = buildArticleListExecuteParams(connection.dialect, queryParams, offset, limit);
+    const executeParams = buildArticleListExecuteParams(queryParams, offset, limit);
     const [result] = await connection.execute(statement, executeParams);
     return result;
   };
@@ -90,14 +151,14 @@ class ArticleService {
    */
   getArticleListOptimized = async (offset, limit, tagId = '', userId = '', pageOrder = 'date', idList = [], keywords = '') => {
     const queryParams = buildArticleListQueryParams(tagId, userId, idList, keywords);
-    const statement = buildGetArticleListOptimizedSql(connection.dialect, baseURL, redirectURL, {
+    const statement = buildGetArticleListOptimizedSql(baseURL, redirectURL, {
       tagId,
       userId,
       idList,
       keywords,
       pageOrder,
     });
-    const executeParams = buildArticleListExecuteParams(connection.dialect, queryParams, offset, limit);
+    const executeParams = buildArticleListExecuteParams(queryParams, offset, limit);
     const [result] = await connection.execute(statement, executeParams);
     return result;
   };
@@ -127,10 +188,30 @@ class ArticleService {
     const { total } = result[0];
     return total;
   };
-  update = async (title, content, articleId) => {
-    const statement = `UPDATE article SET title = ?,content = ? WHERE id = ?;`;
-    const [result] = await connection.execute(statement, [title, content, articleId]);
-    return result;
+  update = async (userId, title, content, articleId, draftId = null) => {
+    const normalizedDraftId = normalizeOptionalDraftId(draftId);
+    const conn = await connection.getConnection();
+    try {
+      await conn.beginTransaction();
+      if (normalizedDraftId != null) {
+        await lockDraftForConsume(conn, { draftId: normalizedDraftId, userId, articleId });
+      }
+      const statement = `UPDATE article SET title = ?,content = ? WHERE id = ?;`;
+      const [result] = await conn.execute(statement, [title, content, articleId]);
+      if (result.affectedRows < 1) {
+        throw new BusinessError('文章不存在', 404);
+      }
+      if (normalizedDraftId != null) {
+        await consumeDraftInTx(conn, normalizedDraftId, userId, articleId);
+      }
+      await conn.commit();
+      return result;
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
+    }
   };
   delete = async (articleId) => {
     // 获取独立连接以支持事务
@@ -235,8 +316,8 @@ class ArticleService {
    * 1. 使用 ? 占位符处理 LIKE 查询。
    */
   getArticlesByKeyWords = async (keywords) => {
-    const statement = buildGetArticlesByKeyWordsSql(connection.dialect, redirectURL);
-    const params = buildGetArticlesByKeyWordsExecuteParams(connection.dialect, keywords);
+    const statement = buildGetArticlesByKeyWordsSql(redirectURL);
+    const params = buildGetArticlesByKeyWordsExecuteParams(keywords);
     const [result] = await connection.execute(statement, params);
     return result;
   };
@@ -253,8 +334,8 @@ class ArticleService {
     return result[0];
   };
   getRecommendArticleList = async (offset, limit) => {
-    const statement = buildGetRecommendArticleListSql(connection.dialect, redirectURL);
-    const params = buildGetRecommendArticleListExecuteParams(connection.dialect, offset, limit);
+    const statement = buildGetRecommendArticleListSql(redirectURL);
+    const params = buildGetRecommendArticleListExecuteParams(offset, limit);
     const [result] = await connection.execute(statement, params);
     return result;
   };

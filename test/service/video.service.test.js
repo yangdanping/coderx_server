@@ -130,3 +130,110 @@ test('updateTranscodeStatus: pg uses update-from SQL', async () => {
   assert.doesNotMatch(calls[0].statement, /INNER JOIN/i);
   assert.deepEqual(calls[0].params, ['completed', 7]);
 });
+
+test('updateVideoArticle: publishing videos also clears draft_id for newly linked files', async () => {
+  const calls = [];
+  const originalConsoleLog = console.log;
+  const service = loadServiceWithConnection({
+    dialect: 'pg',
+    async getConnection() {
+      return {
+        async beginTransaction() {
+          calls.push({ type: 'beginTransaction' });
+        },
+        async execute(statement, params) {
+          calls.push({ type: 'execute', statement, params });
+
+          if (/SELECT id FROM file WHERE article_id = \? AND file_type = 'video'/i.test(statement)) {
+            return [[{ id: 31 }, { id: 32 }], []];
+          }
+
+          return [{ affectedRows: 1 }, []];
+        },
+        async commit() {
+          calls.push({ type: 'commit' });
+        },
+        async rollback() {
+          calls.push({ type: 'rollback' });
+        },
+        release() {
+          calls.push({ type: 'release' });
+        },
+      };
+    },
+  });
+
+  console.log = () => {};
+
+  try {
+    const result = await service.updateVideoArticle(201, [32, 33]);
+
+    assert.deepEqual(result, {
+      success: true,
+      affectedRows: 2,
+      deletedCount: 1,
+    });
+
+    const executeCalls = calls.filter((call) => call.type === 'execute');
+    const bindVideosExecute = executeCalls.find((call) => /SET article_id = \?,\s*draft_id = NULL/i.test(call.statement));
+    assert.ok(bindVideosExecute, 'Expected video binding SQL to clear draft_id');
+    assert.deepEqual(bindVideosExecute.params, [201, 32, 33]);
+  } finally {
+    console.log = originalConsoleLog;
+  }
+});
+
+test('updateVideoArticle: empty videoIds still clears old article video links without rebinding', async () => {
+  const calls = [];
+  const originalConsoleLog = console.log;
+  const service = loadServiceWithConnection({
+    dialect: 'pg',
+    async getConnection() {
+      return {
+        async beginTransaction() {
+          calls.push({ type: 'beginTransaction' });
+        },
+        async execute(statement, params) {
+          calls.push({ type: 'execute', statement, params });
+
+          if (/SELECT id FROM file WHERE article_id = \? AND file_type = 'video'/i.test(statement)) {
+            return [[{ id: 31 }, { id: 32 }], []];
+          }
+
+          return [{ affectedRows: 2 }, []];
+        },
+        async commit() {
+          calls.push({ type: 'commit' });
+        },
+        async rollback() {
+          calls.push({ type: 'rollback' });
+        },
+        release() {
+          calls.push({ type: 'release' });
+        },
+      };
+    },
+  });
+
+  console.log = () => {};
+
+  try {
+    const result = await service.updateVideoArticle(201, []);
+
+    assert.deepEqual(result, {
+      success: true,
+      affectedRows: 0,
+      deletedCount: 2,
+    });
+
+    const executeCalls = calls.filter((call) => call.type === 'execute');
+    const clearArticleExecute = executeCalls.find((call) => /UPDATE file SET article_id = NULL/i.test(call.statement));
+    assert.ok(clearArticleExecute, 'Expected video clearing SQL to run');
+    assert.deepEqual(clearArticleExecute.params, [201]);
+
+    const bindVideosExecute = executeCalls.find((call) => /SET article_id = \?,\s*draft_id = NULL/i.test(call.statement));
+    assert.equal(bindVideosExecute, undefined);
+  } finally {
+    console.log = originalConsoleLog;
+  }
+});

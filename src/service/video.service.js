@@ -29,7 +29,7 @@ class VideoService {
       await conn.beginTransaction();
 
       // 1. 插入文件基础信息
-      const fileStatement = buildAddVideoFileSql(connection.dialect);
+      const fileStatement = buildAddVideoFileSql();
       const [fileResult] = await conn.execute(fileStatement, [userId, filename, mimetype, size]);
       const fileId = fileResult.insertId;
 
@@ -122,7 +122,7 @@ class VideoService {
    */
   updateVideoPoster = async (videoId, posterFilename) => {
     try {
-      const statement = buildUpdateVideoPosterSql(connection.dialect);
+      const statement = buildUpdateVideoPosterSql();
       const [result] = await connection.execute(statement, [posterFilename, videoId]);
       return result;
     } catch (error) {
@@ -139,7 +139,7 @@ class VideoService {
    */
   updateVideoMetadata = async (videoId, metadata) => {
     try {
-      const fields = buildVideoMetadataAssignments(connection.dialect, metadata);
+      const fields = buildVideoMetadataAssignments(metadata);
       const values = buildVideoMetadataValues(metadata);
 
       if (fields.length === 0) {
@@ -147,7 +147,7 @@ class VideoService {
       }
 
       values.push(videoId);
-      const statement = buildUpdateVideoMetadataSql(connection.dialect, fields);
+      const statement = buildUpdateVideoMetadataSql(fields);
       const [result] = await connection.execute(statement, values);
       return result;
     } catch (error) {
@@ -164,7 +164,7 @@ class VideoService {
    */
   updateTranscodeStatus = async (videoId, status) => {
     try {
-      const statement = buildUpdateTranscodeStatusSql(connection.dialect);
+      const statement = buildUpdateTranscodeStatusSql();
       const [result] = await connection.execute(statement, [status, videoId]);
       return result;
     } catch (error) {
@@ -217,7 +217,7 @@ class VideoService {
 
       // 3. 关联新的视频到该文章
       if (uniqueVideoIds.length > 0) {
-        const updateArticleStatement = `UPDATE file SET article_id = ? WHERE ${SqlUtils.queryIn('id', uniqueVideoIds)} AND file_type = 'video';`;
+        const updateArticleStatement = `UPDATE file SET article_id = ?, draft_id = NULL WHERE ${SqlUtils.queryIn('id', uniqueVideoIds)} AND file_type = 'video';`;
         const [result3] = await conn.execute(updateArticleStatement, [articleId, ...uniqueVideoIds]);
         console.log(`✅ 步骤3 - 关联新视频: ${result3.affectedRows} 条记录`);
       }

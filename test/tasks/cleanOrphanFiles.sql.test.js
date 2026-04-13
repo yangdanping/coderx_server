@@ -11,32 +11,65 @@ const loadHelper = () => {
   return require(helperPath);
 };
 
-test('buildFindOrphanFilesSql: pg replaces MySQL time functions for image cleanup query', () => {
+test('buildFindOrphanFilesSql: uses PG time functions for image cleanup query', () => {
   const { buildFindOrphanFilesSql } = loadHelper();
 
-  const pgSql = buildFindOrphanFilesSql('pg', 'image', 'DAY');
-  assert.match(pgSql, /EXTRACT\(EPOCH FROM \(NOW\(\) - f\.create_at\)\)/i);
-  assert.match(pgSql, /NOW\(\) - \(\? \* INTERVAL '1 day'\)/i);
-  assert.doesNotMatch(pgSql, /TIMESTAMPDIFF/i);
-  assert.doesNotMatch(pgSql, /DATE_SUB/i);
-  assert.match(pgSql, /LEFT JOIN video_meta vm ON f\.filename = vm\.poster/i);
-  assert.match(pgSql, /vm\.poster IS NULL/i);
-
-  const mysqlSql = buildFindOrphanFilesSql('mysql', 'image', 'DAY');
-  assert.match(mysqlSql, /TIMESTAMPDIFF\(DAY,\s*f\.create_at,\s*NOW\(\)\)\s+as age_in_units/i);
-  assert.match(mysqlSql, /f\.create_at < DATE_SUB\(NOW\(\), INTERVAL \? DAY\)/i);
+  const imageSql = buildFindOrphanFilesSql('image', 'DAY');
+  assert.match(imageSql, /EXTRACT\(EPOCH FROM \(NOW\(\) - f\.create_at\)\)/i);
+  assert.match(imageSql, /NOW\(\) - \(\? \* INTERVAL '1 day'\)/i);
+  assert.doesNotMatch(imageSql, /TIMESTAMPDIFF/i);
+  assert.doesNotMatch(imageSql, /DATE_SUB/i);
+  assert.match(imageSql, /LEFT JOIN video_meta vm ON f\.filename = vm\.poster/i);
+  assert.match(imageSql, /vm\.poster IS NULL/i);
+  assert.match(imageSql, /f\.draft_id IS NULL/i);
 });
 
-test('buildFindOrphanFilesSql: pg replaces MySQL time functions for video cleanup query', () => {
+test('buildFindOrphanFilesSql: uses PG time functions for video cleanup query', () => {
   const { buildFindOrphanFilesSql } = loadHelper();
 
-  const pgSql = buildFindOrphanFilesSql('pg', 'video', 'SECOND');
-  assert.match(pgSql, /FLOOR\(EXTRACT\(EPOCH FROM \(NOW\(\) - f\.create_at\)\)\)::integer as age_in_units/i);
-  assert.match(pgSql, /NOW\(\) - \(\? \* INTERVAL '1 second'\)/i);
-  assert.doesNotMatch(pgSql, /TIMESTAMPDIFF/i);
-  assert.doesNotMatch(pgSql, /DATE_SUB/i);
+  const sql = buildFindOrphanFilesSql('video', 'SECOND');
+  assert.match(sql, /FLOOR\(EXTRACT\(EPOCH FROM \(NOW\(\) - f\.create_at\)\)\)::integer as age_in_units/i);
+  assert.match(sql, /NOW\(\) - \(\? \* INTERVAL '1 second'\)/i);
+  assert.doesNotMatch(sql, /TIMESTAMPDIFF/i);
+  assert.doesNotMatch(sql, /DATE_SUB/i);
+});
 
-  const mysqlSql = buildFindOrphanFilesSql('mysql', 'video', 'SECOND');
-  assert.match(mysqlSql, /TIMESTAMPDIFF\(SECOND,\s*f\.create_at,\s*NOW\(\)\)\s+as age_in_units/i);
-  assert.match(mysqlSql, /f\.create_at < DATE_SUB\(NOW\(\), INTERVAL \? SECOND\)/i);
+test('draft lifecycle cleanup SQL: splits consumed discarded and active retention rules', () => {
+  const {
+    buildDeleteConsumedDraftsSql,
+    buildDeleteDiscardedDraftsSql,
+    buildDeleteExpiredActiveDraftsSql,
+  } = loadHelper();
+
+  const consumedSql = buildDeleteConsumedDraftsSql();
+  const discardedSql = buildDeleteDiscardedDraftsSql();
+  const activeSql = buildDeleteExpiredActiveDraftsSql();
+
+  assert.match(consumedSql, /DELETE FROM draft/i);
+  assert.match(consumedSql, /status\s*=\s*'consumed'/i);
+  assert.match(consumedSql, /consumed_at IS NOT NULL/i);
+  assert.match(consumedSql, /consumed_at < NOW\(\) - \(\? \* INTERVAL '1 day'\)/i);
+  assert.match(consumedSql, /RETURNING id/i);
+
+  assert.match(discardedSql, /DELETE FROM draft/i);
+  assert.match(discardedSql, /status\s*=\s*'discarded'/i);
+  assert.match(discardedSql, /discarded_at IS NOT NULL/i);
+  assert.match(discardedSql, /discarded_at < NOW\(\) - \(\? \* INTERVAL '1 day'\)/i);
+  assert.match(discardedSql, /RETURNING id/i);
+
+  assert.match(activeSql, /DELETE FROM draft/i);
+  assert.match(activeSql, /status\s*=\s*'active'/i);
+  assert.match(activeSql, /update_at < NOW\(\) - \(\? \* INTERVAL '1 day'\)/i);
+  assert.match(activeSql, /RETURNING id/i);
+});
+
+test('buildDeleteExpiredActiveDraftsSql: only targets stale active drafts instead of lifecycle timestamps', () => {
+  const { buildDeleteExpiredActiveDraftsSql } = loadHelper();
+
+  const sql = buildDeleteExpiredActiveDraftsSql();
+
+  assert.match(sql, /status\s*=\s*'active'/i);
+  assert.match(sql, /update_at/i);
+  assert.doesNotMatch(sql, /consumed_at/i);
+  assert.doesNotMatch(sql, /discarded_at/i);
 });

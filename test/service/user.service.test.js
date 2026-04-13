@@ -60,7 +60,7 @@ test('getCommentById: pg uses limit-first params and pg-safe author SQL', async 
 
 test('toggleLike: invalid table name throws BusinessError instead of ReferenceError', async () => {
   const service = loadServiceWithConnection({
-    dialect: 'mysql',
+    dialect: 'pg',
     async execute() {
       throw new Error('execute should not be called for invalid table name');
     },

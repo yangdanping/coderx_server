@@ -10,7 +10,7 @@ const {
 
 class CollectService {
   addCollect = async (userId, name) => {
-    const statement = buildAddCollectSql(connection.dialect);
+    const statement = buildAddCollectSql();
     const [result] = await connection.execute(statement, [userId, name]);
     return result;
   };
@@ -22,8 +22,8 @@ class CollectService {
   };
 
   getCollectList = async (userId, offset, limit) => {
-    const statement = buildGetCollectListSql(connection.dialect);
-    const executeParams = buildGetCollectListExecuteParams(connection.dialect, userId, String(offset), String(limit));
+    const statement = buildGetCollectListSql();
+    const executeParams = buildGetCollectListExecuteParams(userId, String(offset), String(limit));
     const [result] = await connection.execute(statement, executeParams);
     return result;
   };
@@ -65,7 +65,7 @@ class CollectService {
   };
 
   getCollectArticle = async (collectId) => {
-    const statement = buildGetCollectArticleSql(connection.dialect);
+    const statement = buildGetCollectArticleSql();
     const [result] = await connection.execute(statement, [collectId]);
     return result[0];
   };
