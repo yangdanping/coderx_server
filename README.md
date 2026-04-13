@@ -67,6 +67,12 @@ PGPASSWORD=your_password
 
 # 或使用统一连接串
 # DATABASE_URL=postgresql://postgres:${PGPASSWORD}@127.0.0.1:5432/coderx
+
+# 可选：当服务部署在反向代理/CDN 后面时，覆盖接口中返回的公开 API 地址
+# PUBLIC_API_ORIGIN=https://api.example.com
+
+# 可选：覆盖文章跳转等前端公开地址
+# FRONTEND_URL=https://app.example.com
 ```
 
 ### 4. 启动服务
