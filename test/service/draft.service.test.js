@@ -6,16 +6,28 @@ require('module-alias/register');
 
 const servicePath = path.resolve(__dirname, '../../src/service/draft.service.js');
 const databasePath = path.resolve(__dirname, '../../src/app/database.js');
+const urlsPath = path.resolve(__dirname, '../../src/constants/urls.js');
 
 function loadServiceWithConnection(connectionMock) {
   delete require.cache[servicePath];
   delete require.cache[databasePath];
+  delete require.cache[urlsPath];
 
   require.cache[databasePath] = {
     id: databasePath,
     filename: databasePath,
     loaded: true,
     exports: connectionMock,
+  };
+
+  require.cache[urlsPath] = {
+    id: urlsPath,
+    filename: urlsPath,
+    loaded: true,
+    exports: {
+      baseURL: 'https://api.example',
+      redirectURL: 'https://app.example',
+    },
   };
 
   return require(servicePath);
@@ -296,6 +308,64 @@ test('getDraft: standalone draft lookup is active-only', async () => {
   assert.match(calls[0].statement, /FROM draft/i);
   assert.match(calls[0].statement, /status\s*=\s*'active'/i);
   assert.deepEqual(calls[0].params, [9]);
+});
+
+test('getDraft: hydrates media src and poster from stable file ids for editor backfill', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    async execute(statement, params) {
+      calls.push({ statement, params });
+
+      if (calls.length === 1) {
+        return [[{
+          id: 51,
+          articleId: null,
+          version: 3,
+          content: {
+            type: 'doc',
+            content: [
+              {
+                type: 'image',
+                attrs: {
+                  imageId: 11,
+                  src: 'http://localhost:8000/article/images/legacy-image.png',
+                },
+              },
+              {
+                type: 'video',
+                attrs: {
+                  videoId: 22,
+                  src: 'http://localhost:8000/article/video/legacy-video.mp4',
+                  poster: 'http://localhost:8000/article/video/legacy-poster.png',
+                },
+              },
+            ],
+          },
+        }], []];
+      }
+
+      if (calls.length === 2) {
+        return [[
+          { id: 11, filename: 'fresh-image.png', file_type: 'image' },
+          { id: 22, filename: 'fresh-video.mp4', file_type: 'video' },
+        ], []];
+      }
+
+      if (calls.length === 3) {
+        return [[{ file_id: 22, poster: 'fresh-poster.png' }], []];
+      }
+
+      return [[], []];
+    },
+  });
+
+  const result = await service.getDraft(9, null);
+
+  assert.equal(result.content.content[0].attrs.src, 'https://api.example/article/images/fresh-image.png');
+  assert.equal(result.content.content[1].attrs.src, 'https://api.example/article/video/fresh-video.mp4');
+  assert.equal(result.content.content[1].attrs.poster, 'https://api.example/article/video/fresh-poster.png');
+  assert.deepEqual(calls[1].params, [[11, 22]]);
+  assert.deepEqual(calls[2].params, [[22]]);
 });
 
 test('getDraft: article draft returns null when there is no active draft', async () => {

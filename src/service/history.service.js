@@ -1,5 +1,6 @@
 const connection = require('@/app/database');
 const { baseURL, redirectURL } = require('@/constants/urls');
+const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const {
   buildAddHistorySql,
   buildGetUserHistorySql,
@@ -25,7 +26,7 @@ class HistoryService {
       const statement = buildGetUserHistorySql(baseURL, redirectURL);
       const params = buildUserHistoryExecuteParams(userId, offset, limit);
       const [result] = await connection.execute(statement, params);
-      return result;
+      return hydrateAvatarUrls(result, baseURL);
     } catch (error) {
       console.log('getUserHistory error:', error);
       throw error;

@@ -105,7 +105,6 @@ class UserContoller {
     const { offset, limit } = Utils.getPaginationParams(ctx);
     console.log(userId, collectId, offset, limit);
     const collectArticle = await userService.getArticleByCollectId(userId, collectId, offset, limit);
-    collectArticle.forEach((article) => (article.content = Utils.removeHTMLTag(article.content)));
     console.log('获取该收藏夹下的文章成功');
     ctx.body = Result.success(collectArticle);
   };

@@ -43,6 +43,18 @@ function loadServiceWithConnection(connectionMock) {
   return require(servicePath);
 }
 
+function buildStructuredDoc(text = '结构化正文') {
+  return {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text }],
+      },
+    ],
+  };
+}
+
 function createConnMock(handlers) {
   const calls = [];
   const conn = {
@@ -58,7 +70,7 @@ function createConnMock(handlers) {
         return [{ affectedRows: 1, insertId: 0 }, []];
       }
       if (/FROM draft/i.test(statement)) {
-        return [[{ id: 55 }], []];
+        return [[{ id: 55, content: buildStructuredDoc('来自草稿'), meta: {} }], []];
       }
       if (/UPDATE article SET title/i.test(statement)) {
         return [{ affectedRows: 1, insertId: 0 }, []];
@@ -93,12 +105,17 @@ test('addArticle: pg requests insertId through RETURNING id (transactional path)
     },
   });
 
-  const result = await service.addArticle(9, 'Title', '<p>Content</p>');
+  const contentJson = buildStructuredDoc('结构化正文');
+  const result = await service.addArticle(9, 'Title', null, contentJson);
 
   assert.equal(result.insertId, 301);
-  const insertCall = conn.calls.find((c) => c.statement && /INSERT INTO article \(user_id,title, content\) VALUES \(\?,\?,\?\) RETURNING id;/i.test(c.statement));
+  const insertCall = conn.calls.find(
+    (c) =>
+      c.statement &&
+      /INSERT INTO article \(user_id,title, content, excerpt\) VALUES \(\?,\?,\?::jsonb,\?\) RETURNING id;/i.test(c.statement),
+  );
   assert.ok(insertCall, 'expected INSERT article on connection');
-  assert.deepEqual(insertCall.params, [9, 'Title', '<p>Content</p>']);
+  assert.deepEqual(insertCall.params, [9, 'Title', JSON.stringify(contentJson), '结构化正文']);
   assert.deepEqual(
     conn.calls.filter((c) => c.op).map((c) => ({ op: c.op })),
     [{ op: 'beginTransaction' }, { op: 'commit' }, { op: 'release' }],
@@ -115,7 +132,7 @@ test('addArticle with draftId: locks standalone draft, inserts article, consumes
     },
   });
 
-  await service.addArticle(9, 'Title', '<p>Content</p>', 12);
+  await service.addArticle(9, 'Title', 12);
 
   const stmts = conn.calls.filter((c) => c.statement).map((c) => c.statement);
   assert.match(stmts[0], /FROM draft/i);
@@ -127,6 +144,8 @@ test('addArticle with draftId: locks standalone draft, inserts article, consumes
   assert.equal(stmts.some((statement) => /UPDATE file/i.test(statement)), false);
   const lockCall = conn.calls.find((c) => /FROM draft/i.test(c.statement || ''));
   assert.deepEqual(lockCall.params, [12, 9]);
+  const insertCall = conn.calls.find((c) => /INSERT INTO article/i.test(c.statement || ''));
+  assert.deepEqual(insertCall.params, [9, 'Title', JSON.stringify(buildStructuredDoc('来自草稿')), '来自草稿']);
   const consumeCall = conn.calls.find((c) => /UPDATE draft/i.test(c.statement || '') && /consumed/i.test(c.statement));
   assert.deepEqual(consumeCall.params, [12, 9, 301]);
 });
@@ -142,7 +161,7 @@ test('addArticle with invalid draftId: rejects before opening transaction', asyn
   });
 
   await assert.rejects(
-    () => service.addArticle(9, 'Title', '<p>Content</p>', 'oops'),
+    () => service.addArticle(9, 'Title', 'oops'),
     (err) => {
       assert.ok(err instanceof BusinessError);
       assert.equal(err.httpStatus, 400);
@@ -173,7 +192,7 @@ test('addArticle with draftId: missing draft after lock throws 404 and rolls bac
     },
   });
 
-  await assert.rejects(() => service.addArticle(9, 'Title', '<p>x</p>', 12), (err) => {
+  await assert.rejects(() => service.addArticle(9, 'Title', 12), (err) => {
     assert.ok(err instanceof BusinessError);
     assert.equal(err.httpStatus, 404);
     assert.equal(err.message, '草稿不存在');
@@ -189,7 +208,7 @@ test('addArticle with draftId: consume affects no rows rolls back', async () => 
   const conn = createConnMock({
     execute(statement) {
       if (/FROM draft/i.test(statement)) {
-        return [[{ id: 12 }], []];
+        return [[{ id: 12, content: buildStructuredDoc('来自草稿'), meta: {} }], []];
       }
       if (/INSERT INTO article/i.test(statement)) {
         return [{ insertId: 301, affectedRows: 1 }, []];
@@ -207,7 +226,7 @@ test('addArticle with draftId: consume affects no rows rolls back', async () => 
     },
   });
 
-  await assert.rejects(() => service.addArticle(9, 'Title', '<p>x</p>', 12), (err) => {
+  await assert.rejects(() => service.addArticle(9, 'Title', 12), (err) => {
     assert.ok(err instanceof BusinessError);
     assert.equal(err.message, '草稿不存在');
     return true;
@@ -223,7 +242,7 @@ test('addArticle with draftId: consume execute throws rolls back', async () => {
   const conn = createConnMock({
     execute(statement) {
       if (/FROM draft/i.test(statement)) {
-        return [[{ id: 12 }], []];
+        return [[{ id: 12, content: buildStructuredDoc('来自草稿'), meta: {} }], []];
       }
       if (/INSERT INTO article/i.test(statement)) {
         return [{ insertId: 301, affectedRows: 1 }, []];
@@ -241,7 +260,7 @@ test('addArticle with draftId: consume execute throws rolls back', async () => {
     },
   });
 
-  await assert.rejects(() => service.addArticle(9, 'Title', '<p>x</p>', 12), boom);
+  await assert.rejects(() => service.addArticle(9, 'Title', 12), boom);
   assert.deepEqual(
     conn.calls.filter((c) => c.op).map((c) => ({ op: c.op })),
     [{ op: 'beginTransaction' }, { op: 'rollback' }, { op: 'release' }],
@@ -257,11 +276,13 @@ test('update without draftId: updates article in a transaction', async () => {
     },
   });
 
-  await service.update(7, 'T', '<p>C</p>', 100, null);
+  const contentJson = buildStructuredDoc('结构化更新');
+  await service.update(7, 'T', 100, null, contentJson);
 
   const updateCall = conn.calls.find((c) => c.statement && /UPDATE article SET title/i.test(c.statement));
   assert.ok(updateCall);
-  assert.deepEqual(updateCall.params, ['T', '<p>C</p>', 100]);
+  assert.doesNotMatch(updateCall.statement, /content_html/i);
+  assert.deepEqual(updateCall.params, ['T', JSON.stringify(contentJson), '结构化更新', 100]);
   assert.deepEqual(
     conn.calls.filter((c) => c.op).map((c) => ({ op: c.op })),
     [{ op: 'beginTransaction' }, { op: 'commit' }, { op: 'release' }],
@@ -277,12 +298,15 @@ test('update with draftId: locks article-linked draft then updates then consumes
     },
   });
 
-  await service.update(7, 'T', '<p>C</p>', 100, 44);
+  await service.update(7, 'T', 100, 44);
 
   const lockCall = conn.calls.find((c) => /FROM draft/i.test(c.statement || ''));
   assert.ok(lockCall);
   assert.match(lockCall.statement, /article_id = \$3/i);
   assert.deepEqual(lockCall.params, [44, 7, 100]);
+  const updateCall = conn.calls.find((c) => /UPDATE article SET title/i.test(c.statement || ''));
+  assert.doesNotMatch(updateCall.statement, /content_html/i);
+  assert.deepEqual(updateCall.params, ['T', JSON.stringify(buildStructuredDoc('来自草稿')), '来自草稿', 100]);
   const consumeCall = conn.calls.find((c) => /UPDATE draft/i.test(c.statement || '') && /consumed/i.test(c.statement));
   assert.deepEqual(consumeCall.params, [44, 7, 100]);
   const stmts = conn.calls.filter((c) => c.statement).map((c) => c.statement);
@@ -300,7 +324,7 @@ test('update with invalid draftId: rejects before opening transaction', async ()
   });
 
   await assert.rejects(
-    () => service.update(7, 'T', '<p>C</p>', 100, 'oops'),
+    () => service.update(7, 'T', 100, 'oops'),
     (err) => {
       assert.ok(err instanceof BusinessError);
       assert.equal(err.httpStatus, 400);
@@ -316,7 +340,7 @@ test('update with draftId: article update affects no rows and rolls back without
   const conn = createConnMock({
     execute(statement) {
       if (/FROM draft/i.test(statement)) {
-        return [[{ id: 44 }], []];
+        return [[{ id: 44, content: buildStructuredDoc('来自草稿'), meta: {} }], []];
       }
       if (/UPDATE article SET title/i.test(statement)) {
         return [{ affectedRows: 0, insertId: 0 }, []];
@@ -335,7 +359,7 @@ test('update with draftId: article update affects no rows and rolls back without
   });
 
   await assert.rejects(
-    () => service.update(7, 'T', '<p>C</p>', 100, 44),
+    () => service.update(7, 'T', 100, 44),
     (err) => {
       assert.ok(err instanceof BusinessError);
       assert.equal(err.httpStatus, 404);
@@ -356,7 +380,7 @@ test('update with draftId: consume affects no rows and rolls back', async () => 
   const conn = createConnMock({
     execute(statement) {
       if (/FROM draft/i.test(statement)) {
-        return [[{ id: 44 }], []];
+        return [[{ id: 44, content: buildStructuredDoc('来自草稿'), meta: {} }], []];
       }
       if (/UPDATE article SET title/i.test(statement)) {
         return [{ affectedRows: 1, insertId: 0 }, []];
@@ -375,7 +399,7 @@ test('update with draftId: consume affects no rows and rolls back', async () => 
   });
 
   await assert.rejects(
-    () => service.update(7, 'T', '<p>C</p>', 100, 44),
+    () => service.update(7, 'T', 100, 44),
     (err) => {
       assert.ok(err instanceof BusinessError);
       assert.equal(err.httpStatus, 404);
@@ -395,7 +419,7 @@ test('update with draftId: consume execute throws and rolls back', async () => {
   const conn = createConnMock({
     execute(statement) {
       if (/FROM draft/i.test(statement)) {
-        return [[{ id: 44 }], []];
+        return [[{ id: 44, content: buildStructuredDoc('来自草稿'), meta: {} }], []];
       }
       if (/UPDATE article SET title/i.test(statement)) {
         return [{ affectedRows: 1, insertId: 0 }, []];
@@ -413,7 +437,7 @@ test('update with draftId: consume execute throws and rolls back', async () => {
     },
   });
 
-  await assert.rejects(() => service.update(7, 'T', '<p>C</p>', 100, 44), boom);
+  await assert.rejects(() => service.update(7, 'T', 100, 44), boom);
 
   assert.deepEqual(
     conn.calls.filter((c) => c.op).map((c) => ({ op: c.op })),
@@ -440,7 +464,7 @@ test('update with draftId: missing draft throws 404 and rolls back', async () =>
     },
   });
 
-  await assert.rejects(() => service.update(7, 'T', '<p>C</p>', 100, 44), (err) => {
+  await assert.rejects(() => service.update(7, 'T', 100, 44), (err) => {
     assert.ok(err instanceof BusinessError);
     assert.equal(err.httpStatus, 404);
     assert.equal(err.message, '草稿不存在');
@@ -450,4 +474,87 @@ test('update with draftId: missing draft throws 404 and rolls back', async () =>
     conn.calls.filter((c) => c.op).map((c) => ({ op: c.op })),
     [{ op: 'beginTransaction' }, { op: 'rollback' }, { op: 'release' }],
   );
+});
+
+test('getArticleById: derives detail html from structured content without reading stored content_html', async () => {
+  const executeCalls = [];
+  const service = loadServiceWithConnection({
+    async execute(statement, params) {
+      executeCalls.push({ statement, params });
+      return [[{
+        id: 9,
+        title: 'derived detail',
+        contentJson: { type: 'doc', content: [] },
+        contentHtml: '<p>stale html from column</p>',
+        excerpt: '摘要',
+        images: [],
+        videos: [],
+        status: 0,
+      }], []];
+    },
+  });
+
+  const result = await service.getArticleById(9);
+
+  assert.equal(executeCalls.length, 1);
+  assert.equal(result.contentHtml, '');
+  assert.equal(result.excerpt, '摘要');
+});
+
+test('getArticleById: hydrates legacy avatar and media src from stable ids', async () => {
+  const service = loadServiceWithConnection({
+    async execute() {
+      return [[{
+        id: 62,
+        title: 'legacy media article',
+        excerpt: '',
+        status: 0,
+        author: {
+          id: 3,
+          avatarUrl: 'http://localhost:8000/user/3/avatar',
+        },
+        contentJson: {
+          type: 'doc',
+          content: [
+            {
+              type: 'image',
+              attrs: {
+                imageId: 11,
+                src: 'http://localhost:8000/article/images/legacy-image.png',
+                alt: 'demo',
+              },
+            },
+            {
+              type: 'video',
+              attrs: {
+                videoId: 22,
+                src: 'http://localhost:8000/article/video/legacy-video.mp4',
+                poster: 'http://localhost:8000/article/video/legacy-poster.png',
+              },
+            },
+          ],
+        },
+        contentHtml: '<p>stale html from column</p>',
+        images: [
+          { id: 11, url: 'https://api.example/article/images/current-image.png' },
+        ],
+        videos: [
+          {
+            id: 22,
+            url: 'https://api.example/article/video/current-video.mp4',
+            poster: 'https://api.example/article/video/current-poster.png',
+          },
+        ],
+      }], []];
+    },
+  });
+
+  const result = await service.getArticleById(62);
+
+  assert.equal(result.author.avatarUrl, 'https://api.example/user/3/avatar');
+  assert.equal(result.contentJson.content[0].attrs.src, 'https://api.example/article/images/current-image.png');
+  assert.equal(result.contentJson.content[1].attrs.src, 'https://api.example/article/video/current-video.mp4');
+  assert.equal(result.contentJson.content[1].attrs.poster, 'https://api.example/article/video/current-poster.png');
+  assert.match(result.contentHtml, /current-image\.png/);
+  assert.match(result.contentHtml, /current-video\.mp4/);
 });

@@ -57,14 +57,33 @@ test('getUserHistory: pg uses limit-first params and pg-safe author SQL', async 
     dialect: 'pg',
     async execute(statement, params) {
       calls.push({ statement, params });
-      return [[{ id: 1, articleId: 12, title: 'hello' }], []];
+      return [[{
+        id: 1,
+        articleId: 12,
+        title: 'hello',
+        excerpt: 'preview',
+        author: {
+          id: 9,
+          avatarUrl: 'http://localhost:8000/user/9/avatar',
+        },
+      }], []];
     },
   });
 
   const result = await service.getUserHistory(9, '20', '10');
 
-  assert.deepEqual(result, [{ id: 1, articleId: 12, title: 'hello' }]);
+  assert.deepEqual(result, [{
+    id: 1,
+    articleId: 12,
+    title: 'hello',
+    excerpt: 'preview',
+    author: {
+      id: 9,
+      avatarUrl: 'https://api.example/user/9/avatar',
+    },
+  }]);
   assert.match(calls[0].statement, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
+  assert.match(calls[0].statement, /a\.excerpt\s+AS\s+"excerpt"/i);
   assert.match(calls[0].statement, /LEFT JOIN\s+"user"\s+u\s+ON\s+a\.user_id\s*=\s*u\.id/i);
   assert.match(calls[0].statement, /LIMIT\s+\?\s+OFFSET\s+\?/i);
   assert.deepEqual(calls[0].params, [9, '10', '20']);

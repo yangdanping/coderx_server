@@ -8,7 +8,10 @@ const { IMG_PATH, VIDEO_PATH } = require('@/constants/filePaths');
 const Utils = require('@/utils');
 const Result = require('@/app/Result');
 const deleteFile = require('@/utils/deleteFile');
-const MdUtils = require('@/utils/MdUtils');
+
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
 
 function parsePositiveInt(raw) {
   if (typeof raw === 'number') {
@@ -41,7 +44,7 @@ class ArticleController {
    */
   addArticle = async (ctx, next) => {
     const userId = ctx.user.id;
-    let { title, content, draftId: rawDraftId } = ctx.request.body;
+    const { title, contentJson = null, draftId: rawDraftId } = ctx.request.body;
     const draftIdResult = parseOptionalDraftId(rawDraftId);
 
     if (draftIdResult.invalid) {
@@ -49,10 +52,17 @@ class ArticleController {
       return;
     }
 
-    // 自动转换 Markdown 为 HTML 以保证详情页兼容性 (兼容旧版或第三方输入)
-    content = MdUtils.renderHtml(content);
+    if (contentJson !== null && !isPlainObject(contentJson)) {
+      ctx.body = Result.fail('参数错误: contentJson 必须是对象');
+      return;
+    }
 
-    const result = await articleService.addArticle(userId, title, content, draftIdResult.value);
+    if (contentJson === null && draftIdResult.value === null) {
+      ctx.body = Result.fail('参数错误: contentJson 不能为空');
+      return;
+    }
+
+    const result = await articleService.addArticle(userId, title, draftIdResult.value, contentJson);
     ctx.body = Result.success(result);
   };
 
@@ -100,11 +110,6 @@ class ArticleController {
     // Service 层如果查不到会抛出 BusinessError，不会走到下面的代码
     const result = await articleService.getArticleById(articleId);
 
-    // 自动转换内容为 HTML，确保前端渲染一致性 (兼容历史 Markdown 数据)
-    if (result && result.content) {
-      result.content = MdUtils.renderHtml(result.content);
-    }
-
     // 如果用户已登录，添加浏览记录
     if (ctx.user && ctx.user.id) {
       try {
@@ -116,7 +121,13 @@ class ArticleController {
 
     // 与列表/历史链路保持一致：任何 truthy 状态都视为需要屏蔽
     if (result.status) {
-      result.title = result.content = '文章已被封禁';
+      result.title = '文章已被封禁';
+      result.excerpt = '文章已被封禁';
+      result.content = '文章已被封禁';
+      result.contentHtml = '文章已被封禁';
+      result.contentJson = null;
+      result.images = [];
+      result.videos = [];
     }
 
     ctx.body = Result.success(result);
@@ -137,15 +148,13 @@ class ArticleController {
     // 处理文章内容（清理HTML标签、截取长度、封禁提示）
     result.forEach((article) => {
       if (!article.status) {
-        // 先确保内容是 HTML
-        article.content = MdUtils.renderHtml(article.content);
-        // 然后再清理标签用于预览
-        article.content = Utils.removeHTMLTag(article.content);
-        if (article.content.length > 50) {
-          article.content = article.content.slice(0, 50);
-        }
+        const preview = typeof article.excerpt === 'string' ? article.excerpt : '';
+        article.excerpt = preview.length > 50 ? preview.slice(0, 50) : preview;
+        delete article.content;
       } else {
-        article.title = article.content = '文章已被封禁';
+        article.title = '文章已被封禁';
+        article.excerpt = '文章已被封禁';
+        delete article.content;
       }
     });
 
@@ -159,7 +168,7 @@ class ArticleController {
   };
   update = async (ctx, next) => {
     const userId = ctx.user.id;
-    let { title, content, draftId: rawDraftId } = ctx.request.body;
+    const { title, contentJson = null, draftId: rawDraftId } = ctx.request.body;
     const { articleId } = ctx.params;
     const draftIdResult = parseOptionalDraftId(rawDraftId);
 
@@ -168,10 +177,17 @@ class ArticleController {
       return;
     }
 
-    // 自动转换 Markdown 为 HTML 以保证详情页兼容性
-    content = MdUtils.renderHtml(content);
+    if (contentJson !== null && !isPlainObject(contentJson)) {
+      ctx.body = Result.fail('参数错误: contentJson 必须是对象');
+      return;
+    }
 
-    const result = await articleService.update(userId, title, content, articleId, draftIdResult.value);
+    if (contentJson === null && draftIdResult.value === null) {
+      ctx.body = Result.fail('参数错误: contentJson 不能为空');
+      return;
+    }
+
+    const result = await articleService.update(userId, title, articleId, draftIdResult.value, contentJson);
     ctx.body = Result.success(result);
   };
   /**

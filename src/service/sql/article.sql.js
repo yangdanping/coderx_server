@@ -23,7 +23,7 @@ function buildArticleListExecuteParams(queryParams, offset, limit) {
 }
 
 function buildAddArticleSql() {
-  return 'INSERT INTO article (user_id,title, content) VALUES (?,?,?) RETURNING id;';
+  return 'INSERT INTO article (user_id,title, content, excerpt) VALUES (?,?,?::jsonb,?) RETURNING id;';
 }
 
 function buildGetArticleByIdSql(baseURL, redirectURL) {
@@ -31,7 +31,8 @@ function buildGetArticleByIdSql(baseURL, redirectURL) {
       SELECT
           a.id,
           a.title,
-          a.content,
+          a.content AS "contentJson",
+          a.excerpt AS "excerpt",
           a.views,
           a.status,
           a.create_at AS "createAt",
@@ -46,8 +47,16 @@ function buildGetArticleByIdSql(baseURL, redirectURL) {
           (SELECT jsonb_agg(jsonb_build_object('id', f.id, 'url', CONCAT('${baseURL}/article/images/', f.filename)))
               FROM file f
               WHERE f.article_id = a.id AND (f.file_type = 'image' OR f.file_type IS NULL)) images,
-          (SELECT jsonb_agg(jsonb_build_object('id', f.id, 'url', CONCAT('${baseURL}/article/video/', f.filename)))
+          (SELECT jsonb_agg(jsonb_build_object(
+              'id', f.id,
+              'url', CONCAT('${baseURL}/article/video/', f.filename),
+              'poster', CASE
+                WHEN vm.poster IS NOT NULL THEN CONCAT('${baseURL}/article/video/', vm.poster)
+                ELSE NULL
+              END
+          ))
               FROM file f
+              LEFT JOIN video_meta vm ON f.id = vm.file_id
               WHERE f.article_id = a.id AND f.file_type = 'video') videos,
           CONCAT('${redirectURL}/article/', a.id) AS "articleUrl"
       FROM article a
@@ -71,7 +80,7 @@ function buildPgArticleListSql(baseURL, redirectURL, { tagId, userId, idList, ke
       SELECT
           a.id,
           a.title,
-          a.content,
+          a.excerpt AS "excerpt",
           a.views,
           a.status,
           a.create_at AS "createAt",

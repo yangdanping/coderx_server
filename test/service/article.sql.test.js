@@ -20,6 +20,11 @@ test('buildGetArticleByIdSql: uses jsonb_build_object/jsonb_agg and quoted user 
   assert.match(sql, /jsonb_agg\s*\(\s*jsonb_build_object/i);
   assert.match(sql, /a\.create_at\s+AS\s+"createAt"/i);
   assert.match(sql, /a\.update_at\s+AS\s+"updateAt"/i);
+  assert.match(sql, /a\.content\s+AS\s+"contentJson"/i);
+  assert.match(sql, /a\.excerpt\s+AS\s+"excerpt"/i);
+  assert.doesNotMatch(sql, /a\.content_html\s+AS\s+"contentHtml"/i);
+  assert.doesNotMatch(sql, /a\.content_json\s+AS\s+"contentJson"/i);
+  assert.doesNotMatch(sql, /COALESCE\(a\.content_html,\s*a\.content\)\s+AS\s+"contentHtml"/i);
   assert.match(sql, /\)\s+AS\s+"commentCount"/i);
   assert.match(sql, /CONCAT\('[^']*\/article\/',\s*a\.id\)\s+AS\s+"articleUrl"/i);
   assert.doesNotMatch(sql, /JSON_OBJECT/i);
@@ -45,6 +50,8 @@ test('buildGetArticleListSql: uses optimized-style shape (no GROUP BY), jsonb_*,
   assert.match(sql, /jsonb_agg\s*\(\s*jsonb_build_object/i);
   assert.match(sql, /a\.create_at\s+AS\s+"createAt"/i);
   assert.match(sql, /a\.update_at\s+AS\s+"updateAt"/i);
+  assert.match(sql, /a\.excerpt\s+AS\s+"excerpt"/i);
+  assert.doesNotMatch(sql, /a\.content\s*,/i);
   assert.match(sql, /COALESCE\(comment_agg\.commentCount,\s*0\)\s+AS\s+"commentCount"/i);
   assert.match(sql, /CONCAT\('[^']*\/article\/',\s*a\.id\)\s+AS\s+"articleUrl"/i);
   assert.match(sql, /LIMIT\s+\?\s+OFFSET\s+\?/i);
@@ -107,7 +114,10 @@ test('buildGetArticleByIdSql: separates image and video aggregates for detail pa
   const { buildGetArticleByIdSql } = loadHelper();
   const sql = buildGetArticleByIdSql('https://api.example', 'https://app.example');
   assert.match(sql, /WHERE\s+f\.article_id\s*=\s*a\.id\s+AND\s*\(\s*f\.file_type\s*=\s*'image'\s+OR\s+f\.file_type\s+IS\s+NULL\s*\)/i);
-  assert.match(sql, /jsonb_agg\s*\(\s*jsonb_build_object\s*\(\s*'id',\s*f\.id,\s*'url',\s*CONCAT\('https:\/\/api\.example\/article\/video\/',\s*f\.filename\)\s*\)\s*\)[\s\S]*?WHERE\s+f\.article_id\s*=\s*a\.id\s+AND\s+f\.file_type\s*=\s*'video'[\s\S]*?\)\s+videos/i);
+  assert.match(
+    sql,
+    /jsonb_agg\s*\(\s*jsonb_build_object\s*\([\s\S]*?'id',\s*f\.id,[\s\S]*?'url',\s*CONCAT\('https:\/\/api\.example\/article\/video\/',\s*f\.filename\)[\s\S]*?'poster',[\s\S]*?LEFT JOIN\s+video_meta\s+vm\s+ON\s+f\.id\s*=\s*vm\.file_id[\s\S]*?WHERE\s+f\.article_id\s*=\s*a\.id\s+AND\s+f\.file_type\s*=\s*'video'[\s\S]*?\)\s+videos/i,
+  );
 });
 
 test('buildGetArticleListSql: does not coerce empty tags to jsonb []', () => {
@@ -142,6 +152,6 @@ test('buildAddArticleSql: appends RETURNING id', () => {
 
   assert.match(
     buildAddArticleSql(),
-    /INSERT INTO article \(user_id,title, content\) VALUES \(\?,\?,\?\) RETURNING id;$/i
+    /INSERT INTO article \(user_id,title, content, excerpt\) VALUES \(\?,\?,\?::jsonb,\?\) RETURNING id;$/i
   );
 });

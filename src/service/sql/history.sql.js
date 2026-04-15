@@ -29,7 +29,7 @@ function buildGetUserHistorySql(baseURL, redirectURL) {
             ah.update_at AS "updateAt",
             a.id AS "articleId",
             a.title,
-            a.content,
+            a.excerpt AS "excerpt",
             a.views,
             a.status,
             a.create_at AS "articleCreateAt",

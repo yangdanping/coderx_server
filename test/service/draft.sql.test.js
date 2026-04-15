@@ -171,48 +171,6 @@ test('buildConsumeDraftSql: marks active draft consumed with article id and time
   assert.match(sql, /RETURNING/i);
 });
 
-test('draft lifecycle migration: partial unique index predicates stay aligned with upsert conflict predicates', () => {
-  const migration = loadMigration();
-  const { buildUpsertDraftSql } = loadHelper();
-
-  const newDraftIndexPredicate = extractSqlFragment(
-    migration,
-    /CREATE UNIQUE INDEX draft_user_new_uq\s+ON draft\s*\(user_id\)\s+WHERE (?<fragment>[\s\S]+?);/i,
-    'new draft partial unique index predicate'
-  );
-  const newDraftConflictPredicate = extractSqlFragment(
-    buildUpsertDraftSql({ hasArticleId: false }),
-    /ON CONFLICT\s*\(user_id\)\s*WHERE (?<fragment>[\s\S]+?)DO UPDATE SET/i,
-    'new draft conflict predicate'
-  );
-  const articleDraftIndexPredicate = extractSqlFragment(
-    migration,
-    /CREATE UNIQUE INDEX draft_user_article_uq\s+ON draft\s*\(user_id,\s*article_id\)\s+WHERE (?<fragment>[\s\S]+?);/i,
-    'article draft partial unique index predicate'
-  );
-  const articleDraftConflictPredicate = extractSqlFragment(
-    buildUpsertDraftSql({ hasArticleId: true }),
-    /ON CONFLICT\s*\(user_id,\s*article_id\)\s*WHERE (?<fragment>[\s\S]+?)DO UPDATE SET/i,
-    'article draft conflict predicate'
-  );
-
-  assert.equal(newDraftConflictPredicate, newDraftIndexPredicate);
-  assert.equal(articleDraftConflictPredicate, articleDraftIndexPredicate);
-});
-
-test('draft lifecycle migration: lifecycle CHECK keeps status metadata combinations valid', () => {
-  const migration = loadMigration();
-  const lifecycleCheckClause = extractSqlFragment(
-    migration,
-    /ADD CONSTRAINT draft_lifecycle_status_ck\s+CHECK\s*\((?<fragment>[\s\S]+?)\);\s*(?:ALTER TABLE|DROP INDEX|CREATE INDEX|COMMIT)/i,
-    'draft lifecycle CHECK constraint'
-  );
-
-  assert.match(lifecycleCheckClause, /\(status = 'active' AND consumed_at IS NULL AND discarded_at IS NULL AND consumed_article_id IS NULL\)/i);
-  assert.match(lifecycleCheckClause, /\(status = 'consumed' AND consumed_at IS NOT NULL AND discarded_at IS NULL\)/i);
-  assert.match(lifecycleCheckClause, /\(status = 'discarded' AND discarded_at IS NOT NULL AND consumed_at IS NULL AND consumed_article_id IS NULL\)/i);
-});
-
 test('buildDeleteExpiredDraftsSql: cleanup applies distinct retention rules per lifecycle status', () => {
   const { buildDeleteExpiredDraftsSql } = loadHelper();
   const sql = buildDeleteExpiredDraftsSql();

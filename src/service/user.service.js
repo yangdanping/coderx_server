@@ -1,5 +1,7 @@
 const connection = require('@/app/database');
+const { baseURL } = require('@/constants/urls');
 const BusinessError = require('@/errors/BusinessError');
+const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const {
   buildGetArticleByCollectIdExecuteParams,
   buildGetArticleByCollectIdSql,
@@ -75,7 +77,7 @@ class UserService {
   getProfileById = async (userId) => {
     const statement = buildGetProfileByIdSql();
     const [result] = await connection.execute(statement, [userId]);
-    return result[0];
+    return hydrateAvatarUrls(result[0], baseURL);
   };
   updateProfileById = async (userId, profile) => {
     const keys = Object.keys(profile);
@@ -124,7 +126,7 @@ class UserService {
     const statement = buildGetCommentByIdSql();
     const executeParams = buildGetCommentByIdExecuteParams(userId, String(offset), String(limit));
     const [result] = await connection.execute(statement, executeParams);
-    return result;
+    return hydrateAvatarUrls(result, baseURL);
   };
 
   hasLike = async (tableName, dataId, userId) => {
@@ -218,7 +220,7 @@ class UserService {
     try {
       const statement = buildGetFollowInfoSql();
       const [result] = await connection.execute(statement, [userId]);
-      return result[0];
+      return hydrateAvatarUrls(result[0], baseURL);
     } catch (error) {
       console.log(error);
     }
@@ -274,7 +276,7 @@ class UserService {
     try {
       const statement = buildGetHotUsersSql();
       const [result] = await connection.execute(statement);
-      return result;
+      return hydrateAvatarUrls(result, baseURL);
     } catch (error) {
       console.log(error);
     }

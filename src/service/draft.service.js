@@ -1,5 +1,12 @@
 const connection = require('@/app/database');
+const { baseURL } = require('@/constants/urls');
 const BusinessError = require('@/errors/BusinessError');
+const {
+  collectMediaRefs,
+  hydrateStructuredContentMediaSources,
+  resolveStructuredArticleContent,
+} = require('@/utils/articleContent');
+const { buildPublicAssetUrl } = require('@/utils/publicAssetUrls');
 const {
   buildUpsertDraftSql,
   buildFindDraftSql,
@@ -77,6 +84,86 @@ function normalizeDraftMeta(meta = {}) {
   return normalizedMeta;
 }
 
+function buildImageLookupByRows(rows = []) {
+  return rows.reduce((lookup, row) => {
+    const imageId = normalizePositiveId(row?.id);
+    const filename = typeof row?.filename === 'string' ? row.filename.trim() : '';
+    const fileType = typeof row?.file_type === 'string' ? row.file_type : null;
+    if (imageId && filename && (fileType === 'image' || fileType === null)) {
+      lookup[imageId] = { url: buildPublicAssetUrl(baseURL, `/article/images/${filename}`) };
+    }
+    return lookup;
+  }, {});
+}
+
+function buildVideoLookupByRows(fileRows = [], videoMetaRows = []) {
+  const posterByFileId = videoMetaRows.reduce((lookup, row) => {
+    const fileId = normalizePositiveId(row?.file_id);
+    const poster = typeof row?.poster === 'string' && row.poster.trim() ? row.poster.trim() : '';
+    if (fileId && poster) {
+      lookup[fileId] = poster;
+    }
+    return lookup;
+  }, {});
+
+  return fileRows.reduce((lookup, row) => {
+    const videoId = normalizePositiveId(row?.id);
+    const filename = typeof row?.filename === 'string' ? row.filename.trim() : '';
+    if (videoId && filename && row?.file_type === 'video') {
+      lookup[videoId] = {
+        url: buildPublicAssetUrl(baseURL, `/article/video/${filename}`),
+        poster: posterByFileId[videoId] ? buildPublicAssetUrl(baseURL, `/article/video/${posterByFileId[videoId]}`) : null,
+      };
+    }
+    return lookup;
+  }, {});
+}
+
+async function hydrateDraftContentMedia(executor, draft) {
+  const structuredContent = resolveStructuredArticleContent(draft?.content, null);
+  if (!structuredContent) {
+    return draft;
+  }
+
+  const mediaRefs = collectMediaRefs(structuredContent);
+  const fileIds = Array.from(new Set([...mediaRefs.imageIds, ...mediaRefs.videoIds]));
+  if (!fileIds.length) {
+    return draft;
+  }
+
+  const [fileRows] = await executor.execute(
+    `
+      SELECT id, filename, file_type
+      FROM file
+      WHERE id = ANY($1::bigint[])
+      ORDER BY id ASC;
+    `,
+    [fileIds],
+  );
+  const videoFileIds = fileRows
+    .filter((row) => row?.file_type === 'video')
+    .map((row) => normalizePositiveId(row?.id))
+    .filter((id) => id !== null);
+  let videoMetaRows = [];
+
+  if (videoFileIds.length) {
+    [videoMetaRows] = await executor.execute(
+      `
+        SELECT file_id, poster
+        FROM video_meta
+        WHERE file_id = ANY($1::bigint[]);
+      `,
+      [videoFileIds],
+    );
+  }
+
+  draft.content = hydrateStructuredContentMediaSources(structuredContent, {
+    imagesById: buildImageLookupByRows(fileRows),
+    videosById: buildVideoLookupByRows(fileRows, videoMetaRows),
+  });
+  return draft;
+}
+
 async function ensureOwnedArticle(executor, articleId, userId) {
   const [rows] = await executor.execute(buildCheckOwnedArticleSql(), [articleId, userId]);
   if (!rows[0]) {
@@ -146,6 +233,7 @@ class DraftService {
         await conn.execute(buildBindDraftFilesSql(), [userId, draft.id, fileIds]);
       }
 
+      await hydrateDraftContentMedia(conn, draft);
       await conn.commit();
       return draft;
     } catch (error) {
@@ -169,7 +257,11 @@ class DraftService {
     }
 
     const [rows] = await connection.execute(buildFindDraftSql({ hasArticleId }), hasArticleId ? [userId, normalizedArticleId] : [userId]);
-    return rows[0] || null;
+    if (!rows[0]) {
+      return null;
+    }
+
+    return hydrateDraftContentMedia(connection, rows[0]);
   };
 
   deleteDraft = async (userId, draftId) => {

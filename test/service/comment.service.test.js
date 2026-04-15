@@ -149,21 +149,46 @@ test('getReplies: invalid limit falls back to a safe numeric limit instead of Na
   assert.equal(calls[0].params.at(-1), '11');
 });
 
-test('getCommentById: pg executes pg-safe replyTo SQL with quoted reply user alias', async () => {
+test('getCommentById: pg executes pg-safe replyTo SQL with quoted reply user alias and normalizes avatar hosts', async () => {
   const calls = [];
   const service = loadServiceWithConnection({
     dialect: 'pg',
     async execute(statement, params) {
       calls.push({ statement, params });
-      return [[{ id: 1, content: 'ok', status: 0 }], []];
+      return [[{
+        id: 1,
+        content: 'ok',
+        status: 0,
+        user: {
+          id: 2,
+          avatarUrl: 'http://localhost:8000/user/2/avatar',
+        },
+        replyTo: {
+          id: 3,
+          avatarUrl: 'https://avatars.example/u/3.png',
+        },
+      }], []];
     },
   });
 
-  await service.getCommentById(12);
+  const result = await service.getCommentById(12);
 
   assert.match(calls[0].statement, /jsonb_build_object\s*\(\s*'id',\s*ru\.id/i);
   assert.match(calls[0].statement, /LEFT JOIN\s+"user"\s+ru\s+ON\s+ru\.id\s*=\s*rc\.user_id/i);
   assert.doesNotMatch(calls[0].statement, /JSON_OBJECT/i);
+  assert.deepEqual(result, {
+    id: 1,
+    content: 'ok',
+    status: 0,
+    user: {
+      id: 2,
+      avatarUrl: 'https://api.example/user/2/avatar',
+    },
+    replyTo: {
+      id: 3,
+      avatarUrl: 'https://avatars.example/u/3.png',
+    },
+  });
 });
 
 test('addComment: pg requests insertId through RETURNING id and fetches created comment by id', async () => {

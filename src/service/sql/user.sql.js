@@ -96,7 +96,7 @@ function buildGetFollowInfoSql() {
 
 function buildGetArticleByCollectIdSql() {
   return `
-      SELECT a.id,a.title,a.content,a.create_at AS "createAt"
+      SELECT a.id,a.title,a.excerpt AS "excerpt",a.create_at AS "createAt"
       FROM article_collect ac
       LEFT JOIN collect c ON ac.collect_id = c.id
       LEFT JOIN article a ON ac.article_id = a.id

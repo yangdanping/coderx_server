@@ -1,6 +1,13 @@
 const connection = require('@/app/database');
 const { baseURL, redirectURL } = require('@/constants/urls');
 const SqlUtils = require('@/utils/SqlUtils');
+const {
+  docToExcerpt,
+  docToHtml,
+  hydrateStructuredContentMediaSources,
+  resolveStructuredArticleContent,
+} = require('@/utils/articleContent');
+const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const BusinessError = require('@/errors/BusinessError');
 const {
   buildAddArticleSql,
@@ -50,6 +57,7 @@ async function lockDraftForConsume(conn, { draftId, userId, articleId }) {
   if (!rows[0]) {
     throw new BusinessError('草稿不存在', 404);
   }
+  return rows[0];
 }
 
 async function consumeDraftInTx(conn, draftId, userId, consumedArticleId) {
@@ -60,20 +68,85 @@ async function consumeDraftInTx(conn, draftId, userId, consumedArticleId) {
   }
 }
 
+function buildImageLookupByRows(rows = []) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  return safeRows.reduce((lookup, row) => {
+    const imageId = normalizePositiveId(row?.id);
+    const url = typeof row?.url === 'string' ? row.url : '';
+    if (imageId && url) {
+      lookup[imageId] = { url };
+    }
+    return lookup;
+  }, {});
+}
+
+function buildVideoLookupByRows(rows = []) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  return safeRows.reduce((lookup, row) => {
+    const videoId = normalizePositiveId(row?.id);
+    const url = typeof row?.url === 'string' ? row.url : '';
+    if (videoId && url) {
+      lookup[videoId] = {
+        url,
+        poster: typeof row?.poster === 'string' ? row.poster : null,
+      };
+    }
+    return lookup;
+  }, {});
+}
+
+async function buildArticleDerivedFields(structuredContent) {
+  const normalizedStructuredContent = resolveStructuredArticleContent(structuredContent, null);
+  if (!normalizedStructuredContent) {
+    throw new BusinessError('参数错误: contentJson 不能为空', 400);
+  }
+
+  return {
+    contentJson: normalizedStructuredContent,
+    excerpt: docToExcerpt(normalizedStructuredContent),
+  };
+}
+
+function hydrateArticleDerivedFields(article) {
+  const structuredContent = resolveStructuredArticleContent(article?.contentJson, null);
+  const mediaContext = {
+    imagesById: buildImageLookupByRows(article.images),
+    videosById: buildVideoLookupByRows(article.videos),
+  };
+
+  if (!structuredContent) {
+    article.contentHtml = '';
+    article.excerpt = article.excerpt || '';
+    return hydrateAvatarUrls(article, baseURL);
+  }
+
+  article.contentJson = hydrateStructuredContentMediaSources(structuredContent, mediaContext);
+  article.contentHtml = docToHtml(article.contentJson, mediaContext);
+  article.excerpt = article.excerpt || docToExcerpt(structuredContent) || '';
+  return hydrateAvatarUrls(article, baseURL);
+}
+
 class ArticleService {
   /**
    * 新增文章（可选在同一事务内消费 standalone active 草稿）
    */
-  addArticle = async (userId, title, content, draftId = null) => {
+  addArticle = async (userId, title, draftId = null, contentJson = null) => {
     const normalizedDraftId = normalizeOptionalDraftId(draftId);
     const conn = await connection.getConnection();
     try {
       await conn.beginTransaction();
+      let lockedDraft = null;
       if (normalizedDraftId != null) {
-        await lockDraftForConsume(conn, { draftId: normalizedDraftId, userId, articleId: null });
+        lockedDraft = await lockDraftForConsume(conn, { draftId: normalizedDraftId, userId, articleId: null });
       }
+      const derivedFields = await buildArticleDerivedFields(resolveStructuredArticleContent(contentJson, lockedDraft?.content));
       const statement = buildAddArticleSql();
-      const [insertResult] = await conn.execute(statement, [userId, title, content]);
+      const [insertResult] = await conn.execute(statement, [
+        userId,
+        title,
+        derivedFields.contentJson ? JSON.stringify(derivedFields.contentJson) : null,
+        derivedFields.excerpt || null,
+      ]);
       if (normalizedDraftId != null) {
         await consumeDraftInTx(conn, normalizedDraftId, userId, insertResult.insertId);
       }
@@ -116,7 +189,7 @@ class ArticleService {
     if (!result[0]) {
       throw new BusinessError('文章不存在', 404);
     }
-    return result[0];
+    return hydrateArticleDerivedFields(result[0]);
   };
   /**
    * 通过性能对比测试开关：切换getArticleList和getArticleListOptimized方法来对比性能差异
@@ -134,7 +207,7 @@ class ArticleService {
     });
     const executeParams = buildArticleListExecuteParams(queryParams, offset, limit);
     const [result] = await connection.execute(statement, executeParams);
-    return result;
+    return hydrateAvatarUrls(result, baseURL);
   };
 
   /**
@@ -160,7 +233,7 @@ class ArticleService {
     });
     const executeParams = buildArticleListExecuteParams(queryParams, offset, limit);
     const [result] = await connection.execute(statement, executeParams);
-    return result;
+    return hydrateAvatarUrls(result, baseURL);
   };
 
   getTotal = async (tagId = '', userId = '', idList = [], keywords = '') => {
@@ -188,16 +261,23 @@ class ArticleService {
     const { total } = result[0];
     return total;
   };
-  update = async (userId, title, content, articleId, draftId = null) => {
+  update = async (userId, title, articleId, draftId = null, contentJson = null) => {
     const normalizedDraftId = normalizeOptionalDraftId(draftId);
     const conn = await connection.getConnection();
     try {
       await conn.beginTransaction();
+      let lockedDraft = null;
       if (normalizedDraftId != null) {
-        await lockDraftForConsume(conn, { draftId: normalizedDraftId, userId, articleId });
+        lockedDraft = await lockDraftForConsume(conn, { draftId: normalizedDraftId, userId, articleId });
       }
-      const statement = `UPDATE article SET title = ?,content = ? WHERE id = ?;`;
-      const [result] = await conn.execute(statement, [title, content, articleId]);
+      const derivedFields = await buildArticleDerivedFields(resolveStructuredArticleContent(contentJson, lockedDraft?.content));
+      const statement = `UPDATE article SET title = ?,content = ?::jsonb,excerpt = ? WHERE id = ?;`;
+      const [result] = await conn.execute(statement, [
+        title,
+        derivedFields.contentJson ? JSON.stringify(derivedFields.contentJson) : null,
+        derivedFields.excerpt || null,
+        articleId,
+      ]);
       if (result.affectedRows < 1) {
         throw new BusinessError('文章不存在', 404);
       }

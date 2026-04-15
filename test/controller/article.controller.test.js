@@ -68,6 +68,7 @@ test('getDetail: logged-in user gets rendered article detail and history is writ
     id: 99,
     title: 'Hello',
     content: '# Title',
+    contentHtml: '<h1>Title</h1>\n',
     status: 0,
   };
   const articleService = {
@@ -97,10 +98,7 @@ test('getDetail: logged-in user gets rendered article detail and history is writ
   ]);
   assert.deepEqual(
     ctx.body,
-    Result.success({
-      ...serviceArticle,
-      content: renderHtmlWithoutLogs(serviceArticle.content),
-    }),
+    Result.success(serviceArticle),
   );
 });
 
@@ -133,13 +131,7 @@ test('getDetail: anonymous user gets rendered detail without writing history', a
   await withSilentConsoleLog(() => controller.getDetail(ctx, noopNext));
 
   assert.deepEqual(calls, [{ method: 'getArticleById', articleId: '51' }]);
-  assert.deepEqual(
-    ctx.body,
-    Result.success({
-      ...serviceArticle,
-      content: renderHtmlWithoutLogs(serviceArticle.content),
-    }),
-  );
+  assert.deepEqual(ctx.body, Result.success(serviceArticle));
 });
 
 test('getDetail: history write failure does not block a successful detail response', async () => {
@@ -148,6 +140,7 @@ test('getDetail: history write failure does not block a successful detail respon
     id: 88,
     title: 'Still works',
     content: 'Body',
+    contentHtml: '<p>Body</p>\n',
     status: 0,
   };
   const articleService = {
@@ -178,10 +171,7 @@ test('getDetail: history write failure does not block a successful detail respon
   ]);
   assert.deepEqual(
     ctx.body,
-    Result.success({
-      ...serviceArticle,
-      content: renderHtmlWithoutLogs(serviceArticle.content),
-    }),
+    Result.success(serviceArticle),
   );
 });
 
@@ -219,17 +209,65 @@ test('getDetail: masks title and content when article status is truthy', async (
       id: 101,
       title: '文章已被封禁',
       content: '文章已被封禁',
+      contentHtml: '文章已被封禁',
+      contentJson: null,
+      images: [],
+      videos: [],
+      excerpt: '文章已被封禁',
       status: 2,
+    }),
+  );
+});
+
+test('getDetail: masks structured content and media payload when article status is truthy', async () => {
+  const articleService = {
+    async getArticleById() {
+      return {
+        id: 102,
+        title: 'Should hide',
+        content: 'Top secret',
+        contentHtml: '<p>Top secret</p>',
+        contentJson: {
+          type: 'doc',
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Top secret' }] }],
+        },
+        images: [{ id: 1, url: 'http://example.com/article/images/secret.jpg' }],
+        videos: [{ id: 2, url: 'http://example.com/article/video/secret.mp4' }],
+        excerpt: 'Top secret',
+        status: 1,
+      };
+    },
+  };
+
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const ctx = {
+    params: { articleId: '102' },
+  };
+
+  await withSilentConsoleLog(() => controller.getDetail(ctx, noopNext));
+
+  assert.deepEqual(
+    ctx.body,
+    Result.success({
+      id: 102,
+      title: '文章已被封禁',
+      content: '文章已被封禁',
+      contentHtml: '文章已被封禁',
+      contentJson: null,
+      images: [],
+      videos: [],
+      excerpt: '文章已被封禁',
+      status: 1,
     }),
   );
 });
 
 test('getList: sanitizes list items, masks banned items, parses idList, and falls back invalid pageOrder to date', async () => {
   const calls = [];
-  const longMarkdown = '# Hello\n\n' + 'a'.repeat(80);
+  const longExcerpt = 'a'.repeat(80);
   const serviceList = [
-    { id: 1, title: 'Keep', content: longMarkdown, status: 0 },
-    { id: 2, title: 'Hide me', content: 'secret', status: 5 },
+    { id: 1, title: 'Keep', excerpt: longExcerpt, status: 0 },
+    { id: 2, title: 'Hide me', excerpt: 'secret', status: 5 },
   ];
   const articleService = {
     async getArticleList(offset, limit, tagId, userId, pageOrder, idList, keywords) {
@@ -257,10 +295,7 @@ test('getList: sanitizes list items, masks banned items, parses idList, and fall
 
   await withSilentConsoleLog(() => controller.getList(ctx, noopNext));
 
-  let expectedPreview = Utils.removeHTMLTag(renderHtmlWithoutLogs(longMarkdown));
-  if (expectedPreview.length > 50) {
-    expectedPreview = expectedPreview.slice(0, 50);
-  }
+  const expectedPreview = longExcerpt.slice(0, 50);
 
   assert.deepEqual(calls, [
     {
@@ -285,27 +320,71 @@ test('getList: sanitizes list items, masks banned items, parses idList, and fall
     ctx.body,
     Result.success({
       result: [
-        { id: 1, title: 'Keep', content: expectedPreview, status: 0 },
-        { id: 2, title: '文章已被封禁', content: '文章已被封禁', status: 5 },
+        { id: 1, title: 'Keep', excerpt: expectedPreview, status: 0 },
+        { id: 2, title: '文章已被封禁', excerpt: '文章已被封禁', status: 5 },
       ],
       total: 23,
     }),
   );
 });
 
+test('getList: prefers excerpt for preview output when structured preview is available', async () => {
+  const articleService = {
+    async getArticleList() {
+      return [
+        {
+          id: 1,
+          title: 'Keep',
+          content: '<p>legacy body</p>',
+          excerpt: '结构化摘要',
+          status: 0,
+        },
+      ];
+    },
+    async getTotal() {
+      return 1;
+    },
+  };
+
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const ctx = {
+    query: {},
+  };
+
+  await withSilentConsoleLog(() => controller.getList(ctx, noopNext));
+
+  assert.deepEqual(
+    ctx.body,
+    Result.success({
+      result: [
+        {
+          id: 1,
+          title: 'Keep',
+          excerpt: '结构化摘要',
+          status: 0,
+        },
+      ],
+      total: 1,
+    }),
+  );
+});
+
 test('addArticle: forwards optional draftId to service (strict positive int)', async () => {
   const calls = [];
+  const contentJson = {
+    type: 'doc',
+    content: [{ type: 'paragraph', content: [{ type: 'text', text: '结构化正文' }] }],
+  };
   const articleService = {
-    async addArticle(userId, title, content, draftId) {
-      calls.push({ method: 'addArticle', userId, title, content, draftId });
+    async addArticle(userId, title, draftId, incomingContentJson) {
+      calls.push({ method: 'addArticle', userId, title, draftId, contentJson: incomingContentJson });
       return { insertId: 1, affectedRows: 1 };
     },
   };
   const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
-  const raw = '# x';
   const ctx = {
     user: { id: 42 },
-    request: { body: { title: 'T', content: raw, draftId: 15 } },
+    request: { body: { title: 'T', contentJson, draftId: 15 } },
   };
 
   await controller.addArticle(ctx, noopNext);
@@ -315,31 +394,50 @@ test('addArticle: forwards optional draftId to service (strict positive int)', a
       method: 'addArticle',
       userId: 42,
       title: 'T',
-      content: MdUtils.renderHtml(raw),
       draftId: 15,
+      contentJson,
     },
   ]);
   assert.deepEqual(ctx.body, Result.success({ insertId: 1, affectedRows: 1 }));
 });
 
-test('addArticle: missing draftId passes null to service', async () => {
+test('addArticle: missing structured content returns Result.fail without calling service', async () => {
   const calls = [];
   const articleService = {
-    async addArticle(userId, title, content, draftId) {
-      calls.push({ method: 'addArticle', userId, title, content, draftId });
+    async addArticle() {
+      calls.push({ method: 'addArticle' });
       return { insertId: 2, affectedRows: 1 };
     },
   };
   const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
-  const raw = 'c';
   const ctx = {
     user: { id: 1 },
-    request: { body: { title: 'T', content: raw } },
+    request: { body: { title: 'T' } },
   };
 
   await controller.addArticle(ctx, noopNext);
 
-  assert.deepEqual(calls, [{ method: 'addArticle', userId: 1, title: 'T', content: MdUtils.renderHtml(raw), draftId: null }]);
+  assert.deepEqual(calls, []);
+  assert.deepEqual(ctx.body, Result.fail('参数错误: contentJson 不能为空'));
+});
+
+test('addArticle: invalid contentJson returns Result.fail without calling service', async () => {
+  let called = false;
+  const articleService = {
+    async addArticle() {
+      called = true;
+    },
+  };
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const ctx = {
+    user: { id: 1 },
+    request: { body: { title: 'T', contentJson: 'oops' } },
+  };
+
+  await controller.addArticle(ctx, noopNext);
+
+  assert.equal(called, false);
+  assert.deepEqual(ctx.body, Result.fail('参数错误: contentJson 必须是对象'));
 });
 
 test('addArticle: invalid draftId returns Result.fail without calling service', async () => {
@@ -352,7 +450,7 @@ test('addArticle: invalid draftId returns Result.fail without calling service', 
   const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
   const ctx = {
     user: { id: 1 },
-    request: { body: { title: 'T', content: 'x', draftId: 'oops' } },
+    request: { body: { title: 'T', draftId: 'oops' } },
   };
 
   await controller.addArticle(ctx, noopNext);
@@ -363,18 +461,21 @@ test('addArticle: invalid draftId returns Result.fail without calling service', 
 
 test('update: forwards userId, articleId, optional draftId to service', async () => {
   const calls = [];
+  const contentJson = {
+    type: 'doc',
+    content: [{ type: 'paragraph', content: [{ type: 'text', text: '结构化更新' }] }],
+  };
   const articleService = {
-    async update(userId, title, content, articleId, draftId) {
-      calls.push({ method: 'update', userId, title, content, articleId, draftId });
+    async update(userId, title, articleId, draftId, incomingContentJson) {
+      calls.push({ method: 'update', userId, title, articleId, draftId, contentJson: incomingContentJson });
       return { affectedRows: 1 };
     },
   };
   const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
-  const raw = '**b**';
   const ctx = {
     user: { id: 99 },
     params: { articleId: '200' },
-    request: { body: { title: 'T2', content: raw, draftId: 3 } },
+    request: { body: { title: 'T2', contentJson, draftId: 3 } },
   };
 
   await controller.update(ctx, noopNext);
@@ -384,12 +485,52 @@ test('update: forwards userId, articleId, optional draftId to service', async ()
       method: 'update',
       userId: 99,
       title: 'T2',
-      content: MdUtils.renderHtml(raw),
       articleId: '200',
       draftId: 3,
+      contentJson,
     },
   ]);
   assert.deepEqual(ctx.body, Result.success({ affectedRows: 1 }));
+});
+
+test('update: invalid contentJson returns Result.fail without calling service', async () => {
+  let called = false;
+  const articleService = {
+    async update() {
+      called = true;
+    },
+  };
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const ctx = {
+    user: { id: 99 },
+    params: { articleId: '200' },
+    request: { body: { title: 'T2', contentJson: 'oops' } },
+  };
+
+  await controller.update(ctx, noopNext);
+
+  assert.equal(called, false);
+  assert.deepEqual(ctx.body, Result.fail('参数错误: contentJson 必须是对象'));
+});
+
+test('update: missing structured content returns Result.fail without calling service', async () => {
+  let called = false;
+  const articleService = {
+    async update() {
+      called = true;
+    },
+  };
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const ctx = {
+    user: { id: 99 },
+    params: { articleId: '200' },
+    request: { body: { title: 'T2' } },
+  };
+
+  await controller.update(ctx, noopNext);
+
+  assert.equal(called, false);
+  assert.deepEqual(ctx.body, Result.fail('参数错误: contentJson 不能为空'));
 });
 
 test('update: invalid draftId returns Result.fail without calling service', async () => {
@@ -403,7 +544,7 @@ test('update: invalid draftId returns Result.fail without calling service', asyn
   const ctx = {
     user: { id: 99 },
     params: { articleId: '200' },
-    request: { body: { title: 'T2', content: 'x', draftId: 'oops' } },
+    request: { body: { title: 'T2', draftId: 'oops' } },
   };
 
   await controller.update(ctx, noopNext);

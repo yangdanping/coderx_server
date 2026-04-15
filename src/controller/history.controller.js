@@ -1,5 +1,4 @@
 const historyService = require('@/service/history.service');
-const Utils = require('@/utils');
 const Result = require('@/app/Result');
 
 class HistoryController {
@@ -21,14 +20,12 @@ class HistoryController {
     // 处理每个浏览记录的内容显示
     historyList.forEach((item) => {
       if (!item.status) {
-        // 清理HTML标签并截取内容长度
-        item.content = Utils.removeHTMLTag(item.content);
-        if (item.content.length > 50) {
-          item.content = item.content.slice(0, 50);
-        }
+        const preview = typeof item.excerpt === 'string' ? item.excerpt : '';
+        item.excerpt = preview.length > 50 ? preview.slice(0, 50) : preview;
       } else {
         // 被封禁的文章显示提示信息
-        item.title = item.content = '文章已被封禁';
+        item.title = '文章已被封禁';
+        item.excerpt = '文章已被封禁';
       }
     });
 

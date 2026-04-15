@@ -1,5 +1,7 @@
 const connection = require('@/app/database');
+const { baseURL } = require('@/constants/urls');
 const SqlUtils = require('@/utils/SqlUtils');
+const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const {
   buildAddCommentSql,
   buildAddReplySql,
@@ -78,11 +80,11 @@ class CommentService {
         nextCursor = sort === 'hot' ? SqlUtils.buildHotNextCursor(items[items.length - 1]) : SqlUtils.buildNextCursor(items[items.length - 1]);
       }
 
-      return {
+      return hydrateAvatarUrls({
         items,
         nextCursor,
         hasMore,
-      };
+      }, baseURL);
     } catch (error) {
       console.error('getCommentList error:', error);
       throw error;
@@ -112,7 +114,7 @@ class CommentService {
         return item;
       });
 
-      return items; // 前端似乎直接期望一个数组，或者 { items, total }?
+      return hydrateAvatarUrls(items, baseURL); // 前端似乎直接期望一个数组，或者 { items, total }?
       // 查看前端 stores/comment.store.ts getCommentAction:
       // this.userComments = res.data as any;
       // UserComment.vue 使用 profile.commentCount 作为 total，所以这里只要返回列表即可?
@@ -142,7 +144,7 @@ class CommentService {
         }
       });
 
-      return replies;
+      return hydrateAvatarUrls(replies, baseURL);
     } catch (error) {
       console.error('getReplyPreview error:', error);
       return [];
@@ -186,12 +188,12 @@ class CommentService {
         nextCursor = SqlUtils.buildNextCursor(items[items.length - 1]);
       }
 
-      return {
+      return hydrateAvatarUrls({
         items,
         nextCursor,
         hasMore,
         replyCount,
-      };
+      }, baseURL);
     } catch (error) {
       console.error('getReplies error:', error);
       throw error;
@@ -277,7 +279,7 @@ class CommentService {
         comment.content = '评论已被封禁';
       }
 
-      return comment || null;
+      return comment ? hydrateAvatarUrls(comment, baseURL) : null;
     } catch (error) {
       console.error('getCommentById error:', error);
       return null;
