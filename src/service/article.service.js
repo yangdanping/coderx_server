@@ -128,7 +128,27 @@ function hydrateArticleDerivedFields(article) {
 
 class ArticleService {
   /**
-   * 新增文章（可选在同一事务内消费 standalone active 草稿）
+   * 新增文章，并在同一事务内完成正文派生字段写入与可选草稿消费。
+   *
+   * 处理流程：
+   * 1. 规范化并校验 `draftId`。
+   * 2. 开启事务；当传入 `draftId` 时，先锁定这份可消费的 active 草稿，避免并发重复发布。
+   * 3. 以请求体中的 `contentJson` 为优先正文；若未传则回退到已锁定草稿中的 `content`。
+   * 4. 基于结构化正文派生写库字段：`contentJson` 本身，以及列表/历史/收藏等场景使用的 `excerpt` 摘要。
+   * 5. 写入 `article` 表；若本次是从草稿发布，则把对应草稿标记为已消费并回填 `consumedArticleId`。
+   * 6. 任一步骤失败都会回滚事务，确保文章写入与草稿消费状态保持一致。
+   *
+   * 注意：
+   * - 该方法只接收结构化正文，不负责把 Markdown/HTML 转成 JSON。
+   * - `excerpt` 不由调用方传入，而是由服务端从最终采用的 `contentJson` 自动派生。
+   *
+   * @param {number|string} userId 发布文章的用户 ID。
+   * @param {string} title 文章标题。
+   * @param {number|string|null} [draftId=null] 可选草稿 ID；传入时表示从该草稿发布。
+   * @param {Record<string, any>|null} [contentJson=null] 可选结构化正文；为空时会尝试使用草稿内容。
+   * @returns {Promise<object>} 数据库插入结果，通常包含新文章 ID 等写入信息。
+   * @throws {BusinessError} 当 `draftId` 非法、草稿不存在、或最终无法解析出有效 `contentJson` 时抛出。
+   * @throws {Error} 当数据库写入或事务执行失败时抛出原始错误。
    */
   addArticle = async (userId, title, draftId = null, contentJson = null) => {
     const normalizedDraftId = normalizeOptionalDraftId(draftId);
