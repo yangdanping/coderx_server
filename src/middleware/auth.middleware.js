@@ -14,14 +14,16 @@ const verifyAuth = async (ctx, next) => {
   // console.log('拿到了token', token);
   // 2.验证token(记得导入之前设置好的公钥,拿到的结果是之前颁发token时携带的数据(id/name/颁发时间/过期时间))
   // jwt验证失败后会直接抛出异常,所以要try/catch捕获该异常,否则就会直接报错
+  // 仅用 try/catch 包住 jwt.verify，避免把下游中间件/controller 抛出的业务异常
+  // （如 multer fileFilter 的 BusinessError、controller TypeError 等）一律误报成 401
   try {
     const verifyResult = jwt.verify(token, PUBLIC_KEY, { algorithms: ['RS256'] });
     ctx.user = verifyResult; //记得把拿到的结果(id/name/.../颁发时间/过期时间)保存到user,到时用户发布动态等要用到
     console.log('verifyAuth 验证授权中间件 用户信息', ctx.user);
-    await next(); //验证成功,则直接调用next
   } catch (error) {
     return Utils.emitErrMsg(ctx, errorTypes.UNAUTH);
   }
+  await next(); //token 验证通过后再进入下游，下游异常交给统一错误中间件处理
 };
 
 // -----------------------------------------------------------------------------------

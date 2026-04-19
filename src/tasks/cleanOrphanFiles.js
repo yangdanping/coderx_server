@@ -75,14 +75,14 @@ const unitTextMap = { SECOND: '秒', HOUR: '小时', DAY: '天' };
 
 /**
  * 删除物理文件（通用）
- * @param {string} filename - 文件名
+ * @param {string} filename - 主文件名
  * @param {string} uploadDir - 上传目录（相对于项目根目录）
+ * @param {string} [posterFilename] - 视频封面文件名；image 调用方传 undefined 即可
  */
-const deletePhysicalFile = (filename, uploadDir = 'public/img') => {
+const deletePhysicalFile = (filename, uploadDir = 'public/img', posterFilename) => {
   try {
     let deletedCount = 0;
 
-    // 删除原图
     const filePath = path.resolve(process.cwd(), uploadDir, filename);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -92,7 +92,7 @@ const deletePhysicalFile = (filename, uploadDir = 'public/img') => {
       console.warn(`⚠️ 物理文件不存在: ${filePath}`);
     }
 
-    // 删除缩略图（-small）
+    // 图片缩略图（-small）目前仍按命名约定推断，等图片链路同样改造后再挪到 DB 字段
     const extname = path.extname(filename);
     const smallFilename = filename.replace(extname, `-small${extname}`);
     const smallFilePath = path.resolve(process.cwd(), uploadDir, smallFilename);
@@ -103,21 +103,15 @@ const deletePhysicalFile = (filename, uploadDir = 'public/img') => {
       deletedCount++;
     }
 
-    // 删除视频封面（-poster）
-    // 针对视频文件：系统会自动生成封面图，命名规则为 "视频文件名-poster.jpg"
-    // 例如：视频 1763475692261.mp4 的封面是 1763475692261-poster.jpg
-    if (uploadDir === 'public/video') {
-      // 1. 生成封面文件名：将视频扩展名（如 .mp4）替换为 -poster.jpg
-      const posterFilename = filename.replace(extname, `-poster.jpg`);
-
-      // 2. 组装封面文件的完整路径
+    // 视频封面：由调用方从 video_meta.poster 传入真实文件名，不再靠命名约定拼接
+    if (posterFilename) {
       const posterFilePath = path.resolve(process.cwd(), uploadDir, posterFilename);
-
-      // 3. 检查封面文件是否存在，存在则删除
       if (fs.existsSync(posterFilePath)) {
-        fs.unlinkSync(posterFilePath); // 删除物理文件
+        fs.unlinkSync(posterFilePath);
         console.log(`✅ 已删除视频封面: ${posterFilename}`);
         deletedCount++;
+      } else {
+        console.warn(`⚠️ 视频封面不存在: ${posterFilePath}`);
       }
     }
 
@@ -251,10 +245,10 @@ const cleanOrphanFiles = async (fileType, method = 'cron', options = {}) => {
       console.log(`   ${index + 1}. ID: ${file.id}, 文件: ${file.filename}, 创建于: ${file.age_in_units} ${unitText}前`);
     });
 
-    // 3. 删除物理文件
+    // 3. 删除物理文件（视频类型会从 SQL JOIN 出的 vm.poster 传入真实封面文件名）
     let deletedFilesCount = 0;
     for (const file of orphanFiles) {
-      if (deletePhysicalFile(file.filename, config.uploadDir)) {
+      if (deletePhysicalFile(file.filename, config.uploadDir, file.poster)) {
         deletedFilesCount++;
       }
     }

@@ -248,17 +248,22 @@ class VideoService {
   /**
    * 根据ID删除视频（包含元数据和封面）
    * @param {Array<number>} videoIds - 视频ID数组
+   * @param {number} userId - 必填，仅允许删除归属该用户的视频（防越权）
    * @returns {Promise} 删除结果
    *
    * 重构说明：
    * 1. 采用 ? 占位符处理 IN 子句。
+   * 2. 强制按 user_id 过滤，作为控制器鉴权之外的数据库层兜底。
    */
-  deleteVideos = async (videoIds) => {
+  deleteVideos = async (videoIds, userId) => {
     if (!videoIds || videoIds.length === 0) return null;
+    if (userId == null) {
+      throw new Error('deleteVideos: userId 为必填，禁止无归属删除');
+    }
     try {
       // 由于外键级联删除，只需删除 file 表记录，video_meta 会自动删除
-      const statement = `DELETE FROM file WHERE ${SqlUtils.queryIn('id', videoIds)} AND file_type = 'video';`;
-      const [result] = await connection.execute(statement, videoIds);
+      const statement = `DELETE FROM file WHERE ${SqlUtils.queryIn('id', videoIds)} AND file_type = 'video' AND user_id = ?;`;
+      const [result] = await connection.execute(statement, [...videoIds, userId]);
       return result;
     } catch (error) {
       console.error('deleteVideos error:', error);
@@ -269,21 +274,28 @@ class VideoService {
   /**
    * 根据ID查询视频信息（用于删除物理文件）
    * @param {Array<number>} videoIds - 视频ID数组
+   * @param {number} userId - 必填，仅返回归属该用户的视频（防越权）
    * @returns {Promise<Array>} 视频信息数组（包含poster）
    *
    * 重构说明：
    * 1. 采用 ? 占位符处理 IN 子句。
+   * 2. 强制按 user_id 过滤，保证调用方 diff 出 "不属于当前用户" 的 ID。
    */
-  findVideosByIds = async (videoIds) => {
+  findVideosByIds = async (videoIds, userId) => {
     if (!videoIds || videoIds.length === 0) return [];
+    if (userId == null) {
+      throw new Error('findVideosByIds: userId 为必填，禁止跨用户查询');
+    }
     try {
       const statement = `
-        SELECT f.filename, vm.poster
+        SELECT f.id, f.filename, f.user_id, vm.poster
         FROM file f
         LEFT JOIN video_meta vm ON f.id = vm.file_id
-        WHERE ${SqlUtils.queryIn('f.id', videoIds)} AND f.file_type = 'video';
+        WHERE ${SqlUtils.queryIn('f.id', videoIds)}
+          AND f.file_type = 'video'
+          AND f.user_id = ?;
       `;
-      const [result] = await connection.execute(statement, videoIds);
+      const [result] = await connection.execute(statement, [...videoIds, userId]);
       return result;
     } catch (error) {
       console.error('findVideosByIds error:', error);
@@ -313,7 +325,7 @@ class VideoService {
         FROM file f
                 LEFT JOIN video_meta vm ON f.id = vm.file_id
         WHERE f.article_id = ?
-          AND f.file_type
+          AND f.file_type = 'video';
       `;
       const [result] = await connection.execute(statement, [articleId]);
       return result;

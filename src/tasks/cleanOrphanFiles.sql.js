@@ -64,6 +64,8 @@ function buildFindOrphanFilesSql(fileType, unit) {
   }
 
   if (fileType === 'video') {
+    // 通过 LEFT JOIN video_meta 把封面文件名带出来，下游直接按 DB 字段删物理文件，
+    // 不再依赖 "<name>-poster.jpg" 的命名约定（未来若引入多分辨率封面也能扛住）
     return `
         SELECT
           f.id,
@@ -71,8 +73,10 @@ function buildFindOrphanFilesSql(fileType, unit) {
           f.mimetype,
           f.size,
           f.create_at as createTime,
+          vm.poster,
           ${ageExpression}
         FROM file f
+        LEFT JOIN video_meta vm ON f.id = vm.file_id
         WHERE f.article_id IS NULL
           AND f.draft_id IS NULL
           AND f.file_type = ?

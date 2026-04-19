@@ -34,6 +34,20 @@ test('buildFindOrphanFilesSql: uses PG time functions for video cleanup query', 
   assert.doesNotMatch(sql, /DATE_SUB/i);
 });
 
+// 锁定 P1 改造：video 孤儿清理从 video_meta.poster 读真实封面文件名，
+// 不再依赖 "<name>-poster.jpg" 命名约定推断。未来任何人把 JOIN 或 SELECT 拆掉，
+// 这条用例会立即爆红，防止回退。
+test('buildFindOrphanFilesSql(video): joins video_meta and selects vm.poster', () => {
+  const { buildFindOrphanFilesSql } = loadHelper();
+
+  const sql = buildFindOrphanFilesSql('video', 'DAY');
+  assert.match(sql, /LEFT JOIN video_meta vm ON f\.id = vm\.file_id/i);
+  assert.match(sql, /vm\.poster/i);
+  assert.match(sql, /f\.article_id IS NULL/i);
+  assert.match(sql, /f\.draft_id IS NULL/i);
+  assert.match(sql, /f\.file_type\s*=\s*\?/i);
+});
+
 test('draft lifecycle cleanup SQL: splits consumed discarded and active retention rules', () => {
   const {
     buildDeleteConsumedDraftsSql,
