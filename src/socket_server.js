@@ -37,6 +37,8 @@ const httpServer = http.createServer((req, res) => {
 });
 
 // 初始化 Socket.IO 服务
+// 二期扩展：多实例部署时可接入 @socket.io/redis-adapter（Redis Pub/Sub 同步跨节点广播）；
+// 全局在线 presence 仍可单独用 Redis Hash/Set + TTL 维护，见前端文档「Redis 二期（预留）」。
 const io = new Server(httpServer, {
   cors: {
     // 方案 1：允许多个源（开发环境推荐）

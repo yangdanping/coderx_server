@@ -1,100 +1,92 @@
 /**
  * Socket.IO 版本的在线状态服务
  * 职责：管理用户连接、维护在线用户列表、广播用户上下线通知
+ *
+ * 日志语义约定（区分"用户"与"连接"）：
+ * - 用户(user)：以 userId 为粒度，同一账号多标签页仍算 1 个用户
+ * - 连接(connection/socket)：以 socketId 为粒度，同一账号每开一个标签页就多 1 条
+ * - 上线 / 离线：仅在用户的"第一条 / 最后一条"连接出现或断开时打印
+ * - 接入 / 断开：每次 socket 级的变化都会打印
  */
+
+const { createPresenceRegistry } = require('./presenceRegistry');
 
 /**
  * 初始化 Socket.IO 在线状态服务
  * @param {import('socket.io').Server} io - Socket.IO 服务器实例
  */
 const initSocketIOOnline = (io) => {
-  // ==================== 在线用户存储结构（方案1：单连接模式） ====================
-  // 使用 Map 存储在线用户
-  // key: userId（用户唯一标识）
-  // value: { socketId, userName, userId, status, connectedAt }
-  //
-  // 【重要】多设备/多标签页登录行为：
-  // - 同一个 userId 只保留最后一次连接（新连接覆盖旧连接）
-  // - 无论从 localhost、192.168.3.96 还是手机访问，只要 userId 相同，都会覆盖
-  // - 示例：用户在 localhost 登录 → Map['userId1'] = {socketId: 'abc'}
-  //        同一用户在 192.168.3.96 登录 → Map['userId1'] = {socketId: 'xyz'} ← 覆盖了！
-  // - 结果：前端只显示一个在线状态，关闭任一设备都会显示离线
-  // - 这是预期行为，不是 bug！如需支持多设备同时在线，需要改用 socketId 作为 key
-  const onlineUsers = new Map();
+  const presence = createPresenceRegistry();
+  let guestConnectionCount = 0;
 
-  console.log('✅ Socket.IO 在线状态服务已启动（单连接模式:同一 userId 只保留最后一次连接）');
+  console.log('✅ Socket.IO 在线状态服务已启动（多连接模式：同一 userId 多标签页共存，最后一个连接断开才离线）');
 
-  // 监听客户端连接
+  function broadcastOnline() {
+    io.emit('online', {
+      userList: presence.serializeUserList(),
+    });
+  }
+
+  function stats() {
+    return `用户 ${presence.size()} 人 / 登录连接 ${presence.totalConnections()} 条 / 观察者 ${guestConnectionCount} 条`;
+  }
+
   io.on('connection', (socket) => {
-    // 从连接查询参数中获取用户信息
     const { userName, userId, avatarUrl, isGuest } = socket.handshake.query;
 
-    // 不符合当前需求:验证用户信息不通过则拒绝连接
-    // if (!userId || !userName) {
-    //   console.log('❌ 用户信息不完整，拒绝连接');
-    //   socket.disconnect();
-    //   return;
-    // }
-
-    // 判断是否为游客模式
     const guestMode = isGuest === 'true' || !userId || !userName;
 
     if (guestMode) {
-      // 游客模式：只接收在线列表，不显示在列表中
-      console.log(`👁️ 观察者连接成功，socketId: ${socket.id}（不显示在在线列表中）`);
+      guestConnectionCount += 1;
+      console.log(`👁️ 观察者接入，socketId=${socket.id}（${stats()}）`);
 
-      // 立即向游客发送当前在线用户列表
       socket.emit('online', {
-        userList: Array.from(onlineUsers.values()),
+        userList: presence.serializeUserList(),
       });
 
-      // 游客断开连接时不需要广播（因为他们不在列表中）
       socket.on('disconnect', (reason) => {
-        console.log(`👁️ 观察者断开连接，socketId: ${socket.id}，原因: ${reason}`);
+        guestConnectionCount = Math.max(0, guestConnectionCount - 1);
+        console.log(`👁️ 观察者断开，socketId=${socket.id}，原因=${reason}（${stats()}）`);
       });
     } else {
-      // 正式用户模式：显示在在线列表中
-      console.log(`✅ 用户 ${userName}(${userId}) 连接成功，socketId: ${socket.id}`);
+      const uid = String(userId);
+      const label = `${userName}(${uid})`;
 
-      // 将用户添加到在线列表
-      // ⚠️ 注意：使用 userId 作为 key，所以同一用户的新连接会覆盖旧连接
-      // 这意味着：多标签页/多设备登录时，只保留最新的连接信息
-      onlineUsers.set(userId, {
+      const { isFirstSocket, userConnectionCount } = presence.addConnection({
+        userId: uid,
         socketId: socket.id,
-        userName: userName,
-        userId: userId,
-        avatarUrl: avatarUrl || '', // 存储头像 URL
-        status: 'online',
-        connectedAt: new Date().toISOString(),
+        userName: String(userName),
+        avatarUrl: avatarUrl ? String(avatarUrl) : '',
       });
 
-      console.log(`📊 当前在线用户数: ${onlineUsers.size}`);
+      if (isFirstSocket) {
+        console.log(`🟢 用户上线：${label}，socketId=${socket.id}（${stats()}）`);
+      } else {
+        console.log(`➕ 新增连接：${label}，socketId=${socket.id}（该用户连接 ${userConnectionCount} 条，${stats()}）`);
+      }
 
-      // 广播最新在线用户列表给所有客户端（包括游客）
-      // io.emit() 发送给所有连接的客户端
-      io.emit('online', {
-        userList: Array.from(onlineUsers.values()), // 将 Map 转为数组
-      });
+      broadcastOnline();
 
-      // 监听客户端断开连接
       socket.on('disconnect', (reason) => {
-        console.log(`❌ 用户 ${userName}(${userId}) 断开连接，原因: ${reason}`);
-
-        // 从在线列表中移除该用户
-        onlineUsers.delete(userId);
-
-        console.log(`📊 当前在线用户数: ${onlineUsers.size}`);
-
-        // 再次广播最新在线用户列表
-        io.emit('online', {
-          userList: Array.from(onlineUsers.values()),
+        const { removedUser, userConnectionCount: remain } = presence.removeConnection({
+          userId: uid,
+          socketId: socket.id,
         });
+
+        if (removedUser) {
+          console.log(`🔴 用户离线：${label}，socketId=${socket.id}，原因=${reason}（${stats()}）`);
+        } else {
+          console.log(
+            `➖ 关闭连接：${label}，socketId=${socket.id}，原因=${reason}（该用户剩余连接 ${remain} 条，${stats()}）`,
+          );
+        }
+
+        broadcastOnline();
       });
     }
 
-    // 监听连接错误
     socket.on('error', (error) => {
-      console.error(`❌ Socket 错误 (${userName}):`, error);
+      console.error(`❌ Socket 错误 (${userName ?? 'guest'}):`, error);
     });
   });
 };
