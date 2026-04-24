@@ -10,14 +10,62 @@
  */
 
 const { createPresenceRegistry } = require('./presenceRegistry');
+const { authenticateSocketHandshake } = require('./socketAuth');
+
+/**
+ * 为异步操作增加超时保护，避免非关键依赖长时间阻塞 Socket.IO 连接握手。
+ *
+ * @template T
+ * @param {Promise<T>} promise - 需要限制耗时的异步操作
+ * @param {number} timeoutMs - 超时时间，单位毫秒
+ * @param {string} message - 超时时抛出的错误消息
+ * @returns {Promise<T>} 原始异步操作的结果
+ * @throws {Error} 当异步操作超时，或原始 promise reject 时抛出
+ */
+function withTimeout(promise, timeoutMs, message) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * 按用户 ID 从后端资料服务补齐在线列表头像。
+ *
+ * 头像只是在线列表展示字段，不参与身份判断；因此资料查询失败、数据库暂时不可用、
+ * 或查询超时时都兜底为空字符串，避免影响已通过 JWT 鉴权的用户上线。
+ *
+ * @param {Object} params
+ * @param {string} params.userId - 已通过 JWT 鉴权的用户 ID
+ * @param {{ getProfileById: (userId: string) => Promise<{ avatarUrl?: string } | null | undefined> }} params.userService - 用户资料服务
+ * @param {number} params.timeoutMs - 用户资料查询超时时间，单位毫秒
+ * @returns {Promise<string>} 用户头像地址；无法取得时返回空字符串
+ */
+async function resolvePresenceAvatarUrl({ userId, userService, timeoutMs }) {
+  try {
+    const profile = await withTimeout(
+      Promise.resolve().then(() => userService.getProfileById(userId)),
+      timeoutMs,
+      `profile lookup timeout after ${timeoutMs}ms`,
+    );
+    return typeof profile?.avatarUrl === 'string' ? profile.avatarUrl : '';
+  } catch (error) {
+    console.warn(`⚠️ 在线状态头像查询失败，userId=${userId}，原因=${error.message}`);
+    return '';
+  }
+}
 
 /**
  * 初始化 Socket.IO 在线状态服务
  * @param {import('socket.io').Server} io - Socket.IO 服务器实例
  */
-const initSocketIOOnline = (io) => {
+const initSocketIOOnline = (io, options = {}) => {
   const presence = createPresenceRegistry();
   let guestConnectionCount = 0;
+  const userService = options.userService || require('@/service/user.service');
+  const profileLookupTimeoutMs = options.profileLookupTimeoutMs ?? 800;
 
   console.log('✅ Socket.IO 在线状态服务已启动（多连接模式：同一 userId 多标签页共存，最后一个连接断开才离线）');
 
@@ -31,12 +79,28 @@ const initSocketIOOnline = (io) => {
     return `用户 ${presence.size()} 人 / 登录连接 ${presence.totalConnections()} 条 / 观察者 ${guestConnectionCount} 条`;
   }
 
+  io.use(async (socket, next) => {
+    try {
+      const presenceAuth = authenticateSocketHandshake(socket.handshake);
+      if (presenceAuth.mode === 'user') {
+        presenceAuth.avatarUrl = await resolvePresenceAvatarUrl({
+          userId: presenceAuth.userId,
+          userService,
+          timeoutMs: profileLookupTimeoutMs,
+        });
+      }
+      socket.data.presenceAuth = presenceAuth;
+      next();
+    } catch (error) {
+      console.warn(`⚠️ Socket.IO 鉴权失败，socketId=${socket.id}，原因=${error.message}`);
+      next(error);
+    }
+  });
+
   io.on('connection', (socket) => {
-    const { userName, userId, avatarUrl, isGuest } = socket.handshake.query;
+    const presenceAuth = socket.data.presenceAuth || { mode: 'guest' };
 
-    const guestMode = isGuest === 'true' || !userId || !userName;
-
-    if (guestMode) {
+    if (presenceAuth.mode === 'guest') {
       guestConnectionCount += 1;
       console.log(`👁️ 观察者接入，socketId=${socket.id}（${stats()}）`);
 
@@ -49,14 +113,14 @@ const initSocketIOOnline = (io) => {
         console.log(`👁️ 观察者断开，socketId=${socket.id}，原因=${reason}（${stats()}）`);
       });
     } else {
-      const uid = String(userId);
-      const label = `${userName}(${uid})`;
+      const uid = presenceAuth.userId;
+      const label = `${presenceAuth.userName}(${uid})`;
 
       const { isFirstSocket, userConnectionCount } = presence.addConnection({
         userId: uid,
         socketId: socket.id,
-        userName: String(userName),
-        avatarUrl: avatarUrl ? String(avatarUrl) : '',
+        userName: presenceAuth.userName,
+        avatarUrl: presenceAuth.avatarUrl,
       });
 
       if (isFirstSocket) {
@@ -76,9 +140,7 @@ const initSocketIOOnline = (io) => {
         if (removedUser) {
           console.log(`🔴 用户离线：${label}，socketId=${socket.id}，原因=${reason}（${stats()}）`);
         } else {
-          console.log(
-            `➖ 关闭连接：${label}，socketId=${socket.id}，原因=${reason}（该用户剩余连接 ${remain} 条，${stats()}）`,
-          );
+          console.log(`➖ 关闭连接：${label}，socketId=${socket.id}，原因=${reason}（该用户剩余连接 ${remain} 条，${stats()}）`);
         }
 
         broadcastOnline();
@@ -86,7 +148,8 @@ const initSocketIOOnline = (io) => {
     }
 
     socket.on('error', (error) => {
-      console.error(`❌ Socket 错误 (${userName ?? 'guest'}):`, error);
+      const label = presenceAuth.mode === 'user' ? presenceAuth.userName : 'guest';
+      console.error(`❌ Socket 错误 (${label}):`, error);
     });
   });
 };
