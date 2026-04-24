@@ -9,7 +9,7 @@
  * - 接入 / 断开：每次 socket 级的变化都会打印
  */
 
-const { createPresenceRegistry } = require('./presenceRegistry');
+const { createConfiguredPresenceStore } = require('./createPresenceStore');
 const { authenticateSocketHandshake } = require('./socketAuth');
 
 /**
@@ -62,21 +62,89 @@ async function resolvePresenceAvatarUrl({ userId, userService, timeoutMs }) {
  * @param {import('socket.io').Server} io - Socket.IO 服务器实例
  */
 const initSocketIOOnline = (io, options = {}) => {
-  const presence = createPresenceRegistry();
+  const presenceStorePromise = Promise.resolve(
+    options.presenceStore || createConfiguredPresenceStore(options.presenceStoreOptions),
+  );
   let guestConnectionCount = 0;
   const userService = options.userService || require('@/service/user.service');
   const profileLookupTimeoutMs = options.profileLookupTimeoutMs ?? 800;
 
   console.log('✅ Socket.IO 在线状态服务已启动（多连接模式：同一 userId 多标签页共存，最后一个连接断开才离线）');
 
-  function broadcastOnline() {
+  async function getPresenceStore() {
+    return presenceStorePromise;
+  }
+
+  async function broadcastOnline() {
+    const presence = await getPresenceStore();
     io.emit('online', {
-      userList: presence.serializeUserList(),
+      userList: await presence.serializeUserList(),
     });
   }
 
-  function stats() {
-    return `用户 ${presence.size()} 人 / 登录连接 ${presence.totalConnections()} 条 / 观察者 ${guestConnectionCount} 条`;
+  async function stats() {
+    const presence = await getPresenceStore();
+    const [onlineUserCount, loginConnectionCount] = await Promise.all([presence.size(), presence.totalConnections()]);
+    return `用户 ${onlineUserCount} 人 / 登录连接 ${loginConnectionCount} 条 / 观察者 ${guestConnectionCount} 条`;
+  }
+
+  function logPresenceError(context, error) {
+    console.error(`❌ Socket.IO 在线状态处理失败（${context}）:`, error);
+  }
+
+  async function handleGuestConnection(socket) {
+    const presence = await getPresenceStore();
+    guestConnectionCount += 1;
+    console.log(`👁️ 观察者接入，socketId=${socket.id}（${await stats()}）`);
+
+    socket.emit('online', {
+      userList: await presence.serializeUserList(),
+    });
+
+    socket.on('disconnect', (reason) => {
+      return (async () => {
+        guestConnectionCount = Math.max(0, guestConnectionCount - 1);
+        console.log(`👁️ 观察者断开，socketId=${socket.id}，原因=${reason}（${await stats()}）`);
+      })().catch((error) => logPresenceError('guest disconnect', error));
+    });
+  }
+
+  async function handleUserConnection(socket, presenceAuth) {
+    const presence = await getPresenceStore();
+    const uid = presenceAuth.userId;
+    const label = `${presenceAuth.userName}(${uid})`;
+
+    const { isFirstSocket, userConnectionCount } = await presence.addConnection({
+      userId: uid,
+      socketId: socket.id,
+      userName: presenceAuth.userName,
+      avatarUrl: presenceAuth.avatarUrl,
+    });
+
+    if (isFirstSocket) {
+      console.log(`🟢 用户上线：${label}，socketId=${socket.id}（${await stats()}）`);
+    } else {
+      console.log(`➕ 新增连接：${label}，socketId=${socket.id}（该用户连接 ${userConnectionCount} 条，${await stats()}）`);
+    }
+
+    await broadcastOnline();
+
+    socket.on('disconnect', (reason) => {
+      return (async () => {
+        const { removedUser, userConnectionCount: remain } = await presence.removeConnection({
+          userId: uid,
+          socketId: socket.id,
+        });
+
+        if (removedUser) {
+          console.log(`🔴 用户离线：${label}，socketId=${socket.id}，原因=${reason}（${await stats()}）`);
+        } else {
+          console.log(`➖ 关闭连接：${label}，socketId=${socket.id}，原因=${reason}（该用户剩余连接 ${remain} 条，${await stats()}）`);
+        }
+
+        await broadcastOnline();
+      })().catch((error) => logPresenceError('user disconnect', error));
+    });
   }
 
   io.use(async (socket, next) => {
@@ -97,60 +165,23 @@ const initSocketIOOnline = (io, options = {}) => {
     }
   });
 
-  io.on('connection', (socket) => {
+  async function handleConnection(socket) {
     const presenceAuth = socket.data.presenceAuth || { mode: 'guest' };
 
     if (presenceAuth.mode === 'guest') {
-      guestConnectionCount += 1;
-      console.log(`👁️ 观察者接入，socketId=${socket.id}（${stats()}）`);
-
-      socket.emit('online', {
-        userList: presence.serializeUserList(),
-      });
-
-      socket.on('disconnect', (reason) => {
-        guestConnectionCount = Math.max(0, guestConnectionCount - 1);
-        console.log(`👁️ 观察者断开，socketId=${socket.id}，原因=${reason}（${stats()}）`);
-      });
+      await handleGuestConnection(socket);
     } else {
-      const uid = presenceAuth.userId;
-      const label = `${presenceAuth.userName}(${uid})`;
-
-      const { isFirstSocket, userConnectionCount } = presence.addConnection({
-        userId: uid,
-        socketId: socket.id,
-        userName: presenceAuth.userName,
-        avatarUrl: presenceAuth.avatarUrl,
-      });
-
-      if (isFirstSocket) {
-        console.log(`🟢 用户上线：${label}，socketId=${socket.id}（${stats()}）`);
-      } else {
-        console.log(`➕ 新增连接：${label}，socketId=${socket.id}（该用户连接 ${userConnectionCount} 条，${stats()}）`);
-      }
-
-      broadcastOnline();
-
-      socket.on('disconnect', (reason) => {
-        const { removedUser, userConnectionCount: remain } = presence.removeConnection({
-          userId: uid,
-          socketId: socket.id,
-        });
-
-        if (removedUser) {
-          console.log(`🔴 用户离线：${label}，socketId=${socket.id}，原因=${reason}（${stats()}）`);
-        } else {
-          console.log(`➖ 关闭连接：${label}，socketId=${socket.id}，原因=${reason}（该用户剩余连接 ${remain} 条，${stats()}）`);
-        }
-
-        broadcastOnline();
-      });
+      await handleUserConnection(socket, presenceAuth);
     }
 
     socket.on('error', (error) => {
       const label = presenceAuth.mode === 'user' ? presenceAuth.userName : 'guest';
       console.error(`❌ Socket 错误 (${label}):`, error);
     });
+  }
+
+  io.on('connection', (socket) => {
+    return handleConnection(socket).catch((error) => logPresenceError('connection', error));
   });
 };
 
