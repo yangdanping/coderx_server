@@ -23,6 +23,8 @@ const SOCKET_PORT = process.env.SOCKET_PORT || 8001; // 独立端口，不占用
 
 // 导入在线状态服务
 const initSocketIOOnline = require('./socket/socketio-online');
+const { configureSocketRedisAdapter } = require('./socket/socketRedisAdapter');
+const { startSocketServer } = require('./socket/socketServerRuntime');
 
 // 创建独立的 HTTP 服务器（不依赖 Koa）
 const httpServer = http.createServer((req, res) => {
@@ -70,18 +72,16 @@ const io = new Server(httpServer, {
   pingInterval: 25000, // 每 25 秒发送心跳
 });
 
-// 启动在线状态服务
-initSocketIOOnline(io);
-
-// 启动服务器
-httpServer.listen(SOCKET_PORT, () => {
-  console.log('='.repeat(60));
-  console.log(`🚀 Socket.IO 服务器启动成功！`);
-  console.log(`📡 监听端口: ${SOCKET_PORT}`);
-  console.log(`🌐 允许跨域: ${redirectURL}`);
-  console.log(`✅ 在线状态服务已启动`);
-  console.log(`🔗 健康检查: http://localhost:${SOCKET_PORT}/health`);
-  console.log('='.repeat(60));
+startSocketServer({
+  httpServer,
+  io,
+  port: SOCKET_PORT,
+  redirectURL,
+  configureRedisAdapter: configureSocketRedisAdapter,
+  initOnline: initSocketIOOnline,
+}).catch((error) => {
+  console.error('❌ Socket.IO 服务器启动失败:', error);
+  process.exit(1);
 });
 
 // 优雅关闭
