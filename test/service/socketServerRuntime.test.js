@@ -76,3 +76,39 @@ test('socketServerRuntime: adapter startup failure prevents online service and l
 
   assert.deepEqual(calls, [['configureRedisAdapter']]);
 });
+
+test('socketServerRuntime: logs Redis presence and adapter runtime modes on startup', async () => {
+  const calls = [];
+  const io = { id: 'io' };
+  const httpServer = {
+    listen(port, callback) {
+      calls.push(['listen', port]);
+      callback();
+    },
+  };
+
+  await startSocketServer({
+    httpServer,
+    io,
+    port: 9001,
+    redirectURL: 'http://localhost:8080',
+    logger: createFakeLogger(calls),
+    configureRedisAdapter: async () => ({ enabled: true }),
+    initOnline: () => {
+      calls.push(['initOnline']);
+    },
+    presenceStoreType: 'redis',
+    redisKeyPrefix: 'coderx',
+  });
+
+  const logMessages = calls.filter(([level]) => level === 'log').map(([, message]) => message);
+
+  assert.ok(
+    logMessages.includes('✅ Presence Store: redis（在线用户/连接记账写入 Redis，key 前缀 coderx:presence:*）'),
+  );
+  assert.ok(
+    logMessages.includes(
+      '✅ Socket.IO Redis Adapter: enabled（跨 Socket.IO 实例广播走 Redis Pub/Sub；单实例时主要是预备能力）',
+    ),
+  );
+});
