@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { configureSocketRedisAdapter } = require('../../src/socket/socketRedisAdapter');
+const { configureSocketRedisAdapter } = require('../../src/socket/adapter/socketRedisAdapter');
 
 function createFakeIo() {
   const calls = [];

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { createPresenceRegistry } = require('../../src/socket/presenceRegistry');
+const { createPresenceRegistry } = require('../../src/socket/presence/presenceRegistry');
 
 test('presenceRegistry: 同一用户第二个连接断开后仍在线', () => {
   const p = createPresenceRegistry();

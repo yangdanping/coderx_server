@@ -9,8 +9,8 @@
  * - 接入 / 断开：每次 socket 级的变化都会打印
  */
 
-const { createConfiguredPresenceStore } = require('./createPresenceStore');
-const { authenticateSocketHandshake } = require('./socketAuth');
+const { createConfiguredPresenceStore } = require('../presence/createPresenceStore');
+const { authenticateSocketHandshake } = require('../auth/socketAuth');
 
 /**
  * 为异步操作增加超时保护，避免非关键依赖长时间阻塞 Socket.IO 连接握手。

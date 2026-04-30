@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 require('module-alias/register');
 
 const { PRIVATE_KEY } = require('../../src/app/config');
-const { authenticateSocketHandshake } = require('../../src/socket/socketAuth');
+const { authenticateSocketHandshake } = require('../../src/socket/auth/socketAuth');
 
 function signToken(payload = { id: 7, name: 'Alice' }) {
   return jwt.sign(payload, PRIVATE_KEY, {

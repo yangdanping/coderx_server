@@ -1,9 +1,9 @@
 /**
- * 单机内存版在线 presence 注册表
- * - 用户级展示：对外序列化时每个 userId 一条记录
- * - 连接级记账：同一 userId 可对应多个 socketId，仅当最后一个连接断开时才视为离线
+ * 单机内存版 presence store 实现。
  *
- * 二期扩展：可将本模块替换为 Redis 等外部存储，保持 serializeUserList 的 DTO 形状稳定。
+ * 数据保存在当前 Node 进程的 Map 中：
+ * - 展示按用户维度：每个 userId 只序列化出一条在线用户记录
+ * - 记账按连接维度：同一 userId 可对应多个 socketId，最后一个连接断开才算离线
  */
 
 /**

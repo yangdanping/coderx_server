@@ -5,7 +5,7 @@ const {
   describeSocketRuntimeMode,
   resolvePresenceStoreMode,
   resolveRedisAdapterMode,
-} = require('../../src/socket/socketRuntimeConfig');
+} = require('../../src/socket/runtime/socketRuntimeConfig');
 
 test('socketRuntimeConfig: describes Redis presence and adapter runtime mode', () => {
   const runtimeMode = describeSocketRuntimeMode({

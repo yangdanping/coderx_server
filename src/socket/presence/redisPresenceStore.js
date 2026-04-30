@@ -1,3 +1,10 @@
+/**
+ * Redis 版 presence store 实现。
+ *
+ * 使用 Redis Hash / Set 保存在线用户和 socket 连接关系，
+ * 对外保持和内存版 presence store 一致的接口。
+ */
+
 function createKeys(keyPrefix) {
   const prefix = String(keyPrefix || 'coderx').replace(/:+$/, '');
 

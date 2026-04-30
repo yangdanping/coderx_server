@@ -5,7 +5,9 @@ const jwt = require('jsonwebtoken');
 require('module-alias/register');
 
 const { PRIVATE_KEY } = require('../../src/app/config');
-const initSocketIOOnline = require('../../src/socket/socketio-online');
+const initSocketIOOnline = require('../../src/socket/online/socketio-online');
+
+process.env.PRESENCE_STORE = 'memory';
 
 function signToken(payload = { id: 7, name: 'Alice' }) {
   return jwt.sign(payload, PRIVATE_KEY, {

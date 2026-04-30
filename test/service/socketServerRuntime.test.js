@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { startSocketServer } = require('../../src/socket/socketServerRuntime');
+const { startSocketServer } = require('../../src/socket/runtime/socketServerRuntime');
 
 function createFakeLogger(calls) {
   return {

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { DEFAULT_REDIS_URL, createPresenceRedisClient } = require('../../src/socket/redisClient');
+const { DEFAULT_REDIS_URL, createPresenceRedisClient } = require('../../src/socket/redis/redisClient');
 
 function createFakeRedis() {
   const calls = [];

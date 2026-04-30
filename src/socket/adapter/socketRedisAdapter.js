@@ -1,4 +1,4 @@
-const { DEFAULT_REDIS_URL } = require('./redisClient');
+const { DEFAULT_REDIS_URL } = require('../redis/redisClient');
 
 function resolveRedisAdapterEnabled(options = {}) {
   if (typeof options.enabled === 'boolean') return options.enabled;

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { createRedisPresenceStore } = require('../../src/socket/redisPresenceStore');
+const { createRedisPresenceStore } = require('../../src/socket/presence/redisPresenceStore');
 
 class FakeRedisClient {
   constructor() {

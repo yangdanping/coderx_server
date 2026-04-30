@@ -1,7 +1,13 @@
 const { createPresenceRegistry } = require('./presenceRegistry');
-const { createPresenceRedisClient } = require('./redisClient');
+const { createPresenceRedisClient } = require('../redis/redisClient');
 const { createRedisPresenceStore } = require('./redisPresenceStore');
 
+/**
+ * presence store 工厂。
+ *
+ * 根据 PRESENCE_STORE=memory|redis 创建对应的在线状态存储实现，
+ * 让上层在线状态服务不需要关心数据到底存在内存还是 Redis。
+ */
 const SUPPORTED_STORE_TYPES = new Set(['memory', 'redis']);
 const SUPPORTED_STORE_TYPE_LABEL = Array.from(SUPPORTED_STORE_TYPES).join(', ');
 
@@ -34,9 +40,7 @@ function createPresenceStore(options = {}) {
 async function createConfiguredPresenceStore(options = {}) {
   const storeType = resolveStoreType(options);
 
-  if (storeType === 'memory') {
-    return createPresenceStore({ storeType: 'memory' });
-  }
+  if (storeType === 'memory') return createPresenceStore({ storeType: 'memory' });
 
   if (storeType === 'redis') {
     const redisClient =
