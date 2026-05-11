@@ -135,3 +135,29 @@ test('redisPresenceStore: counts connections across multiple users', async () =>
     ['1', '2'],
   );
 });
+
+test('redisPresenceStore: prunes users whose sockets expired before serialization', async () => {
+  const redisClient = new FakeRedisClient();
+  const presence = createRedisPresenceStore({ redisClient, keyPrefix: 'coderx' });
+
+  await presence.addConnection({ userId: '7', socketId: 's1', userName: 'Alice' });
+  redisClient.hashes.delete('coderx:presence:socket:s1');
+
+  assert.deepEqual(await presence.serializeUserList(), []);
+  assert.equal(await presence.size(), 0);
+  assert.equal(await presence.totalConnections(), 0);
+  assert.equal(redisClient.sets.has('coderx:presence:user:7:sockets'), false);
+  assert.equal(redisClient.hashes.has('coderx:presence:user:7'), false);
+});
+
+test('redisPresenceStore: refreshes socket TTL for known connections', async () => {
+  const redisClient = new FakeRedisClient();
+  const presence = createRedisPresenceStore({ redisClient, keyPrefix: 'coderx', socketTtlSeconds: 120 });
+
+  await presence.addConnection({ userId: '7', socketId: 's1', userName: 'Alice' });
+  redisClient.expireCalls = [];
+
+  assert.equal(await presence.refreshConnection({ userId: '7', socketId: 's1' }), true);
+  assert.deepEqual(redisClient.hashes.get('coderx:presence:socket:s1'), { userId: '7', socketId: 's1' });
+  assert.deepEqual(redisClient.expireCalls, [{ key: 'coderx:presence:socket:s1', seconds: 120 }]);
+});

@@ -61,13 +61,14 @@ async function resolvePresenceAvatarUrl({ userId, userService, timeoutMs }) {
  * 初始化 Socket.IO 在线状态服务
  * @param {import('socket.io').Server} io - Socket.IO 服务器实例
  */
-const initSocketIOOnline = (io, options = {}) => {
+const initializeOnlinePresence = (io, options = {}) => {
   const presenceStorePromise = Promise.resolve(
     options.presenceStore || createConfiguredPresenceStore(options.presenceStoreOptions),
   );
   let guestConnectionCount = 0;
   const userService = options.userService || require('@/service/user.service');
   const profileLookupTimeoutMs = options.profileLookupTimeoutMs ?? 800;
+  const presenceRefreshIntervalMs = options.presenceRefreshIntervalMs ?? 30_000;
 
   console.log('✅ Socket.IO 在线状态服务已启动（多连接模式：同一 userId 多标签页共存，最后一个连接断开才离线）');
 
@@ -120,6 +121,15 @@ const initSocketIOOnline = (io, options = {}) => {
       userName: presenceAuth.userName,
       avatarUrl: presenceAuth.avatarUrl,
     });
+    const refreshTimer =
+      typeof presence.refreshConnection === 'function'
+        ? setInterval(() => {
+            return presence
+              .refreshConnection({ userId: uid, socketId: socket.id })
+              .catch((error) => logPresenceError('refresh connection', error));
+          }, presenceRefreshIntervalMs)
+        : null;
+    if (refreshTimer && typeof refreshTimer.unref === 'function') refreshTimer.unref();
 
     if (isFirstSocket) {
       console.log(`🟢 用户上线：${label}，socketId=${socket.id}（${await stats()}）`);
@@ -131,6 +141,8 @@ const initSocketIOOnline = (io, options = {}) => {
 
     socket.on('disconnect', (reason) => {
       return (async () => {
+        if (refreshTimer) clearInterval(refreshTimer);
+
         const { removedUser, userConnectionCount: remain } = await presence.removeConnection({
           userId: uid,
           socketId: socket.id,
@@ -185,4 +197,4 @@ const initSocketIOOnline = (io, options = {}) => {
   });
 };
 
-module.exports = initSocketIOOnline;
+module.exports = initializeOnlinePresence;

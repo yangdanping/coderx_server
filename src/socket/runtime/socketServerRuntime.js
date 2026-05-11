@@ -7,19 +7,19 @@ async function startSocketServer({
   redirectURL = '',
   logger = console,
   configureRedisAdapter = async () => ({ enabled: false }),
-  initOnline,
-  presenceStoreType,
-  redisKeyPrefix,
+  initializeOnlinePresence,
+  onlinePresenceOptions = {},
 }) {
   const redisAdapterRuntime = (await configureRedisAdapter(io)) || { enabled: false };
-  initOnline(io);
+  initializeOnlinePresence(io, onlinePresenceOptions);
+  const presenceStoreOptions = onlinePresenceOptions.presenceStoreOptions || {};
 
   await new Promise((resolve) => {
     httpServer.listen(port, () => {
       const runtimeMode = describeSocketRuntimeMode({
-        presenceStoreType,
+        presenceStoreType: presenceStoreOptions.storeType,
         redisAdapterEnabled: redisAdapterRuntime.enabled,
-        redisKeyPrefix,
+        redisKeyPrefix: presenceStoreOptions.keyPrefix,
       });
 
       logger.log('='.repeat(60));

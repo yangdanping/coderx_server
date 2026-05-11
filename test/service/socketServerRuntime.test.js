@@ -17,6 +17,7 @@ function createFakeLogger(calls) {
 test('socketServerRuntime: initializes Redis adapter before online service and listen', async () => {
   const calls = [];
   const io = { id: 'io' };
+  const onlinePresenceOptions = { presenceRefreshIntervalMs: 30_000 };
   const httpServer = {
     listen(port, callback) {
       calls.push(['listen', port]);
@@ -33,16 +34,17 @@ test('socketServerRuntime: initializes Redis adapter before online service and l
     configureRedisAdapter: async (receivedIo) => {
       calls.push(['configureRedisAdapter', receivedIo]);
     },
-    initOnline: (receivedIo) => {
-      calls.push(['initOnline', receivedIo]);
+    initializeOnlinePresence: (receivedIo, receivedOptions) => {
+      calls.push(['initializeOnlinePresence', receivedIo, receivedOptions]);
     },
+    onlinePresenceOptions,
   });
 
   assert.equal(result.httpServer, httpServer);
   assert.equal(result.io, io);
   assert.deepEqual(calls.slice(0, 3), [
     ['configureRedisAdapter', io],
-    ['initOnline', io],
+    ['initializeOnlinePresence', io, onlinePresenceOptions],
     ['listen', 9001],
   ]);
 });
@@ -67,8 +69,8 @@ test('socketServerRuntime: adapter startup failure prevents online service and l
           calls.push(['configureRedisAdapter']);
           throw new Error('Socket.IO Redis Adapter 初始化失败: redis unavailable');
         },
-        initOnline: () => {
-          calls.push(['initOnline']);
+        initializeOnlinePresence: () => {
+          calls.push(['initializeOnlinePresence']);
         },
       }),
     /Socket\.IO Redis Adapter 初始化失败: redis unavailable/,
@@ -94,11 +96,15 @@ test('socketServerRuntime: logs Redis presence and adapter runtime modes on star
     redirectURL: 'http://localhost:8080',
     logger: createFakeLogger(calls),
     configureRedisAdapter: async () => ({ enabled: true }),
-    initOnline: () => {
-      calls.push(['initOnline']);
+    initializeOnlinePresence: () => {
+      calls.push(['initializeOnlinePresence']);
     },
-    presenceStoreType: 'redis',
-    redisKeyPrefix: 'coderx',
+    onlinePresenceOptions: {
+      presenceStoreOptions: {
+        storeType: 'redis',
+        keyPrefix: 'coderx',
+      },
+    },
   });
 
   const logMessages = calls.filter(([level]) => level === 'log').map(([, message]) => message);

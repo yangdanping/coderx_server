@@ -40,12 +40,38 @@ function createRedisPresenceStore(options = {}) {
   const keys = createKeys(options.keyPrefix || process.env.REDIS_KEY_PREFIX || 'coderx');
   const socketTtlSeconds = options.socketTtlSeconds ?? 90;
 
+  async function removeUserPresence(userId) {
+    await redisClient.sRem(keys.users, userId);
+    await redisClient.del(keys.user(userId), keys.userSockets(userId));
+  }
+
+  async function pruneExpiredUserSockets(userId) {
+    const socketsKey = keys.userSockets(userId);
+    const socketIds = await redisClient.sMembers(socketsKey);
+    let activeSocketCount = 0;
+
+    for (const socketId of socketIds) {
+      const socketHash = await redisClient.hGetAll(keys.socket(socketId));
+      if (socketHash.socketId === socketId && socketHash.userId === String(userId)) {
+        activeSocketCount += 1;
+      } else {
+        await redisClient.sRem(socketsKey, socketId);
+      }
+    }
+
+    if (activeSocketCount === 0) {
+      await removeUserPresence(userId);
+    }
+
+    return activeSocketCount;
+  }
+
   async function addConnection(payload) {
     const { userId, socketId, userName, avatarUrl } = normalizeConnectionPayload(payload);
     const socketsKey = keys.userSockets(userId);
     const userKey = keys.user(userId);
     const socketKey = keys.socket(socketId);
-    const previousConnectionCount = await redisClient.sCard(socketsKey);
+    const previousConnectionCount = await pruneExpiredUserSockets(userId);
     const isFirstSocket = previousConnectionCount === 0;
     const existingUser = isFirstSocket ? {} : await redisClient.hGetAll(userKey);
     const connectedAt = existingUser.connectedAt || new Date().toISOString();
@@ -70,6 +96,20 @@ function createRedisPresenceStore(options = {}) {
     };
   }
 
+  async function refreshConnection({ userId, socketId }) {
+    const normalizedUserId = String(userId);
+    const normalizedSocketId = String(socketId);
+    const socketIds = await redisClient.sMembers(keys.userSockets(normalizedUserId));
+    if (!socketIds.includes(normalizedSocketId)) return false;
+
+    await redisClient.hSet(keys.socket(normalizedSocketId), {
+      userId: normalizedUserId,
+      socketId: normalizedSocketId,
+    });
+    await redisClient.expire(keys.socket(normalizedSocketId), socketTtlSeconds);
+    return true;
+  }
+
   async function removeConnection({ userId, socketId }) {
     const normalizedUserId = String(userId);
     const normalizedSocketId = String(socketId);
@@ -85,8 +125,7 @@ function createRedisPresenceStore(options = {}) {
 
     const nextConnectionCount = await redisClient.sCard(socketsKey);
     if (nextConnectionCount === 0) {
-      await redisClient.sRem(keys.users, normalizedUserId);
-      await redisClient.del(keys.user(normalizedUserId), socketsKey);
+      await removeUserPresence(normalizedUserId);
       return { removedUser: true, hadEntry: true, userConnectionCount: 0 };
     }
 
@@ -98,8 +137,14 @@ function createRedisPresenceStore(options = {}) {
     const users = [];
 
     for (const userId of userIds) {
+      const activeSocketCount = await pruneExpiredUserSockets(userId);
+      if (activeSocketCount === 0) continue;
+
       const userHash = await redisClient.hGetAll(keys.user(userId));
-      if (!userHash.userId) continue;
+      if (!userHash.userId) {
+        await removeUserPresence(userId);
+        continue;
+      }
 
       users.push({
         userId: userHash.userId,
@@ -114,7 +159,14 @@ function createRedisPresenceStore(options = {}) {
   }
 
   async function size() {
-    return redisClient.sCard(keys.users);
+    const userIds = await redisClient.sMembers(keys.users);
+    let total = 0;
+
+    for (const userId of userIds) {
+      if ((await pruneExpiredUserSockets(userId)) > 0) total += 1;
+    }
+
+    return total;
   }
 
   async function totalConnections() {
@@ -122,7 +174,7 @@ function createRedisPresenceStore(options = {}) {
     let total = 0;
 
     for (const userId of userIds) {
-      total += await redisClient.sCard(keys.userSockets(userId));
+      total += await pruneExpiredUserSockets(userId);
     }
 
     return total;
@@ -130,6 +182,7 @@ function createRedisPresenceStore(options = {}) {
 
   return {
     addConnection,
+    refreshConnection,
     removeConnection,
     serializeUserList,
     size,

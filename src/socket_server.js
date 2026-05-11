@@ -22,7 +22,7 @@ const { ALLOWED_ORIGINS } = require('@/constants/cors');
 const SOCKET_PORT = process.env.SOCKET_PORT || 8001; // 独立端口，不占用 Koa 的 APP_PORT(8000)
 
 // 导入在线状态服务
-const initSocketIOOnline = require('./socket/online/socketio-online');
+const initializeOnlinePresence = require('./socket/online/socketio-online');
 const { configureSocketRedisAdapter } = require('./socket/adapter/socketRedisAdapter');
 const { startSocketServer } = require('./socket/runtime/socketServerRuntime');
 
@@ -72,13 +72,24 @@ const io = new Server(httpServer, {
   pingInterval: 25000, // 每 25 秒发送心跳
 });
 
+const onlinePresenceOptions = {
+  presenceStoreOptions: {
+    storeType: process.env.PRESENCE_STORE || 'memory',
+    redisUrl: process.env.REDIS_URL,
+    keyPrefix: process.env.REDIS_KEY_PREFIX || 'coderx',
+  },
+  profileLookupTimeoutMs: 800,
+  presenceRefreshIntervalMs: 30_000,
+};
+
 startSocketServer({
   httpServer,
   io,
   port: SOCKET_PORT,
   redirectURL,
   configureRedisAdapter: configureSocketRedisAdapter,
-  initOnline: initSocketIOOnline,
+  initializeOnlinePresence,
+  onlinePresenceOptions,
 }).catch((error) => {
   console.error('❌ Socket.IO 服务器启动失败:', error);
   process.exit(1);

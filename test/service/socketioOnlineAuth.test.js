@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 require('module-alias/register');
 
 const { PRIVATE_KEY } = require('../../src/app/config');
-const initSocketIOOnline = require('../../src/socket/online/socketio-online');
+const initializeOnlinePresence = require('../../src/socket/online/socketio-online');
 
 process.env.PRESENCE_STORE = 'memory';
 
@@ -122,7 +122,7 @@ async function connectFakeSocket(io, socket) {
 
 test('socketio-online: registers authenticated users from JWT payload instead of query identity', async () => {
   const io = createFakeIo();
-  initSocketIOOnline(io, {
+  initializeOnlinePresence(io, {
     userService: {
       getProfileById: async () => ({ avatarUrl: 'https://cdn.example/server-alice.png' }),
     },
@@ -159,7 +159,7 @@ test('socketio-online: registers authenticated users from JWT payload instead of
 
 test('socketio-online: rejects claimed user identity when token is missing', async () => {
   const io = createFakeIo();
-  initSocketIOOnline(io);
+  initializeOnlinePresence(io);
 
   const socket = createFakeSocket({
     query: { userId: '7', userName: 'Alice', isGuest: 'false' },
@@ -173,7 +173,7 @@ test('socketio-online: rejects claimed user identity when token is missing', asy
 
 test('socketio-online: keeps authenticated users online when profile lookup fails', async () => {
   const io = createFakeIo();
-  initSocketIOOnline(io, {
+  initializeOnlinePresence(io, {
     userService: {
       getProfileById: async () => {
         throw new Error('database unavailable');
@@ -195,7 +195,7 @@ test('socketio-online: keeps authenticated users online when profile lookup fail
 
 test('socketio-online: profile lookup timeout falls back to empty avatar', async () => {
   const io = createFakeIo();
-  initSocketIOOnline(io, {
+  initializeOnlinePresence(io, {
     profileLookupTimeoutMs: 1,
     userService: {
       getProfileById: () => new Promise((resolve) => setTimeout(() => resolve({ avatarUrl: 'late-avatar' }), 50)),
@@ -244,7 +244,7 @@ test('socketio-online: can use an injected presence store without knowing its im
     },
   };
 
-  initSocketIOOnline(io, {
+  initializeOnlinePresence(io, {
     presenceStore: injectedPresenceStore,
     userService: {
       getProfileById: async () => ({ avatarUrl: 'profile-avatar' }),
@@ -314,7 +314,7 @@ test('socketio-online: waits for async presence removal before broadcasting disc
     },
   };
 
-  initSocketIOOnline(io, {
+  initializeOnlinePresence(io, {
     presenceStore: injectedPresenceStore,
     userService: {
       getProfileById: async () => ({ avatarUrl: 'avatar' }),
@@ -341,10 +341,80 @@ test('socketio-online: waits for async presence removal before broadcasting disc
   });
 });
 
+test('socketio-online: refreshes authenticated presence while socket stays connected', async () => {
+  const io = createFakeIo();
+  const calls = [];
+  const intervals = [];
+  const originalSetInterval = global.setInterval;
+  const originalClearInterval = global.clearInterval;
+
+  global.setInterval = (callback, delay) => {
+    const interval = { callback, delay, cleared: false };
+    intervals.push(interval);
+    return interval;
+  };
+  global.clearInterval = (interval) => {
+    interval.cleared = true;
+  };
+
+  const injectedPresenceStore = {
+    async addConnection(payload) {
+      calls.push(['addConnection', payload]);
+      return { isFirstSocket: true, userConnectionCount: 1 };
+    },
+    async refreshConnection(payload) {
+      calls.push(['refreshConnection', payload]);
+      return true;
+    },
+    async removeConnection(payload) {
+      calls.push(['removeConnection', payload]);
+      return { removedUser: true, hadEntry: true, userConnectionCount: 0 };
+    },
+    async serializeUserList() {
+      return [];
+    },
+    async size() {
+      return 1;
+    },
+    async totalConnections() {
+      return 1;
+    },
+  };
+
+  try {
+    initializeOnlinePresence(io, {
+      presenceStore: injectedPresenceStore,
+      presenceRefreshIntervalMs: 1000,
+      userService: {
+        getProfileById: async () => ({ avatarUrl: '' }),
+      },
+    });
+
+    const socket = createFakeSocket({
+      auth: { token: signToken() },
+      query: { isGuest: 'false' },
+    });
+
+    const error = await connectFakeSocket(io, socket);
+    assert.equal(error, undefined);
+    assert.equal(intervals.length, 1);
+    assert.equal(intervals[0].delay, 1000);
+
+    await intervals[0].callback();
+    assert.deepEqual(calls.at(-1), ['refreshConnection', { userId: '7', socketId: 's1' }]);
+
+    await socket.handlers.disconnect('transport close');
+    assert.equal(intervals[0].cleared, true);
+  } finally {
+    global.setInterval = originalSetInterval;
+    global.clearInterval = originalClearInterval;
+  }
+});
+
 test('socketio-online: can create a configured redis presence store from options', async () => {
   const io = createFakeIo();
   const redisClient = new FakeRedisClient();
-  initSocketIOOnline(io, {
+  initializeOnlinePresence(io, {
     presenceStoreOptions: {
       storeType: 'redis',
       redisClient,

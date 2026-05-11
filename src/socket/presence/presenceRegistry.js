@@ -18,6 +18,7 @@
 /**
  * @returns {{
  *   addConnection: (p: { userId: string, socketId: string, userName: string, avatarUrl?: string }) => { isFirstSocket: boolean, userConnectionCount: number },
+ *   refreshConnection: (p: { userId: string, socketId: string }) => boolean,
  *   removeConnection: (p: { userId: string, socketId: string }) => { removedUser: boolean, hadEntry: boolean, userConnectionCount: number },
  *   serializeUserList: () => OnlineUserDTO[],
  *   size: () => number,
@@ -46,6 +47,10 @@ function createPresenceRegistry() {
     entry.userName = userName;
     if (avatarUrl) entry.avatarUrl = avatarUrl;
     return { isFirstSocket, userConnectionCount: entry.socketIds.size };
+  }
+
+  function refreshConnection({ userId, socketId }) {
+    return byUserId.get(userId)?.socketIds.has(socketId) || false;
   }
 
   function removeConnection({ userId, socketId }) {
@@ -81,6 +86,7 @@ function createPresenceRegistry() {
 
   return {
     addConnection,
+    refreshConnection,
     removeConnection,
     serializeUserList,
     size,
