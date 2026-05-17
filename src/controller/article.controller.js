@@ -1,7 +1,7 @@
 const fs = require('fs'); //fs模块用于读取文件信息,如获取到用户头像信息后找到图像资源返回给前端
 const path = require('path');
 const articleService = require('@/service/article.service.js');
-const userService = require('@/service/user.service.js');
+const articleLikeService = require('@/service/articleLike.service.js');
 const fileService = require('@/service/file.service.js');
 const historyService = require('@/service/history.service.js');
 const { IMG_PATH, VIDEO_PATH } = require('@/constants/filePaths');
@@ -77,15 +77,13 @@ class ArticleController {
   likeArticle = async (ctx, next) => {
     // 1.获取用户id和点赞的评论id
     const userId = ctx.user.id;
-    const [urlKey] = Object.keys(ctx.params); //从 params 中取出对象的 key
-    const dataId = ctx.params[urlKey]; //获取到对应 id 的值
-    const tableName = urlKey.replace('Id', ''); //把 Id 去掉就是表名
+    const { articleId } = ctx.params;
 
     // 切换点赞状态
-    const result = await userService.toggleLike(tableName, dataId, userId);
+    const result = await articleLikeService.toggleArticleLike(articleId, userId);
 
     // 获取更新后的点赞总数
-    const likeInfo = await articleService.getArticleLikedById(dataId);
+    const likeInfo = await articleService.getArticleLikedById(articleId);
 
     // 5.统一返回格式：code=0 表示成功，data 中包含业务状态
     ctx.body = Result.success({

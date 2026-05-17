@@ -24,3 +24,5 @@ psql "$DATABASE_URL" -f migrations/001_fix_file_size_bigint.sql
 | 编号 | 文件 | 说明 |
 |---|---|---|
 | 001 | `001_fix_file_size_bigint.sql` | 修正 `file.size` 从 `integer` 升级到 `bigint`，避免大视频溢出 |
+| 002 | `002_create_notifications.sql` | 新增站内通知事实表与文章点赞通知冷却查询索引 |
+| 003 | `003_update_notifications_cooldown_index.sql` | 兼容旧版通知表迁移，删除永久去重约束并补建冷却查询索引 |

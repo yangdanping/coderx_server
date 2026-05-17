@@ -8,6 +8,7 @@ const controllerPath = path.resolve(__dirname, '../../src/controller/article.con
 const articleServicePath = path.resolve(__dirname, '../../src/service/article.service.js');
 const historyServicePath = path.resolve(__dirname, '../../src/service/history.service.js');
 const userServicePath = path.resolve(__dirname, '../../src/service/user.service.js');
+const articleLikeServicePath = path.resolve(__dirname, '../../src/service/articleLike.service.js');
 const fileServicePath = path.resolve(__dirname, '../../src/service/file.service.js');
 
 const Result = require('@/app/Result');
@@ -23,16 +24,18 @@ function injectCache(modulePath, exports) {
   };
 }
 
-function loadControllerWithServiceMocks({ articleService, historyService }) {
+function loadControllerWithServiceMocks({ articleService, historyService, articleLikeService = {} }) {
   delete require.cache[controllerPath];
   delete require.cache[articleServicePath];
   delete require.cache[historyServicePath];
   delete require.cache[userServicePath];
+  delete require.cache[articleLikeServicePath];
   delete require.cache[fileServicePath];
 
   injectCache(articleServicePath, articleService);
   injectCache(historyServicePath, historyService);
   injectCache(userServicePath, {});
+  injectCache(articleLikeServicePath, articleLikeService);
   injectCache(fileServicePath, {});
 
   return require(controllerPath);
@@ -551,4 +554,37 @@ test('update: invalid draftId returns Result.fail without calling service', asyn
 
   assert.equal(called, false);
   assert.deepEqual(ctx.body, Result.fail('参数错误: draftId 必须是正整数'));
+});
+
+test('likeArticle: delegates article like toggle to articleLikeService and keeps response shape', async () => {
+  const calls = [];
+  const articleService = {
+    async getArticleLikedById(articleId) {
+      calls.push({ method: 'getArticleLikedById', articleId });
+      return { likes: 12 };
+    },
+  };
+  const articleLikeService = {
+    async toggleArticleLike(articleId, userId) {
+      calls.push({ method: 'toggleArticleLike', articleId, userId });
+      return { isLiked: true, action: 'liked', notificationCreated: true };
+    },
+  };
+  const controller = loadControllerWithServiceMocks({
+    articleService,
+    historyService: {},
+    articleLikeService,
+  });
+  const ctx = {
+    user: { id: 7 },
+    params: { articleId: '30' },
+  };
+
+  await controller.likeArticle(ctx, noopNext);
+
+  assert.deepEqual(calls, [
+    { method: 'toggleArticleLike', articleId: '30', userId: 7 },
+    { method: 'getArticleLikedById', articleId: '30' },
+  ]);
+  assert.deepEqual(ctx.body, Result.success({ liked: true, likes: 12 }));
 });

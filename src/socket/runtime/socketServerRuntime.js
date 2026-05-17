@@ -9,9 +9,12 @@ async function startSocketServer({
   configureRedisAdapter = async () => ({ enabled: false }),
   initializeOnlinePresence,
   onlinePresenceOptions = {},
+  initializeNotifications = async () => {},
+  notificationOptions = {},
 }) {
   const redisAdapterRuntime = (await configureRedisAdapter(io)) || { enabled: false };
   initializeOnlinePresence(io, onlinePresenceOptions);
+  await initializeNotifications(io, notificationOptions);
   const presenceStoreOptions = onlinePresenceOptions.presenceStoreOptions || {};
 
   await new Promise((resolve) => {

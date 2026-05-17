@@ -23,6 +23,7 @@ const SOCKET_PORT = process.env.SOCKET_PORT || 8001; // 独立端口，不占用
 
 // 导入在线状态服务
 const initializeOnlinePresence = require('./socket/online/socketio-online');
+const initializeSocketNotifications = require('./socket/notification/socketio-notification');
 const { configureSocketRedisAdapter } = require('./socket/adapter/socketRedisAdapter');
 const { startSocketServer } = require('./socket/runtime/socketServerRuntime');
 
@@ -90,6 +91,10 @@ startSocketServer({
   configureRedisAdapter: configureSocketRedisAdapter,
   initializeOnlinePresence,
   onlinePresenceOptions,
+  initializeNotifications: initializeSocketNotifications,
+  notificationOptions: {
+    keyPrefix: process.env.REDIS_KEY_PREFIX || 'coderx',
+  },
 }).catch((error) => {
   console.error('❌ Socket.IO 服务器启动失败:', error);
   process.exit(1);

@@ -411,6 +411,75 @@ test('socketio-online: refreshes authenticated presence while socket stays conne
   }
 });
 
+test('socketio-online: refresh interval accepts synchronous presence stores', async () => {
+  const io = createFakeIo();
+  const calls = [];
+  const intervals = [];
+  const originalSetInterval = global.setInterval;
+  const originalClearInterval = global.clearInterval;
+
+  global.setInterval = (callback, delay) => {
+    const interval = { callback, delay, cleared: false };
+    intervals.push(interval);
+    return interval;
+  };
+  global.clearInterval = (interval) => {
+    interval.cleared = true;
+  };
+
+  const injectedPresenceStore = {
+    addConnection(payload) {
+      calls.push(['addConnection', payload]);
+      return { isFirstSocket: true, userConnectionCount: 1 };
+    },
+    refreshConnection(payload) {
+      calls.push(['refreshConnection', payload]);
+      return true;
+    },
+    removeConnection(payload) {
+      calls.push(['removeConnection', payload]);
+      return { removedUser: true, hadEntry: true, userConnectionCount: 0 };
+    },
+    serializeUserList() {
+      return [];
+    },
+    size() {
+      return 1;
+    },
+    totalConnections() {
+      return 1;
+    },
+  };
+
+  try {
+    initializeOnlinePresence(io, {
+      presenceStore: injectedPresenceStore,
+      presenceRefreshIntervalMs: 1000,
+      userService: {
+        getProfileById: async () => ({ avatarUrl: '' }),
+      },
+    });
+
+    const socket = createFakeSocket({
+      auth: { token: signToken() },
+      query: { isGuest: 'false' },
+    });
+
+    const error = await connectFakeSocket(io, socket);
+    assert.equal(error, undefined);
+    assert.equal(intervals.length, 1);
+
+    await assert.doesNotReject(() => Promise.resolve(intervals[0].callback()));
+    assert.deepEqual(calls.at(-1), ['refreshConnection', { userId: '7', socketId: 's1' }]);
+
+    await socket.handlers.disconnect('transport close');
+    assert.equal(intervals[0].cleared, true);
+  } finally {
+    global.setInterval = originalSetInterval;
+    global.clearInterval = originalClearInterval;
+  }
+});
+
 test('socketio-online: can create a configured redis presence store from options', async () => {
   const io = createFakeIo();
   const redisClient = new FakeRedisClient();

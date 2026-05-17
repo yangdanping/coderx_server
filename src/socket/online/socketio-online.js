@@ -124,8 +124,8 @@ const initializeOnlinePresence = (io, options = {}) => {
     const refreshTimer =
       typeof presence.refreshConnection === 'function'
         ? setInterval(() => {
-            return presence
-              .refreshConnection({ userId: uid, socketId: socket.id })
+            return Promise.resolve()
+              .then(() => presence.refreshConnection({ userId: uid, socketId: socket.id }))
               .catch((error) => logPresenceError('refresh connection', error));
           }, presenceRefreshIntervalMs)
         : null;
