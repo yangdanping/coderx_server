@@ -91,7 +91,7 @@ test('createArticleLikeNotification: first like locks key, inserts notification,
       return [{ insertId: notification.id, affectedRows: 1 }, []];
     }
 
-    if (/FROM notifications/i.test(statement) && /WHERE id = \?/i.test(statement)) {
+    if (/FROM notifications/i.test(statement) && /WHERE n\.id = \?/i.test(statement)) {
       return [[notification], []];
     }
 
@@ -114,9 +114,9 @@ test('createArticleLikeNotification: first like locks key, inserts notification,
   assert.match(executeCalls[0].statement, /pg_advisory_xact_lock/i);
   assert.deepEqual(executeCalls[0].params, ['article_like:10:20:article:30']);
   assert.match(executeCalls[1].statement, /ORDER BY\s+created_at\s+DESC\s+LIMIT\s+1/i);
-  assert.deepEqual(executeCalls[1].params, [10, 20, 30]);
+  assert.deepEqual(executeCalls[1].params, [10, 20, 'article_like', 'article', 30]);
   assert.match(executeCalls[2].statement, /INSERT INTO notifications/i);
-  assert.deepEqual(executeCalls[2].params, [10, 20, 30, 30]);
+  assert.deepEqual(executeCalls[2].params, [10, 20, 'article_like', 'article', 30, 30, null, '{}']);
   assert.deepEqual(executeCalls[3].params, [88]);
   assert.deepEqual(calls.filter((call) => call.type !== 'execute'), [
     { type: 'beginTransaction' },
@@ -186,7 +186,7 @@ test('createArticleLikeNotification: like after cooldown creates a new notificat
       return [{ insertId: notification.id, affectedRows: 1 }, []];
     }
 
-    if (/FROM notifications/i.test(statement) && /WHERE id = \?/i.test(statement)) {
+    if (/FROM notifications/i.test(statement) && /WHERE n\.id = \?/i.test(statement)) {
       return [[notification], []];
     }
 
@@ -230,7 +230,7 @@ test('createArticleLikeNotification: evaluates cooldown after waiting for the ad
       return [{ insertId: notification.id, affectedRows: 1 }, []];
     }
 
-    if (/FROM notifications/i.test(statement) && /WHERE id = \?/i.test(statement)) {
+    if (/FROM notifications/i.test(statement) && /WHERE n\.id = \?/i.test(statement)) {
       return [[notification], []];
     }
 
@@ -293,6 +293,80 @@ test('createArticleLikeNotification: rolls back and releases connection when ins
   assert.equal(calls.some((call) => call.type === 'release'), true);
 });
 
+test('createArticleCommentNotification: creates a notification with sanitized comment excerpt and no cooldown lookup', async () => {
+  const notification = {
+    id: 188,
+    recipientId: 10,
+    actorId: 20,
+    type: 'article_comment',
+    targetType: 'article',
+    targetId: 30,
+    articleId: 30,
+    commentId: 40,
+    metadata: { commentExcerpt: 'hello world' },
+    readAt: null,
+    createdAt: new Date('2026-05-13T00:00:00.000Z'),
+    lastOccurredAt: new Date('2026-05-13T00:00:00.000Z'),
+  };
+  const { conn, calls } = createTransactionalMock((statement, params) => {
+    if (/INSERT INTO notifications/i.test(statement)) {
+      assert.equal(params[2], 'article_comment');
+      assert.equal(params[6], 40);
+      assert.deepEqual(JSON.parse(params[7]), { commentExcerpt: 'hello world' });
+      return [{ insertId: notification.id, affectedRows: 1 }, []];
+    }
+
+    if (/FROM notifications/i.test(statement) && /WHERE n\.id = \?/i.test(statement)) {
+      return [[notification], []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return conn;
+    },
+  });
+
+  const result = await service.createArticleCommentNotification({
+    recipientId: 10,
+    actorId: 20,
+    articleId: 30,
+    commentId: 40,
+    content: '<p>hello&nbsp;<strong>world</strong></p>',
+  });
+
+  assert.deepEqual(result, { created: true, notification });
+  assert.equal(calls.some((call) => call.statement && /pg_advisory_xact_lock/i.test(call.statement)), false);
+  assert.equal(calls.some((call) => call.statement && /ORDER BY created_at DESC/i.test(call.statement)), false);
+  assert.deepEqual(calls.filter((call) => call.type !== 'execute'), [
+    { type: 'beginTransaction' },
+    { type: 'commit' },
+    { type: 'release' },
+  ]);
+});
+
+test('createArticleCommentNotification: self-comment does not open a transaction', async () => {
+  let getConnectionCalled = false;
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      getConnectionCalled = true;
+      throw new Error('should not open connection for self-comment');
+    },
+  });
+
+  const result = await service.createArticleCommentNotification({
+    recipientId: 7,
+    actorId: 7,
+    articleId: 20,
+    commentId: 30,
+    content: 'self',
+  });
+
+  assert.equal(getConnectionCalled, false);
+  assert.deepEqual(result, { created: false, notification: null, reason: 'self' });
+});
+
 test('notification service: list, unread count, and read mutations use recipient-scoped SQL', async () => {
   const calls = [];
   const service = loadServiceWithConnection({
@@ -316,7 +390,7 @@ test('notification service: list, unread count, and read mutations use recipient
   assert.deepEqual(await service.markAsRead(99, 10), { affectedRows: 2 });
   assert.deepEqual(await service.markAllAsRead(10), { affectedRows: 2 });
 
-  assert.match(calls[0].statement, /WHERE recipient_id = \?/i);
+  assert.match(calls[0].statement, /WHERE n\.recipient_id = \?/i);
   assert.deepEqual(calls[0].params, [10, 5, 20]);
   assert.match(calls[1].statement, /read_at IS NULL/i);
   assert.deepEqual(calls[1].params, [10]);

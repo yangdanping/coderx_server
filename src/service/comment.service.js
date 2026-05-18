@@ -1,5 +1,7 @@
 const connection = require('@/app/database');
 const { baseURL } = require('@/constants/urls');
+const notificationService = require('@/service/notification.service');
+const { publishNotificationCreated } = require('@/socket/notification/notificationEventBus');
 const SqlUtils = require('@/utils/SqlUtils');
 const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const {
@@ -12,6 +14,14 @@ const {
   buildGetUserCommentListSql,
   buildUserCommentListExecuteParams,
 } = require('./sql/comment.sql');
+
+function buildGetArticleAuthorSql() {
+  return 'SELECT user_id AS "authorId" FROM article WHERE id = ? LIMIT 1;';
+}
+
+function isSameUser(left, right) {
+  return String(left) === String(right);
+}
 
 class CommentService {
   /**
@@ -218,19 +228,70 @@ class CommentService {
    * 新增一级评论
    */
   addComment = async (userId, articleId, content) => {
+    if (typeof connection.getConnection !== 'function') {
+      try {
+        const statement = buildAddCommentSql();
+        const [result] = await connection.execute(statement, [userId, articleId, content]);
+
+        if (result.insertId) {
+          return await this.getCommentById(result.insertId);
+        }
+        return null;
+      } catch (error) {
+        console.error('addComment error:', error);
+        throw error;
+      }
+    }
+
+    const conn = await connection.getConnection();
+    let comment = null;
+    let notificationResult = { created: false, notification: null };
+
     try {
+      await conn.beginTransaction();
+
       const statement = buildAddCommentSql();
-      const [result] = await connection.execute(statement, [userId, articleId, content]);
+      const [result] = await conn.execute(statement, [userId, articleId, content]);
 
       if (result.insertId) {
-        // 返回新创建的评论完整信息
-        return await this.getCommentById(result.insertId);
+        const commentId = result.insertId;
+        const [articleRows] = await conn.execute(buildGetArticleAuthorSql(), [articleId]);
+        const article = articleRows[0];
+
+        if (article && !isSameUser(article.authorId, userId)) {
+          notificationResult = await notificationService.createArticleCommentNotification(
+            {
+              recipientId: article.authorId,
+              actorId: userId,
+              articleId,
+              commentId,
+              content,
+            },
+            { conn },
+          );
+        }
+
+        comment = await this.getCommentById(commentId, conn);
       }
-      return null;
+
+      await conn.commit();
     } catch (error) {
+      await conn.rollback();
       console.error('addComment error:', error);
       throw error;
+    } finally {
+      conn.release();
     }
+
+    if (notificationResult.created && notificationResult.notification) {
+      try {
+        await publishNotificationCreated(notificationResult.notification);
+      } catch (error) {
+        console.warn('⚠️ 文章评论通知实时推送失败，将由 REST 同步兜底:', error.message);
+      }
+    }
+
+    return comment;
   };
 
   /**
@@ -269,11 +330,12 @@ class CommentService {
   /**
    * 获取单条评论详情
    */
-  getCommentById = async (commentId) => {
+  getCommentById = async (commentId, conn = null) => {
     try {
       const statement = buildGetCommentByIdSql();
+      const execute = conn ? conn.execute.bind(conn) : connection.execute.bind(connection);
 
-      const [[comment]] = await connection.execute(statement, [commentId]);
+      const [[comment]] = await execute(statement, [commentId]);
 
       if (comment && comment.status) {
         comment.content = '评论已被封禁';

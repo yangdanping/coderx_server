@@ -7,11 +7,15 @@ require('module-alias/register');
 const servicePath = path.resolve(__dirname, '../../src/service/comment.service.js');
 const databasePath = path.resolve(__dirname, '../../src/app/database.js');
 const urlsPath = path.resolve(__dirname, '../../src/constants/urls.js');
+const notificationServicePath = path.resolve(__dirname, '../../src/service/notification.service.js');
+const eventBusPath = path.resolve(__dirname, '../../src/socket/notification/notificationEventBus.js');
 
-function loadServiceWithConnection(connectionMock) {
+function loadServiceWithConnection(connectionMock, options = {}) {
   delete require.cache[servicePath];
   delete require.cache[databasePath];
   delete require.cache[urlsPath];
+  delete require.cache[notificationServicePath];
+  delete require.cache[eventBusPath];
 
   require.cache[databasePath] = {
     id: databasePath,
@@ -30,7 +34,50 @@ function loadServiceWithConnection(connectionMock) {
     },
   };
 
+  require.cache[notificationServicePath] = {
+    id: notificationServicePath,
+    filename: notificationServicePath,
+    loaded: true,
+    exports: options.notificationService || {
+      async createArticleCommentNotification() {
+        return { created: false, notification: null };
+      },
+    },
+  };
+
+  require.cache[eventBusPath] = {
+    id: eventBusPath,
+    filename: eventBusPath,
+    loaded: true,
+    exports: options.eventBus || {
+      async publishNotificationCreated() {},
+    },
+  };
+
   return require(servicePath);
+}
+
+function createConnMock(executeHandler) {
+  const calls = [];
+  const conn = {
+    async beginTransaction() {
+      calls.push({ type: 'beginTransaction' });
+    },
+    async execute(statement, params) {
+      calls.push({ type: 'execute', statement, params });
+      return executeHandler(statement, params, calls);
+    },
+    async commit() {
+      calls.push({ type: 'commit' });
+    },
+    async rollback() {
+      calls.push({ type: 'rollback' });
+    },
+    release() {
+      calls.push({ type: 'release' });
+    },
+  };
+  return { conn, calls };
 }
 
 test('getCommentList latest: pg executes pg-safe comment author SQL', async () => {
@@ -210,6 +257,129 @@ test('addComment: pg requests insertId through RETURNING id and fetches created 
   assert.match(calls[0].statement, /INSERT INTO comment \(user_id, article_id, content\) VALUES \(\?, \?, \?\) RETURNING id;$/i);
   assert.deepEqual(calls[0].params, [9, 12, 'hello']);
   assert.deepEqual(calls[1].params, [151]);
+});
+
+test('addComment: creates article comment notification in the same transaction and publishes after commit', async () => {
+  const notification = { id: 300, recipientId: 10, actorId: 9, type: 'article_comment', articleId: 12, commentId: 151 };
+  const { conn, calls } = createConnMock((statement, params) => {
+    if (/INSERT INTO comment/i.test(statement)) {
+      return [{ insertId: 151, affectedRows: 1 }, []];
+    }
+
+    if (/SELECT user_id AS "authorId" FROM article/i.test(statement)) {
+      return [[{ authorId: 10 }], []];
+    }
+
+    if (/FROM comment c/i.test(statement) && /WHERE c\.id = \?/i.test(statement)) {
+      return [[{ id: 151, content: 'hello', status: 0, articleId: 12 }], []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      notificationService: {
+        async createArticleCommentNotification(payload, options) {
+          calls.push({ type: 'createNotification', payload, conn: options.conn });
+          return { created: true, notification };
+        },
+      },
+      eventBus: {
+        async publishNotificationCreated(payload) {
+          calls.push({ type: 'publish', payload });
+        },
+      },
+    },
+  );
+
+  const result = await service.addComment(9, 12, '<p>hello</p>');
+
+  assert.deepEqual(result, { id: 151, content: 'hello', status: 0, articleId: 12 });
+  assert.equal(calls.find((call) => call.type === 'createNotification').conn, conn);
+  assert.deepEqual(calls.find((call) => call.type === 'createNotification').payload, {
+    recipientId: 10,
+    actorId: 9,
+    articleId: 12,
+    commentId: 151,
+    content: '<p>hello</p>',
+  });
+  assert.ok(calls.findIndex((call) => call.type === 'commit') < calls.findIndex((call) => call.type === 'publish'));
+  assert.deepEqual(calls.find((call) => call.type === 'publish').payload, notification);
+});
+
+test('addComment: self-comment keeps the comment without creating a notification', async () => {
+  const { conn, calls } = createConnMock((statement) => {
+    if (/INSERT INTO comment/i.test(statement)) return [{ insertId: 151, affectedRows: 1 }, []];
+    if (/SELECT user_id AS "authorId" FROM article/i.test(statement)) return [[{ authorId: 9 }], []];
+    if (/FROM comment c/i.test(statement) && /WHERE c\.id = \?/i.test(statement)) return [[{ id: 151, content: 'hello' }], []];
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      notificationService: {
+        async createArticleCommentNotification() {
+          throw new Error('self-comment should not notify');
+        },
+      },
+      eventBus: {
+        async publishNotificationCreated() {
+          throw new Error('self-comment should not publish');
+        },
+      },
+    },
+  );
+
+  const result = await service.addComment(9, 12, 'hello');
+
+  assert.deepEqual(result, { id: 151, content: 'hello' });
+  assert.equal(calls.some((call) => call.type === 'commit'), true);
+  assert.equal(calls.some((call) => call.type === 'rollback'), false);
+});
+
+test('addComment: publish failure does not roll back committed comment and notification', async () => {
+  const notification = { id: 300, recipientId: 10, actorId: 9, type: 'article_comment', articleId: 12, commentId: 151 };
+  const { conn, calls } = createConnMock((statement) => {
+    if (/INSERT INTO comment/i.test(statement)) return [{ insertId: 151, affectedRows: 1 }, []];
+    if (/SELECT user_id AS "authorId" FROM article/i.test(statement)) return [[{ authorId: 10 }], []];
+    if (/FROM comment c/i.test(statement) && /WHERE c\.id = \?/i.test(statement)) return [[{ id: 151, content: 'hello' }], []];
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      notificationService: {
+        async createArticleCommentNotification() {
+          return { created: true, notification };
+        },
+      },
+      eventBus: {
+        async publishNotificationCreated() {
+          calls.push({ type: 'publish' });
+          throw new Error('redis unavailable');
+        },
+      },
+    },
+  );
+
+  const result = await service.addComment(9, 12, 'hello');
+
+  assert.deepEqual(result, { id: 151, content: 'hello' });
+  assert.equal(calls.some((call) => call.type === 'rollback'), false);
+  assert.ok(calls.findIndex((call) => call.type === 'commit') < calls.findIndex((call) => call.type === 'publish'));
 });
 
 test('addReply: pg requests insertId through RETURNING id for nested reply path and fetches created comment by id', async () => {

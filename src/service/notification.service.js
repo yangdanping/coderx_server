@@ -1,11 +1,14 @@
 const connection = require('@/app/database');
+const { baseURL } = require('@/constants/urls');
+const Utils = require('@/utils');
+const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const {
   buildAcquireArticleLikeNotificationLockParams,
   buildAcquireArticleLikeNotificationLockSql,
-  buildCreateArticleLikeNotificationParams,
-  buildCreateArticleLikeNotificationSql,
-  buildFindLatestArticleLikeNotificationParams,
-  buildFindLatestArticleLikeNotificationSql,
+  buildCreateNotificationParams,
+  buildCreateNotificationSql,
+  buildFindLatestNotificationParams,
+  buildFindLatestNotificationSql,
   buildGetNotificationByIdParams,
   buildGetNotificationByIdSql,
   buildGetNotificationListParams,
@@ -16,6 +19,7 @@ const {
 } = require('./sql/notification.sql');
 
 const ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS = 60 * 60 * 1000;
+const COMMENT_EXCERPT_LIMIT = 60;
 
 function toTimeMs(value) {
   if (value instanceof Date) return value.getTime();
@@ -31,11 +35,56 @@ function isInsideCooldown(latestNotification, nowMs) {
   return nowMs - latestCreatedAtMs < ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS;
 }
 
+function isSameUser(left, right) {
+  return String(left) === String(right);
+}
+
+function truncateText(value, limit) {
+  const chars = Array.from(value || '');
+  return chars.length > limit ? chars.slice(0, limit).join('') : chars.join('');
+}
+
 class NotificationService {
   ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS = ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS;
 
+  createNotification = async (payload, options = {}) => {
+    const ownsConnection = !options.conn;
+    const conn = options.conn || (await connection.getConnection());
+
+    try {
+      if (ownsConnection) {
+        await conn.beginTransaction();
+      }
+
+      const [insertResult] = await conn.execute(buildCreateNotificationSql(), buildCreateNotificationParams(payload));
+      const notificationId = insertResult.insertId;
+      const [notificationRows] = await conn.execute(
+        buildGetNotificationByIdSql(),
+        buildGetNotificationByIdParams(notificationId),
+      );
+
+      if (ownsConnection) {
+        await conn.commit();
+      }
+
+      return {
+        created: true,
+        notification: notificationRows[0] ? hydrateAvatarUrls(notificationRows[0], baseURL) : null,
+      };
+    } catch (error) {
+      if (ownsConnection) {
+        await conn.rollback();
+      }
+      throw error;
+    } finally {
+      if (ownsConnection) {
+        conn.release();
+      }
+    }
+  };
+
   createArticleLikeNotification = async ({ recipientId, actorId, articleId }, options = {}) => {
-    if (recipientId === actorId) {
+    if (isSameUser(recipientId, actorId)) {
       return { created: false, notification: null, reason: 'self' };
     }
 
@@ -46,16 +95,23 @@ class NotificationService {
       if (ownsConnection) {
         await conn.beginTransaction();
       }
-      const keyParams = { recipientId, actorId, articleId };
+      const keyParams = {
+        recipientId,
+        actorId,
+        type: 'article_like',
+        targetType: 'article',
+        targetId: articleId,
+        articleId,
+      };
 
       await conn.execute(
         buildAcquireArticleLikeNotificationLockSql(),
-        buildAcquireArticleLikeNotificationLockParams(keyParams),
+        buildAcquireArticleLikeNotificationLockParams({ recipientId, actorId, articleId }),
       );
 
       const [latestRows] = await conn.execute(
-        buildFindLatestArticleLikeNotificationSql(),
-        buildFindLatestArticleLikeNotificationParams(keyParams),
+        buildFindLatestNotificationSql(),
+        buildFindLatestNotificationParams(keyParams),
       );
       const latestNotification = latestRows[0] || null;
       const nowMs = options.nowMs ?? Date.now();
@@ -72,24 +128,23 @@ class NotificationService {
         };
       }
 
-      const [insertResult] = await conn.execute(
-        buildCreateArticleLikeNotificationSql(),
-        buildCreateArticleLikeNotificationParams(keyParams),
-      );
-      const notificationId = insertResult.insertId;
-      const [notificationRows] = await conn.execute(
-        buildGetNotificationByIdSql(),
-        buildGetNotificationByIdParams(notificationId),
+      const notificationResult = await this.createNotification(
+        {
+          recipientId,
+          actorId,
+          type: 'article_like',
+          targetType: 'article',
+          targetId: articleId,
+          articleId,
+        },
+        { conn },
       );
 
       if (ownsConnection) {
         await conn.commit();
       }
 
-      return {
-        created: true,
-        notification: notificationRows[0] || null,
-      };
+      return notificationResult;
     } catch (error) {
       if (ownsConnection) {
         await conn.rollback();
@@ -102,12 +157,34 @@ class NotificationService {
     }
   };
 
+  createArticleCommentNotification = async ({ recipientId, actorId, articleId, commentId, content }, options = {}) => {
+    if (isSameUser(recipientId, actorId)) {
+      return { created: false, notification: null, reason: 'self' };
+    }
+
+    const commentExcerpt = truncateText(Utils.removeHTMLTag(content), COMMENT_EXCERPT_LIMIT);
+
+    return this.createNotification(
+      {
+        recipientId,
+        actorId,
+        type: 'article_comment',
+        targetType: 'article',
+        targetId: articleId,
+        articleId,
+        commentId,
+        metadata: { commentExcerpt },
+      },
+      options,
+    );
+  };
+
   getNotificationList = async (recipientId, pagination = {}) => {
     const [rows] = await connection.execute(
       buildGetNotificationListSql(),
       buildGetNotificationListParams(recipientId, pagination),
     );
-    return rows;
+    return hydrateAvatarUrls(rows, baseURL);
   };
 
   getUnreadCount = async (recipientId) => {

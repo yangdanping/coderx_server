@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const migrationPath = path.resolve(__dirname, '../../migrations/002_create_notifications.sql');
 const cooldownMigrationPath = path.resolve(__dirname, '../../migrations/003_update_notifications_cooldown_index.sql');
+const articleCommentMigrationPath = path.resolve(__dirname, '../../migrations/004_expand_notifications_for_article_comment.sql');
 const helperPath = path.resolve(__dirname, '../../src/service/sql/notification.sql.js');
 
 const compactSql = (sql) => sql.replace(/\s+/g, ' ').trim();
@@ -66,6 +67,16 @@ test('notifications cooldown migration: repairs databases that already ran the o
   );
 });
 
+test('article comment notification migration: expands notification types and adds comment metadata fields', () => {
+  assert.equal(fs.existsSync(articleCommentMigrationPath), true, 'Expected article comment notifications migration to exist');
+  const sql = fs.readFileSync(articleCommentMigrationPath, 'utf8');
+
+  assert.match(sql, /article_comment/i);
+  assert.match(sql, /comment_id\s+BIGINT\s+REFERENCES\s+comment\s*\(\s*id\s*\)\s+ON\s+DELETE\s+SET\s+NULL/i);
+  assert.match(sql, /metadata\s+JSONB\s+NOT\s+NULL\s+DEFAULT\s+'\{\}'::jsonb/i);
+  assert.match(sql, /CREATE INDEX\s+IF NOT EXISTS\s+idx_notifications_comment_id\b[\s\S]*?\(\s*comment_id\s*\)/i);
+});
+
 test('buildCreateArticleLikeNotificationSql: inserts a new notification without permanent dedupe', () => {
   const { buildCreateArticleLikeNotificationSql } = loadHelper();
   const sql = compactSql(buildCreateArticleLikeNotificationSql());
@@ -95,6 +106,30 @@ test('buildCreateArticleLikeNotificationParams: maps article id to target and ar
   );
 });
 
+test('buildCreateNotificationSql: inserts generic notification payloads including comment and metadata fields', () => {
+  const { buildCreateNotificationSql, buildCreateNotificationParams } = loadHelper();
+  const sql = compactSql(buildCreateNotificationSql());
+
+  assert.match(sql, /^INSERT INTO notifications/i);
+  assert.match(sql, /type,\s*target_type,\s*target_id,\s*article_id,\s*comment_id,\s*metadata/i);
+  assert.match(sql, /RETURNING\s+id\s*,\s*recipient_id\s+AS\s+"recipientId"/i);
+  assert.match(sql, /comment_id\s+AS\s+"commentId"/i);
+  assert.match(sql, /metadata/i);
+  assert.deepEqual(
+    buildCreateNotificationParams({
+      recipientId: 10,
+      actorId: 20,
+      type: 'article_comment',
+      targetType: 'article',
+      targetId: 30,
+      articleId: 30,
+      commentId: 40,
+      metadata: { commentExcerpt: 'hello' },
+    }),
+    [10, 20, 'article_comment', 'article', 30, 30, 40, JSON.stringify({ commentExcerpt: 'hello' })],
+  );
+});
+
 test('buildFindLatestArticleLikeNotificationSql: finds the newest matching notification for cooldown checks', () => {
   const { buildFindLatestArticleLikeNotificationSql } = loadHelper();
   const sql = compactSql(buildFindLatestArticleLikeNotificationSql());
@@ -118,4 +153,33 @@ test('buildFindLatestArticleLikeNotificationParams: uses the cooldown lookup key
     }),
     [10, 20, 30],
   );
+});
+
+test('buildGetNotificationByIdSql: hydrates actor and article display fields', () => {
+  const { buildGetNotificationByIdSql } = loadHelper();
+  const sql = compactSql(buildGetNotificationByIdSql());
+
+  assert.match(sql, /LEFT JOIN\s+"user"\s+actor\s+ON\s+actor\.id\s*=\s*n\.actor_id/i);
+  assert.match(sql, /LEFT JOIN\s+profile\s+actor_profile\s+ON\s+actor_profile\.user_id\s*=\s*actor\.id/i);
+  assert.match(sql, /LEFT JOIN\s+article\s+a\s+ON\s+a\.id\s*=\s*n\.article_id/i);
+  assert.match(sql, /jsonb_build_object\(\s*'id',\s*actor\.id,\s*'name',\s*actor\.name,\s*'avatarUrl',\s*actor_profile\.avatar_url\s*\)\s+AS\s+"actor"/i);
+  assert.match(sql, /jsonb_build_object\(\s*'id',\s*a\.id,\s*'title',\s*a\.title\s*\)\s+AS\s+"article"/i);
+  assert.match(sql, /n\.comment_id\s+AS\s+"commentId"/i);
+  assert.match(sql, /n\.metadata/i);
+  assert.match(sql, /jsonb_build_object\(\s*'id',\s*c\.id,\s*'content',\s*c\.content\s*\)\s+AS\s+"comment"/i);
+  assert.match(sql, /WHERE\s+n\.id\s*=\s*\?/i);
+});
+
+test('buildGetNotificationListSql: hydrates actor and article display fields for recipient list', () => {
+  const { buildGetNotificationListSql } = loadHelper();
+  const sql = compactSql(buildGetNotificationListSql());
+
+  assert.match(sql, /LEFT JOIN\s+"user"\s+actor\s+ON\s+actor\.id\s*=\s*n\.actor_id/i);
+  assert.match(sql, /LEFT JOIN\s+profile\s+actor_profile\s+ON\s+actor_profile\.user_id\s*=\s*actor\.id/i);
+  assert.match(sql, /LEFT JOIN\s+article\s+a\s+ON\s+a\.id\s*=\s*n\.article_id/i);
+  assert.match(sql, /jsonb_build_object\(\s*'id',\s*actor\.id,\s*'name',\s*actor\.name,\s*'avatarUrl',\s*actor_profile\.avatar_url\s*\)\s+AS\s+"actor"/i);
+  assert.match(sql, /jsonb_build_object\(\s*'id',\s*a\.id,\s*'title',\s*a\.title\s*\)\s+AS\s+"article"/i);
+  assert.match(sql, /LEFT JOIN\s+comment\s+c\s+ON\s+c\.id\s*=\s*n\.comment_id/i);
+  assert.match(sql, /n\.comment_id\s+AS\s+"commentId"/i);
+  assert.match(sql, /WHERE\s+n\.recipient_id\s*=\s*\?/i);
 });

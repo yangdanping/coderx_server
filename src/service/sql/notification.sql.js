@@ -1,3 +1,86 @@
+function buildNotificationSelectFields() {
+  return `
+      n.id,
+      n.recipient_id AS "recipientId",
+      n.actor_id AS "actorId",
+      n.type,
+      n.target_type AS "targetType",
+      n.target_id AS "targetId",
+      n.article_id AS "articleId",
+      n.comment_id AS "commentId",
+      n.metadata,
+      n.read_at AS "readAt",
+      n.created_at AS "createdAt",
+      n.last_occurred_at AS "lastOccurredAt",
+      jsonb_build_object(
+        'id', actor.id,
+        'name', actor.name,
+        'avatarUrl', actor_profile.avatar_url
+      ) AS "actor",
+      jsonb_build_object(
+        'id', a.id,
+        'title', a.title
+      ) AS "article",
+      jsonb_build_object(
+        'id', c.id,
+        'content', c.content
+      ) AS "comment"
+  `;
+}
+
+function buildNotificationDisplayJoins() {
+  return `
+    LEFT JOIN "user" actor ON actor.id = n.actor_id
+    LEFT JOIN profile actor_profile ON actor_profile.user_id = actor.id
+    LEFT JOIN article a ON a.id = n.article_id
+    LEFT JOIN comment c ON c.id = n.comment_id
+  `;
+}
+
+function buildCreateNotificationSql() {
+  return `
+    INSERT INTO notifications (
+      recipient_id,
+      actor_id,
+      type,
+      target_type,
+      target_id,
+      article_id,
+      comment_id,
+      metadata,
+      created_at,
+      last_occurred_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, clock_timestamp(), clock_timestamp())
+    RETURNING
+      id,
+      recipient_id AS "recipientId",
+      actor_id AS "actorId",
+      type,
+      target_type AS "targetType",
+      target_id AS "targetId",
+      article_id AS "articleId",
+      comment_id AS "commentId",
+      metadata,
+      read_at AS "readAt",
+      created_at AS "createdAt",
+      last_occurred_at AS "lastOccurredAt";
+  `;
+}
+
+function buildCreateNotificationParams({
+  recipientId,
+  actorId,
+  type,
+  targetType,
+  targetId,
+  articleId,
+  commentId = null,
+  metadata = {},
+}) {
+  return [recipientId, actorId, type, targetType, targetId, articleId, commentId, JSON.stringify(metadata)];
+}
+
 function buildCreateArticleLikeNotificationSql() {
   return `
     INSERT INTO notifications (
@@ -58,21 +141,34 @@ function buildFindLatestArticleLikeNotificationParams({ recipientId, actorId, ar
   return [recipientId, actorId, articleId];
 }
 
-function buildGetNotificationByIdSql() {
+function buildFindLatestNotificationSql() {
   return `
     SELECT
       id,
-      recipient_id AS "recipientId",
-      actor_id AS "actorId",
-      type,
-      target_type AS "targetType",
-      target_id AS "targetId",
-      article_id AS "articleId",
-      read_at AS "readAt",
       created_at AS "createdAt",
-      last_occurred_at AS "lastOccurredAt"
+      read_at AS "readAt"
     FROM notifications
-    WHERE id = ?
+    WHERE recipient_id = ?
+      AND actor_id = ?
+      AND type = ?
+      AND target_type = ?
+      AND target_id = ?
+    ORDER BY created_at DESC
+    LIMIT 1;
+  `;
+}
+
+function buildFindLatestNotificationParams({ recipientId, actorId, type, targetType, targetId }) {
+  return [recipientId, actorId, type, targetType, targetId];
+}
+
+function buildGetNotificationByIdSql() {
+  return `
+    SELECT
+      ${buildNotificationSelectFields()}
+    FROM notifications n
+    ${buildNotificationDisplayJoins()}
+    WHERE n.id = ?
     LIMIT 1;
   `;
 }
@@ -84,19 +180,11 @@ function buildGetNotificationByIdParams(notificationId) {
 function buildGetNotificationListSql() {
   return `
     SELECT
-      id,
-      recipient_id AS "recipientId",
-      actor_id AS "actorId",
-      type,
-      target_type AS "targetType",
-      target_id AS "targetId",
-      article_id AS "articleId",
-      read_at AS "readAt",
-      created_at AS "createdAt",
-      last_occurred_at AS "lastOccurredAt"
-    FROM notifications
-    WHERE recipient_id = ?
-    ORDER BY created_at DESC
+      ${buildNotificationSelectFields()}
+    FROM notifications n
+    ${buildNotificationDisplayJoins()}
+    WHERE n.recipient_id = ?
+    ORDER BY n.created_at DESC
     LIMIT ? OFFSET ?;
   `;
 }
@@ -134,8 +222,12 @@ module.exports = {
   buildAcquireArticleLikeNotificationLockSql,
   buildCreateArticleLikeNotificationParams,
   buildCreateArticleLikeNotificationSql,
+  buildCreateNotificationParams,
+  buildCreateNotificationSql,
   buildFindLatestArticleLikeNotificationParams,
   buildFindLatestArticleLikeNotificationSql,
+  buildFindLatestNotificationParams,
+  buildFindLatestNotificationSql,
   buildGetNotificationByIdParams,
   buildGetNotificationByIdSql,
   buildGetNotificationListParams,
