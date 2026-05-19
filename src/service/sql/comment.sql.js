@@ -165,6 +165,10 @@ function buildGetCommentByIdSql() {
   `;
 }
 
+function buildGetCommentAuthorSql() {
+  return 'SELECT user_id AS "authorId" FROM comment WHERE id = ? LIMIT 1;';
+}
+
 function buildAddCommentSql() {
   return 'INSERT INTO comment (user_id, article_id, content) VALUES (?, ?, ?) RETURNING id;';
 }
@@ -179,6 +183,7 @@ function buildAddReplySql(hasReplyId) {
 module.exports = {
   buildAddCommentSql,
   buildAddReplySql,
+  buildGetCommentAuthorSql,
   buildGetCommentListSql,
   buildGetCommentByIdSql,
   buildGetRepliesSql,

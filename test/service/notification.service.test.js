@@ -125,6 +125,61 @@ test('createArticleLikeNotification: first like locks key, inserts notification,
   ]);
 });
 
+test('createCommentReplyNotification: stores the created reply id in metadata', async () => {
+  const notification = {
+    id: 401,
+    recipientId: 10,
+    actorId: 9,
+    type: 'comment_reply',
+    targetType: 'article',
+    targetId: 12,
+    articleId: 12,
+    commentId: 33,
+    metadata: {
+      commentExcerpt: 'reply body',
+      replyId: 181,
+    },
+  };
+  const { conn, calls } = createTransactionalMock((statement) => {
+    if (/INSERT INTO notifications/i.test(statement)) {
+      return [{ insertId: notification.id, affectedRows: 1 }, []];
+    }
+
+    if (/FROM notifications/i.test(statement) && /WHERE n\.id = \?/i.test(statement)) {
+      return [[notification], []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return conn;
+    },
+  });
+
+  const result = await service.createCommentReplyNotification({
+    recipientId: 10,
+    actorId: 9,
+    articleId: 12,
+    commentId: 33,
+    replyId: 181,
+    content: '<p>reply body</p>',
+  });
+
+  assert.deepEqual(result, { created: true, notification });
+  const insertCall = calls.find((call) => call.type === 'execute' && /INSERT INTO notifications/i.test(call.statement));
+  assert.deepEqual(insertCall.params, [
+    10,
+    9,
+    'comment_reply',
+    'article',
+    12,
+    12,
+    33,
+    JSON.stringify({ commentExcerpt: 'reply body', replyId: 181 }),
+  ]);
+});
+
 test('createArticleLikeNotification: repeated like inside cooldown does not insert or touch old unread state', async () => {
   const nowMs = Date.parse('2026-05-13T10:00:00.000Z');
   const latest = {
@@ -356,6 +411,83 @@ test('createArticleCommentNotification: self-comment does not open a transaction
   });
 
   const result = await service.createArticleCommentNotification({
+    recipientId: 7,
+    actorId: 7,
+    articleId: 20,
+    commentId: 30,
+    content: 'self',
+  });
+
+  assert.equal(getConnectionCalled, false);
+  assert.deepEqual(result, { created: false, notification: null, reason: 'self' });
+});
+
+test('createCommentReplyNotification: creates a notification with sanitized reply excerpt and no cooldown lookup', async () => {
+  const notification = {
+    id: 288,
+    recipientId: 10,
+    actorId: 20,
+    type: 'comment_reply',
+    targetType: 'article',
+    targetId: 30,
+    articleId: 30,
+    commentId: 40,
+    metadata: { commentExcerpt: 'reply text' },
+    readAt: null,
+    createdAt: new Date('2026-05-13T00:00:00.000Z'),
+    lastOccurredAt: new Date('2026-05-13T00:00:00.000Z'),
+  };
+  const { conn, calls } = createTransactionalMock((statement, params) => {
+    if (/INSERT INTO notifications/i.test(statement)) {
+      assert.equal(params[2], 'comment_reply');
+      assert.equal(params[3], 'article');
+      assert.equal(params[4], 30);
+      assert.equal(params[5], 30);
+      assert.equal(params[6], 40);
+      assert.deepEqual(JSON.parse(params[7]), { commentExcerpt: 'reply text' });
+      return [{ insertId: notification.id, affectedRows: 1 }, []];
+    }
+
+    if (/FROM notifications/i.test(statement) && /WHERE n\.id = \?/i.test(statement)) {
+      return [[notification], []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return conn;
+    },
+  });
+
+  const result = await service.createCommentReplyNotification({
+    recipientId: 10,
+    actorId: 20,
+    articleId: 30,
+    commentId: 40,
+    content: '<p>reply&nbsp;<em>text</em></p>',
+  });
+
+  assert.deepEqual(result, { created: true, notification });
+  assert.equal(calls.some((call) => call.statement && /pg_advisory_xact_lock/i.test(call.statement)), false);
+  assert.equal(calls.some((call) => call.statement && /ORDER BY created_at DESC/i.test(call.statement)), false);
+  assert.deepEqual(calls.filter((call) => call.type !== 'execute'), [
+    { type: 'beginTransaction' },
+    { type: 'commit' },
+    { type: 'release' },
+  ]);
+});
+
+test('createCommentReplyNotification: self-reply does not open a transaction', async () => {
+  let getConnectionCalled = false;
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      getConnectionCalled = true;
+      throw new Error('should not open connection for self-reply');
+    },
+  });
+
+  const result = await service.createCommentReplyNotification({
     recipientId: 7,
     actorId: 7,
     articleId: 20,
