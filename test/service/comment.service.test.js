@@ -455,6 +455,7 @@ test('addReply: replying to a top-level comment creates a reply notification in 
     actorId: 9,
     articleId: 12,
     commentId: 33,
+    replyId: 181,
     content: '<p>reply</p>',
   });
   assert.equal(calls.find((call) => call.type === 'createReplyNotification').conn, conn);
@@ -503,6 +504,7 @@ test('addReply: replying to another reply notifies the replied reply author whil
     actorId: 9,
     articleId: 12,
     commentId: 33,
+    replyId: 182,
     content: 'nested reply',
   });
 });

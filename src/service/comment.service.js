@@ -362,6 +362,7 @@ class CommentService {
               actorId: userId,
               articleId,
               commentId,
+              replyId: replyCommentId,
               content,
             },
             { conn },

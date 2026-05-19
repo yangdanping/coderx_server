@@ -179,12 +179,16 @@ class NotificationService {
     );
   };
 
-  createCommentReplyNotification = async ({ recipientId, actorId, articleId, commentId, content }, options = {}) => {
+  createCommentReplyNotification = async ({ recipientId, actorId, articleId, commentId, replyId, content }, options = {}) => {
     if (isSameUser(recipientId, actorId)) {
       return { created: false, notification: null, reason: 'self' };
     }
 
     const commentExcerpt = truncateText(Utils.removeHTMLTag(content), COMMENT_EXCERPT_LIMIT);
+    const metadata = { commentExcerpt };
+    if (replyId != null) {
+      metadata.replyId = replyId;
+    }
 
     return this.createNotification(
       {
@@ -195,7 +199,7 @@ class NotificationService {
         targetId: articleId,
         articleId,
         commentId,
-        metadata: { commentExcerpt },
+        metadata,
       },
       options,
     );

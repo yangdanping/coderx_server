@@ -125,6 +125,61 @@ test('createArticleLikeNotification: first like locks key, inserts notification,
   ]);
 });
 
+test('createCommentReplyNotification: stores the created reply id in metadata', async () => {
+  const notification = {
+    id: 401,
+    recipientId: 10,
+    actorId: 9,
+    type: 'comment_reply',
+    targetType: 'article',
+    targetId: 12,
+    articleId: 12,
+    commentId: 33,
+    metadata: {
+      commentExcerpt: 'reply body',
+      replyId: 181,
+    },
+  };
+  const { conn, calls } = createTransactionalMock((statement) => {
+    if (/INSERT INTO notifications/i.test(statement)) {
+      return [{ insertId: notification.id, affectedRows: 1 }, []];
+    }
+
+    if (/FROM notifications/i.test(statement) && /WHERE n\.id = \?/i.test(statement)) {
+      return [[notification], []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return conn;
+    },
+  });
+
+  const result = await service.createCommentReplyNotification({
+    recipientId: 10,
+    actorId: 9,
+    articleId: 12,
+    commentId: 33,
+    replyId: 181,
+    content: '<p>reply body</p>',
+  });
+
+  assert.deepEqual(result, { created: true, notification });
+  const insertCall = calls.find((call) => call.type === 'execute' && /INSERT INTO notifications/i.test(call.statement));
+  assert.deepEqual(insertCall.params, [
+    10,
+    9,
+    'comment_reply',
+    'article',
+    12,
+    12,
+    33,
+    JSON.stringify({ commentExcerpt: 'reply body', replyId: 181 }),
+  ]);
+});
+
 test('createArticleLikeNotification: repeated like inside cooldown does not insert or touch old unread state', async () => {
   const nowMs = Date.parse('2026-05-13T10:00:00.000Z');
   const latest = {
