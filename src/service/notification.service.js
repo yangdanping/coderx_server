@@ -179,6 +179,28 @@ class NotificationService {
     );
   };
 
+  createCommentReplyNotification = async ({ recipientId, actorId, articleId, commentId, content }, options = {}) => {
+    if (isSameUser(recipientId, actorId)) {
+      return { created: false, notification: null, reason: 'self' };
+    }
+
+    const commentExcerpt = truncateText(Utils.removeHTMLTag(content), COMMENT_EXCERPT_LIMIT);
+
+    return this.createNotification(
+      {
+        recipientId,
+        actorId,
+        type: 'comment_reply',
+        targetType: 'article',
+        targetId: articleId,
+        articleId,
+        commentId,
+        metadata: { commentExcerpt },
+      },
+      options,
+    );
+  };
+
   getNotificationList = async (recipientId, pagination = {}) => {
     const [rows] = await connection.execute(
       buildGetNotificationListSql(),

@@ -6,6 +6,7 @@ const path = require('node:path');
 const migrationPath = path.resolve(__dirname, '../../migrations/002_create_notifications.sql');
 const cooldownMigrationPath = path.resolve(__dirname, '../../migrations/003_update_notifications_cooldown_index.sql');
 const articleCommentMigrationPath = path.resolve(__dirname, '../../migrations/004_expand_notifications_for_article_comment.sql');
+const commentReplyMigrationPath = path.resolve(__dirname, '../../migrations/005_expand_notifications_for_comment_reply.sql');
 const helperPath = path.resolve(__dirname, '../../src/service/sql/notification.sql.js');
 
 const compactSql = (sql) => sql.replace(/\s+/g, ' ').trim();
@@ -75,6 +76,16 @@ test('article comment notification migration: expands notification types and add
   assert.match(sql, /comment_id\s+BIGINT\s+REFERENCES\s+comment\s*\(\s*id\s*\)\s+ON\s+DELETE\s+SET\s+NULL/i);
   assert.match(sql, /metadata\s+JSONB\s+NOT\s+NULL\s+DEFAULT\s+'\{\}'::jsonb/i);
   assert.match(sql, /CREATE INDEX\s+IF NOT EXISTS\s+idx_notifications_comment_id\b[\s\S]*?\(\s*comment_id\s*\)/i);
+});
+
+test('comment reply notification migration: expands notification types without adding new columns', () => {
+  assert.equal(fs.existsSync(commentReplyMigrationPath), true, 'Expected comment reply notifications migration to exist');
+  const sql = fs.readFileSync(commentReplyMigrationPath, 'utf8');
+
+  assert.match(sql, /comment_reply/i);
+  assert.match(sql, /CHECK\s*\(\s*type\s+IN\s*\(\s*'article_like'\s*,\s*'article_comment'\s*,\s*'comment_reply'\s*\)\s*\)/i);
+  assert.match(sql, /CHECK\s*\(\s*target_type\s+IN\s*\(\s*'article'\s*\)\s*\)/i);
+  assert.doesNotMatch(sql, /ADD\s+COLUMN/i);
 });
 
 test('buildCreateArticleLikeNotificationSql: inserts a new notification without permanent dedupe', () => {

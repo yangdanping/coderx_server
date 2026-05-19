@@ -7,6 +7,7 @@ const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const {
   buildAddCommentSql,
   buildAddReplySql,
+  buildGetCommentAuthorSql,
   buildGetCommentListSql,
   buildGetCommentByIdSql,
   buildGetRepliesSql,
@@ -303,7 +304,38 @@ class CommentService {
    * @param {string} content 内容
    */
   addReply = async (userId, articleId, commentId, replyId, content) => {
+    if (typeof connection.getConnection !== 'function') {
+      try {
+        let queryParams;
+
+        if (replyId) {
+          // 回复的回复
+          queryParams = [userId, articleId, commentId, replyId, content];
+        } else {
+          // 回复一级评论
+          queryParams = [userId, articleId, commentId, content];
+        }
+
+        const statement = buildAddReplySql(!!replyId);
+        const [result] = await connection.execute(statement, queryParams);
+
+        if (result.insertId) {
+          return await this.getCommentById(result.insertId);
+        }
+        return null;
+      } catch (error) {
+        console.error('addReply error:', error);
+        throw error;
+      }
+    }
+
+    const conn = await connection.getConnection();
+    let comment = null;
+    let notificationResult = { created: false, notification: null };
+
     try {
+      await conn.beginTransaction();
+
       let queryParams;
 
       if (replyId) {
@@ -315,16 +347,48 @@ class CommentService {
       }
 
       const statement = buildAddReplySql(!!replyId);
-      const [result] = await connection.execute(statement, queryParams);
+      const [result] = await conn.execute(statement, queryParams);
 
       if (result.insertId) {
-        return await this.getCommentById(result.insertId);
+        const replyCommentId = result.insertId;
+        const repliedCommentId = replyId || commentId;
+        const [repliedRows] = await conn.execute(buildGetCommentAuthorSql(), [repliedCommentId]);
+        const repliedComment = repliedRows[0];
+
+        if (repliedComment && !isSameUser(repliedComment.authorId, userId)) {
+          notificationResult = await notificationService.createCommentReplyNotification(
+            {
+              recipientId: repliedComment.authorId,
+              actorId: userId,
+              articleId,
+              commentId,
+              content,
+            },
+            { conn },
+          );
+        }
+
+        comment = await this.getCommentById(replyCommentId, conn);
       }
-      return null;
+
+      await conn.commit();
     } catch (error) {
+      await conn.rollback();
       console.error('addReply error:', error);
       throw error;
+    } finally {
+      conn.release();
     }
+
+    if (notificationResult.created && notificationResult.notification) {
+      try {
+        await publishNotificationCreated(notificationResult.notification);
+      } catch (error) {
+        console.warn('⚠️ 评论回复通知实时推送失败，将由 REST 同步兜底:', error.message);
+      }
+    }
+
+    return comment;
   };
 
   /**
