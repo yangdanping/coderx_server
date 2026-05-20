@@ -331,7 +331,7 @@ class CommentService {
 
     const conn = await connection.getConnection();
     let comment = null;
-    let notificationResult = { created: false, notification: null };
+    const notificationResults = [];
 
     try {
       await conn.beginTransaction();
@@ -354,19 +354,37 @@ class CommentService {
         const repliedCommentId = replyId || commentId;
         const [repliedRows] = await conn.execute(buildGetCommentAuthorSql(), [repliedCommentId]);
         const repliedComment = repliedRows[0];
+        const [articleRows] = await conn.execute(buildGetArticleAuthorSql(), [articleId]);
+        const article = articleRows[0];
+        const recipientCandidates = [];
+        const seenRecipientIds = new Set();
 
-        if (repliedComment && !isSameUser(repliedComment.authorId, userId)) {
-          notificationResult = await notificationService.createCommentReplyNotification(
+        const addRecipientCandidate = (recipientId, recipientRole) => {
+          if (recipientId == null || isSameUser(recipientId, userId)) return;
+          const key = String(recipientId);
+          if (seenRecipientIds.has(key)) return;
+          seenRecipientIds.add(key);
+          recipientCandidates.push({ recipientId, recipientRole });
+        };
+
+        addRecipientCandidate(repliedComment?.authorId, 'comment_author');
+        addRecipientCandidate(article?.authorId, 'article_author');
+
+        for (const recipient of recipientCandidates) {
+          const notificationResult = await notificationService.createCommentReplyNotification(
             {
-              recipientId: repliedComment.authorId,
+              recipientId: recipient.recipientId,
               actorId: userId,
               articleId,
               commentId,
               replyId: replyCommentId,
               content,
+              recipientRole: recipient.recipientRole,
             },
             { conn },
           );
+
+          notificationResults.push(notificationResult);
         }
 
         comment = await this.getCommentById(replyCommentId, conn);
@@ -381,11 +399,13 @@ class CommentService {
       conn.release();
     }
 
-    if (notificationResult.created && notificationResult.notification) {
-      try {
-        await publishNotificationCreated(notificationResult.notification);
-      } catch (error) {
-        console.warn('⚠️ 评论回复通知实时推送失败，将由 REST 同步兜底:', error.message);
+    for (const notificationResult of notificationResults) {
+      if (notificationResult.created && notificationResult.notification) {
+        try {
+          await publishNotificationCreated(notificationResult.notification);
+        } catch (error) {
+          console.warn('⚠️ 评论回复通知实时推送失败，将由 REST 同步兜底:', error.message);
+        }
       }
     }
 

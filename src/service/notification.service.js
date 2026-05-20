@@ -179,7 +179,7 @@ class NotificationService {
     );
   };
 
-  createCommentReplyNotification = async ({ recipientId, actorId, articleId, commentId, replyId, content }, options = {}) => {
+  createCommentReplyNotification = async ({ recipientId, actorId, articleId, commentId, replyId, content, recipientRole }, options = {}) => {
     if (isSameUser(recipientId, actorId)) {
       return { created: false, notification: null, reason: 'self' };
     }
@@ -188,6 +188,9 @@ class NotificationService {
     const metadata = { commentExcerpt };
     if (replyId != null) {
       metadata.replyId = replyId;
+    }
+    if (recipientRole) {
+      metadata.recipientRole = recipientRole;
     }
 
     return this.createNotification(

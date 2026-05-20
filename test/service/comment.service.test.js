@@ -420,6 +420,10 @@ test('addReply: replying to a top-level comment creates a reply notification in 
       return [[{ authorId: 10 }], []];
     }
 
+    if (/SELECT user_id AS "authorId" FROM article/i.test(statement)) {
+      return [[{ authorId: 10 }], []];
+    }
+
     if (/FROM comment c/i.test(statement) && /WHERE c\.id = \?/i.test(statement)) {
       return [[{ id: 181, content: 'reply', status: 0, cid: 33, articleId: 12 }], []];
     }
@@ -457,6 +461,7 @@ test('addReply: replying to a top-level comment creates a reply notification in 
     commentId: 33,
     replyId: 181,
     content: '<p>reply</p>',
+    recipientRole: 'comment_author',
   });
   assert.equal(calls.find((call) => call.type === 'createReplyNotification').conn, conn);
   assert.ok(calls.findIndex((call) => call.type === 'commit') < calls.findIndex((call) => call.type === 'publish'));
@@ -471,6 +476,11 @@ test('addReply: replying to another reply notifies the replied reply author whil
 
     if (/SELECT user_id AS "authorId" FROM comment/i.test(statement)) {
       assert.deepEqual(params, [44]);
+      return [[{ authorId: 11 }], []];
+    }
+
+    if (/SELECT user_id AS "authorId" FROM article/i.test(statement)) {
+      assert.deepEqual(params, [12]);
       return [[{ authorId: 11 }], []];
     }
 
@@ -506,13 +516,153 @@ test('addReply: replying to another reply notifies the replied reply author whil
     commentId: 33,
     replyId: 182,
     content: 'nested reply',
+    recipientRole: 'comment_author',
   });
+});
+
+test('addReply: replying to another user also notifies a distinct article author', async () => {
+  const notifications = [
+    { id: 401, recipientId: 11, actorId: 9, type: 'comment_reply', articleId: 12, commentId: 33 },
+    { id: 402, recipientId: 10, actorId: 9, type: 'comment_reply', articleId: 12, commentId: 33 },
+  ];
+  const { conn, calls } = createConnMock((statement, params) => {
+    if (/INSERT INTO comment/i.test(statement)) {
+      return [{ insertId: 182, affectedRows: 1 }, []];
+    }
+
+    if (/SELECT user_id AS "authorId" FROM comment/i.test(statement)) {
+      assert.deepEqual(params, [44]);
+      return [[{ authorId: 11 }], []];
+    }
+
+    if (/SELECT user_id AS "authorId" FROM article/i.test(statement)) {
+      assert.deepEqual(params, [12]);
+      return [[{ authorId: 10 }], []];
+    }
+
+    if (/FROM comment c/i.test(statement) && /WHERE c\.id = \?/i.test(statement)) {
+      return [[{ id: 182, content: 'nested reply', status: 0, cid: 33, rid: 44, articleId: 12 }], []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      notificationService: {
+        async createCommentReplyNotification(payload, options) {
+          calls.push({ type: 'createReplyNotification', payload, conn: options.conn });
+          return { created: true, notification: notifications.shift() };
+        },
+      },
+      eventBus: {
+        async publishNotificationCreated(payload) {
+          calls.push({ type: 'publish', payload });
+        },
+      },
+    },
+  );
+
+  const result = await service.addReply(9, 12, 33, 44, 'nested reply');
+
+  assert.deepEqual(result, { id: 182, content: 'nested reply', status: 0, cid: 33, rid: 44, articleId: 12 });
+  const notificationPayloads = calls
+    .filter((call) => call.type === 'createReplyNotification')
+    .map((call) => call.payload);
+  assert.deepEqual(notificationPayloads, [
+    {
+      recipientId: 11,
+      actorId: 9,
+      articleId: 12,
+      commentId: 33,
+      replyId: 182,
+      content: 'nested reply',
+      recipientRole: 'comment_author',
+    },
+    {
+      recipientId: 10,
+      actorId: 9,
+      articleId: 12,
+      commentId: 33,
+      replyId: 182,
+      content: 'nested reply',
+      recipientRole: 'article_author',
+    },
+  ]);
+  assert.equal(calls.filter((call) => call.type === 'publish').length, 2);
+  assert.ok(calls.findIndex((call) => call.type === 'commit') < calls.findIndex((call) => call.type === 'publish'));
+});
+
+test('addReply: replying to own comment skips the self reply notification but still notifies the article author', async () => {
+  const notification = { id: 402, recipientId: 10, actorId: 9, type: 'comment_reply', articleId: 12, commentId: 33 };
+  const { conn, calls } = createConnMock((statement, params) => {
+    if (/INSERT INTO comment/i.test(statement)) {
+      return [{ insertId: 183, affectedRows: 1 }, []];
+    }
+
+    if (/SELECT user_id AS "authorId" FROM comment/i.test(statement)) {
+      assert.deepEqual(params, [33]);
+      return [[{ authorId: 9 }], []];
+    }
+
+    if (/SELECT user_id AS "authorId" FROM article/i.test(statement)) {
+      assert.deepEqual(params, [12]);
+      return [[{ authorId: 10 }], []];
+    }
+
+    if (/FROM comment c/i.test(statement) && /WHERE c\.id = \?/i.test(statement)) {
+      return [[{ id: 183, content: 'self thread update', status: 0, cid: 33, articleId: 12 }], []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      notificationService: {
+        async createCommentReplyNotification(payload, options) {
+          calls.push({ type: 'createReplyNotification', payload, conn: options.conn });
+          return { created: true, notification };
+        },
+      },
+      eventBus: {
+        async publishNotificationCreated(payload) {
+          calls.push({ type: 'publish', payload });
+        },
+      },
+    },
+  );
+
+  const result = await service.addReply(9, 12, 33, null, 'self thread update');
+
+  assert.deepEqual(result, { id: 183, content: 'self thread update', status: 0, cid: 33, articleId: 12 });
+  assert.deepEqual(calls.filter((call) => call.type === 'createReplyNotification').map((call) => call.payload), [
+    {
+      recipientId: 10,
+      actorId: 9,
+      articleId: 12,
+      commentId: 33,
+      replyId: 183,
+      content: 'self thread update',
+      recipientRole: 'article_author',
+    },
+  ]);
+  assert.deepEqual(calls.find((call) => call.type === 'publish').payload, notification);
 });
 
 test('addReply: self-reply keeps the reply without creating or publishing a notification', async () => {
   const { conn, calls } = createConnMock((statement) => {
     if (/INSERT INTO comment/i.test(statement)) return [{ insertId: 181, affectedRows: 1 }, []];
     if (/SELECT user_id AS "authorId" FROM comment/i.test(statement)) return [[{ authorId: 9 }], []];
+    if (/SELECT user_id AS "authorId" FROM article/i.test(statement)) return [[{ authorId: 9 }], []];
     if (/FROM comment c/i.test(statement) && /WHERE c\.id = \?/i.test(statement)) return [[{ id: 181, content: 'self reply' }], []];
     throw new Error(`Unexpected SQL: ${statement}`);
   });
@@ -548,6 +698,7 @@ test('addReply: publish failure does not roll back committed reply and notificat
   const { conn, calls } = createConnMock((statement) => {
     if (/INSERT INTO comment/i.test(statement)) return [{ insertId: 181, affectedRows: 1 }, []];
     if (/SELECT user_id AS "authorId" FROM comment/i.test(statement)) return [[{ authorId: 10 }], []];
+    if (/SELECT user_id AS "authorId" FROM article/i.test(statement)) return [[{ authorId: 10 }], []];
     if (/FROM comment c/i.test(statement) && /WHERE c\.id = \?/i.test(statement)) return [[{ id: 181, content: 'reply' }], []];
     throw new Error(`Unexpected SQL: ${statement}`);
   });
