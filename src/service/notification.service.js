@@ -3,8 +3,9 @@ const { baseURL } = require('@/constants/urls');
 const Utils = require('@/utils');
 const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const {
+  buildAcquireNotificationLockParams,
+  buildAcquireNotificationLockSql,
   buildAcquireArticleLikeNotificationLockParams,
-  buildAcquireArticleLikeNotificationLockSql,
   buildCreateNotificationParams,
   buildCreateNotificationSql,
   buildFindLatestNotificationParams,
@@ -19,6 +20,7 @@ const {
 } = require('./sql/notification.sql');
 
 const ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS = 60 * 60 * 1000;
+const FOLLOW_NOTIFICATION_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const COMMENT_EXCERPT_LIMIT = 60;
 
 function toTimeMs(value) {
@@ -26,13 +28,13 @@ function toTimeMs(value) {
   return new Date(value).getTime();
 }
 
-function isInsideCooldown(latestNotification, nowMs) {
+function isInsideCooldown(latestNotification, nowMs, cooldownMs) {
   if (!latestNotification?.createdAt) return false;
 
   const latestCreatedAtMs = toTimeMs(latestNotification.createdAt);
   if (!Number.isFinite(latestCreatedAtMs)) return false;
 
-  return nowMs - latestCreatedAtMs < ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS;
+  return nowMs - latestCreatedAtMs < cooldownMs;
 }
 
 function isSameUser(left, right) {
@@ -46,6 +48,7 @@ function truncateText(value, limit) {
 
 class NotificationService {
   ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS = ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS;
+  FOLLOW_NOTIFICATION_COOLDOWN_MS = FOLLOW_NOTIFICATION_COOLDOWN_MS;
 
   createNotification = async (payload, options = {}) => {
     const ownsConnection = !options.conn;
@@ -83,8 +86,8 @@ class NotificationService {
     }
   };
 
-  createArticleLikeNotification = async ({ recipientId, actorId, articleId }, options = {}) => {
-    if (isSameUser(recipientId, actorId)) {
+  createNotificationWithCooldown = async ({ payload, lockKey, cooldownMs }, options = {}) => {
+    if (isSameUser(payload.recipientId, payload.actorId)) {
       return { created: false, notification: null, reason: 'self' };
     }
 
@@ -95,28 +98,17 @@ class NotificationService {
       if (ownsConnection) {
         await conn.beginTransaction();
       }
-      const keyParams = {
-        recipientId,
-        actorId,
-        type: 'article_like',
-        targetType: 'article',
-        targetId: articleId,
-        articleId,
-      };
 
-      await conn.execute(
-        buildAcquireArticleLikeNotificationLockSql(),
-        buildAcquireArticleLikeNotificationLockParams({ recipientId, actorId, articleId }),
-      );
+      await conn.execute(buildAcquireNotificationLockSql(), buildAcquireNotificationLockParams(lockKey));
 
       const [latestRows] = await conn.execute(
         buildFindLatestNotificationSql(),
-        buildFindLatestNotificationParams(keyParams),
+        buildFindLatestNotificationParams(payload),
       );
       const latestNotification = latestRows[0] || null;
       const nowMs = options.nowMs ?? Date.now();
 
-      if (isInsideCooldown(latestNotification, nowMs)) {
+      if (isInsideCooldown(latestNotification, nowMs, cooldownMs)) {
         if (ownsConnection) {
           await conn.commit();
         }
@@ -128,17 +120,7 @@ class NotificationService {
         };
       }
 
-      const notificationResult = await this.createNotification(
-        {
-          recipientId,
-          actorId,
-          type: 'article_like',
-          targetType: 'article',
-          targetId: articleId,
-          articleId,
-        },
-        { conn },
-      );
+      const notificationResult = await this.createNotification(payload, { conn });
 
       if (ownsConnection) {
         await conn.commit();
@@ -155,6 +137,50 @@ class NotificationService {
         conn.release();
       }
     }
+  };
+
+  createArticleLikeNotification = async ({ recipientId, actorId, articleId }, options = {}) => {
+    if (isSameUser(recipientId, actorId)) {
+      return { created: false, notification: null, reason: 'self' };
+    }
+
+    return this.createNotificationWithCooldown(
+      {
+        payload: {
+          recipientId,
+          actorId,
+          type: 'article_like',
+          targetType: 'article',
+          targetId: articleId,
+          articleId,
+        },
+        lockKey: buildAcquireArticleLikeNotificationLockParams({ recipientId, actorId, articleId })[0],
+        cooldownMs: ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS,
+      },
+      options,
+    );
+  };
+
+  createFollowNotification = async ({ recipientId, actorId }, options = {}) => {
+    if (isSameUser(recipientId, actorId)) {
+      return { created: false, notification: null, reason: 'self' };
+    }
+
+    return this.createNotificationWithCooldown(
+      {
+        payload: {
+          recipientId,
+          actorId,
+          type: 'follow',
+          targetType: 'user',
+          targetId: recipientId,
+          articleId: null,
+        },
+        lockKey: `follow:${recipientId}:${actorId}:user:${recipientId}`,
+        cooldownMs: FOLLOW_NOTIFICATION_COOLDOWN_MS,
+      },
+      options,
+    );
   };
 
   createArticleCommentNotification = async ({ recipientId, actorId, articleId, commentId, content }, options = {}) => {

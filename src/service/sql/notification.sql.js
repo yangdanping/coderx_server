@@ -116,6 +116,14 @@ function buildAcquireArticleLikeNotificationLockSql() {
   return 'SELECT pg_advisory_xact_lock(hashtextextended(?::text, 0));';
 }
 
+function buildAcquireNotificationLockSql() {
+  return 'SELECT pg_advisory_xact_lock(hashtextextended(?::text, 0));';
+}
+
+function buildAcquireNotificationLockParams(lockKey) {
+  return [lockKey];
+}
+
 function buildAcquireArticleLikeNotificationLockParams({ recipientId, actorId, articleId }) {
   return [`article_like:${recipientId}:${actorId}:article:${articleId}`];
 }
@@ -218,6 +226,8 @@ function buildMarkAllNotificationsReadSql() {
 }
 
 module.exports = {
+  buildAcquireNotificationLockParams,
+  buildAcquireNotificationLockSql,
   buildAcquireArticleLikeNotificationLockParams,
   buildAcquireArticleLikeNotificationLockSql,
   buildCreateArticleLikeNotificationParams,

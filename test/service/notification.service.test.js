@@ -323,6 +323,167 @@ test('createArticleLikeNotification: like after cooldown creates a new notificat
   assert.equal(calls.some((call) => call.statement && /INSERT INTO notifications/i.test(call.statement)), true);
 });
 
+test('createFollowNotification: self-follow does not open a transaction', async () => {
+  let getConnectionCalled = false;
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      getConnectionCalled = true;
+      throw new Error('should not open connection for self-follow');
+    },
+  });
+
+  const result = await service.createFollowNotification({
+    recipientId: 7,
+    actorId: 7,
+  });
+
+  assert.equal(getConnectionCalled, false);
+  assert.deepEqual(result, { created: false, notification: null, reason: 'self' });
+});
+
+test('createFollowNotification: first follow locks key, inserts notification, and commits', async () => {
+  const notification = {
+    id: 501,
+    recipientId: 10,
+    actorId: 20,
+    type: 'follow',
+    targetType: 'user',
+    targetId: 10,
+    articleId: null,
+    commentId: null,
+    metadata: {},
+    readAt: null,
+    createdAt: new Date('2026-05-13T00:00:00.000Z'),
+    lastOccurredAt: new Date('2026-05-13T00:00:00.000Z'),
+  };
+  const { conn, calls } = createTransactionalMock((statement) => {
+    if (/pg_advisory_xact_lock/i.test(statement)) {
+      return [[{}], []];
+    }
+
+    if (/FROM notifications/i.test(statement) && /ORDER BY created_at DESC/i.test(statement)) {
+      return [[], []];
+    }
+
+    if (/INSERT INTO notifications/i.test(statement)) {
+      return [{ insertId: notification.id, affectedRows: 1 }, []];
+    }
+
+    if (/FROM notifications/i.test(statement) && /WHERE n\.id = \?/i.test(statement)) {
+      return [[notification], []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return conn;
+    },
+  });
+
+  const result = await service.createFollowNotification({
+    recipientId: 10,
+    actorId: 20,
+  });
+
+  assert.deepEqual(result, { created: true, notification });
+  const executeCalls = calls.filter((call) => call.type === 'execute');
+  assert.match(executeCalls[0].statement, /pg_advisory_xact_lock/i);
+  assert.deepEqual(executeCalls[0].params, ['follow:10:20:user:10']);
+  assert.deepEqual(executeCalls[1].params, [10, 20, 'follow', 'user', 10]);
+  assert.deepEqual(executeCalls[2].params, [10, 20, 'follow', 'user', 10, null, null, '{}']);
+});
+
+test('createFollowNotification: repeated follow inside seven-day cooldown does not insert', async () => {
+  const nowMs = Date.parse('2026-05-20T10:00:00.000Z');
+  const latest = {
+    id: 500,
+    createdAt: new Date(nowMs - 6 * 24 * 60 * 60 * 1000),
+    readAt: null,
+  };
+  const { conn, calls } = createTransactionalMock((statement) => {
+    if (/pg_advisory_xact_lock/i.test(statement)) {
+      return [[{}], []];
+    }
+
+    if (/FROM notifications/i.test(statement) && /ORDER BY created_at DESC/i.test(statement)) {
+      return [[latest], []];
+    }
+
+    throw new Error(`Should not insert inside follow cooldown: ${statement}`);
+  });
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return conn;
+    },
+  });
+
+  const result = await service.createFollowNotification(
+    {
+      recipientId: 10,
+      actorId: 20,
+    },
+    { nowMs },
+  );
+
+  assert.deepEqual(result, {
+    created: false,
+    notification: null,
+    reason: 'cooldown',
+    latestNotification: latest,
+  });
+  assert.equal(calls.some((call) => call.statement && /INSERT INTO notifications/i.test(call.statement)), false);
+  assert.equal(calls.some((call) => call.statement && /UPDATE notifications/i.test(call.statement)), false);
+});
+
+test('createFollowNotification: follow after seven-day cooldown creates a new notification', async () => {
+  const nowMs = Date.parse('2026-05-20T10:00:00.000Z');
+  const notification = {
+    id: 502,
+    recipientId: 10,
+    actorId: 20,
+    type: 'follow',
+    targetType: 'user',
+    targetId: 10,
+    articleId: null,
+  };
+  const { conn, calls } = createTransactionalMock((statement) => {
+    if (/pg_advisory_xact_lock/i.test(statement)) {
+      return [[{}], []];
+    }
+
+    if (/FROM notifications/i.test(statement) && /ORDER BY created_at DESC/i.test(statement)) {
+      return [[{ id: 500, createdAt: new Date(nowMs - 8 * 24 * 60 * 60 * 1000), readAt: null }], []];
+    }
+
+    if (/INSERT INTO notifications/i.test(statement)) {
+      return [{ insertId: notification.id, affectedRows: 1 }, []];
+    }
+
+    if (/FROM notifications/i.test(statement) && /WHERE n\.id = \?/i.test(statement)) {
+      return [[notification], []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return conn;
+    },
+  });
+
+  const result = await service.createFollowNotification(
+    {
+      recipientId: 10,
+      actorId: 20,
+    },
+    { nowMs },
+  );
+
+  assert.deepEqual(result, { created: true, notification });
+  assert.equal(calls.some((call) => call.statement && /INSERT INTO notifications/i.test(call.statement)), true);
+});
+
 test('createArticleLikeNotification: evaluates cooldown after waiting for the advisory lock', async () => {
   const originalDateNow = Date.now;
   const latestCreatedAtMs = Date.parse('2026-05-13T10:00:00.000Z');

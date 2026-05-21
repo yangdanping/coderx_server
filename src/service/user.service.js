@@ -1,6 +1,8 @@
 const connection = require('@/app/database');
 const { baseURL } = require('@/constants/urls');
 const BusinessError = require('@/errors/BusinessError');
+const notificationService = require('@/service/notification.service');
+const { publishNotificationCreated } = require('@/socket/notification/notificationEventBus');
 const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const {
   buildGetArticleByCollectIdExecuteParams,
@@ -201,19 +203,63 @@ class UserService {
 
   // 优化：关注/取关切换，减少数据库查询
   toggleFollow = async (userId, followerId) => {
-    // 先尝试删除
-    const deleteStmt = `DELETE FROM user_follow WHERE user_id = ? AND follower_id = ?;`;
-    const [deleteResult] = await connection.execute(deleteStmt, [userId, followerId]);
+    const conn = await connection.getConnection();
+    let notificationResult = { created: false, notification: null };
+    let result;
 
-    // 如果删除了行，说明之前已关注，现在取关
-    if (deleteResult.affectedRows > 0) {
-      return { isFollowed: false, action: 'unfollowed' };
+    try {
+      await conn.beginTransaction();
+
+      // 先尝试删除
+      const deleteStmt = `DELETE FROM user_follow WHERE user_id = ? AND follower_id = ?;`;
+      const [deleteResult] = await conn.execute(deleteStmt, [userId, followerId]);
+
+      // 如果删除了行，说明之前已关注，现在取关；取关不产生负反馈通知。
+      if (deleteResult.affectedRows > 0) {
+        result = {
+          isFollowed: false,
+          action: 'unfollowed',
+          notificationCreated: false,
+          notification: null,
+        };
+        await conn.commit();
+        return result;
+      }
+
+      // 如果没删除任何行，说明之前未关注，现在添加
+      const insertStmt = `INSERT INTO user_follow (user_id, follower_id) VALUES (?, ?);`;
+      await conn.execute(insertStmt, [userId, followerId]);
+
+      notificationResult = await notificationService.createFollowNotification(
+        {
+          recipientId: userId,
+          actorId: followerId,
+        },
+        { conn },
+      );
+
+      await conn.commit();
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
     }
 
-    // 如果没删除任何行，说明之前未关注，现在添加
-    const insertStmt = `INSERT INTO user_follow (user_id, follower_id) VALUES (?, ?);`;
-    await connection.execute(insertStmt, [userId, followerId]);
-    return { isFollowed: true, action: 'followed' };
+    if (notificationResult.created && notificationResult.notification) {
+      try {
+        await publishNotificationCreated(notificationResult.notification);
+      } catch (error) {
+        console.warn('⚠️ 用户关注通知实时推送失败，将由 REST 同步兜底:', error.message);
+      }
+    }
+
+    return {
+      isFollowed: true,
+      action: 'followed',
+      notificationCreated: notificationResult.created,
+      notification: notificationResult.notification,
+    };
   };
 
   getFollowInfo = async (userId) => {

@@ -7,11 +7,15 @@ require('module-alias/register');
 const servicePath = path.resolve(__dirname, '../../src/service/user.service.js');
 const databasePath = path.resolve(__dirname, '../../src/app/database.js');
 const urlsPath = path.resolve(__dirname, '../../src/constants/urls.js');
+const notificationServicePath = path.resolve(__dirname, '../../src/service/notification.service.js');
+const eventBusPath = path.resolve(__dirname, '../../src/socket/notification/notificationEventBus.js');
 
-function loadServiceWithConnection(connectionMock) {
+function loadServiceWithConnection(connectionMock, options = {}) {
   delete require.cache[servicePath];
   delete require.cache[databasePath];
   delete require.cache[urlsPath];
+  delete require.cache[notificationServicePath];
+  delete require.cache[eventBusPath];
 
   require.cache[databasePath] = {
     id: databasePath,
@@ -30,7 +34,55 @@ function loadServiceWithConnection(connectionMock) {
     },
   };
 
+  require.cache[notificationServicePath] = {
+    id: notificationServicePath,
+    filename: notificationServicePath,
+    loaded: true,
+    exports:
+      options.notificationService || {
+        async createFollowNotification() {
+          return { created: false, notification: null };
+        },
+      },
+  };
+
+  require.cache[eventBusPath] = {
+    id: eventBusPath,
+    filename: eventBusPath,
+    loaded: true,
+    exports: {
+      publishNotificationCreated:
+        options.publishNotificationCreated ||
+        (async () => {
+          throw new Error('publishNotificationCreated should not be called');
+        }),
+    },
+  };
+
   return require(servicePath);
+}
+
+function createTransactionalMock(executeHandler) {
+  const calls = [];
+  const conn = {
+    async beginTransaction() {
+      calls.push({ type: 'beginTransaction' });
+    },
+    async execute(statement, params) {
+      calls.push({ type: 'execute', statement, params });
+      return executeHandler(statement, params, calls);
+    },
+    async commit() {
+      calls.push({ type: 'commit' });
+    },
+    async rollback() {
+      calls.push({ type: 'rollback' });
+    },
+    release() {
+      calls.push({ type: 'release' });
+    },
+  };
+  return { conn, calls };
 }
 
 test('getUserByName: pg executes query against quoted user table', async () => {
@@ -166,4 +218,141 @@ test('addUser: pg quotes reserved user table in insert statement while keeping t
   assert.deepEqual(firstExecute.params, ['alice', 'secret']);
   const secondExecute = calls.filter((call) => call.type === 'execute')[1];
   assert.deepEqual(secondExecute.params, [11]);
+});
+
+test('toggleFollow: unfollow commits silently without creating or publishing notifications', async () => {
+  const notificationCalls = [];
+  const publishCalls = [];
+  const { conn, calls } = createTransactionalMock((statement, params) => {
+    assert.match(statement, /DELETE FROM user_follow/i);
+    assert.deepEqual(params, [10, 20]);
+    return [{ affectedRows: 1 }, []];
+  });
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      notificationService: {
+        async createFollowNotification(...args) {
+          notificationCalls.push(args);
+          return { created: true, notification: { id: 1 } };
+        },
+      },
+      async publishNotificationCreated(notification) {
+        publishCalls.push(notification);
+      },
+    },
+  );
+
+  const result = await service.toggleFollow(10, 20);
+
+  assert.deepEqual(result, {
+    isFollowed: false,
+    action: 'unfollowed',
+    notificationCreated: false,
+    notification: null,
+  });
+  assert.deepEqual(notificationCalls, []);
+  assert.deepEqual(publishCalls, []);
+  assert.deepEqual(calls.filter((call) => call.type !== 'execute'), [
+    { type: 'beginTransaction' },
+    { type: 'commit' },
+    { type: 'release' },
+  ]);
+});
+
+test('toggleFollow: new follow creates notification in the transaction and publishes after commit', async () => {
+  const notification = { id: 501, recipientId: 10, actorId: 20, type: 'follow' };
+  const notificationCalls = [];
+  const publishCalls = [];
+  const { conn, calls } = createTransactionalMock((statement, params) => {
+    if (/DELETE FROM user_follow/i.test(statement)) {
+      assert.deepEqual(params, [10, 20]);
+      return [{ affectedRows: 0 }, []];
+    }
+
+    if (/INSERT INTO user_follow/i.test(statement)) {
+      assert.deepEqual(params, [10, 20]);
+      return [{ affectedRows: 1 }, []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      notificationService: {
+        async createFollowNotification(payload, options) {
+          notificationCalls.push({ payload, options });
+          return { created: true, notification };
+        },
+      },
+      async publishNotificationCreated(payload) {
+        publishCalls.push(payload);
+      },
+    },
+  );
+
+  const result = await service.toggleFollow(10, 20);
+
+  assert.deepEqual(result, {
+    isFollowed: true,
+    action: 'followed',
+    notificationCreated: true,
+    notification,
+  });
+  assert.deepEqual(notificationCalls.map((call) => call.payload), [{ recipientId: 10, actorId: 20 }]);
+  assert.equal(notificationCalls[0].options.conn, conn);
+  assert.deepEqual(publishCalls, [notification]);
+  assert.equal(calls.findIndex((call) => call.type === 'commit') < calls.findIndex((call) => call.type === 'release'), true);
+});
+
+test('toggleFollow: publish failure does not roll back committed follow and notification', async () => {
+  const notification = { id: 502, recipientId: 10, actorId: 20, type: 'follow' };
+  const { conn, calls } = createTransactionalMock((statement) => {
+    if (/DELETE FROM user_follow/i.test(statement)) {
+      return [{ affectedRows: 0 }, []];
+    }
+
+    if (/INSERT INTO user_follow/i.test(statement)) {
+      return [{ affectedRows: 1 }, []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      notificationService: {
+        async createFollowNotification() {
+          return { created: true, notification };
+        },
+      },
+      async publishNotificationCreated() {
+        throw new Error('redis unavailable');
+      },
+    },
+  );
+
+  const result = await service.toggleFollow(10, 20);
+
+  assert.deepEqual(result, {
+    isFollowed: true,
+    action: 'followed',
+    notificationCreated: true,
+    notification,
+  });
+  assert.equal(calls.some((call) => call.type === 'commit'), true);
+  assert.equal(calls.some((call) => call.type === 'rollback'), false);
 });

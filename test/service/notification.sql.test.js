@@ -139,6 +139,17 @@ test('buildCreateNotificationSql: inserts generic notification payloads includin
     }),
     [10, 20, 'article_comment', 'article', 30, 30, 40, JSON.stringify({ commentExcerpt: 'hello' })],
   );
+  assert.deepEqual(
+    buildCreateNotificationParams({
+      recipientId: 10,
+      actorId: 20,
+      type: 'follow',
+      targetType: 'user',
+      targetId: 10,
+      articleId: null,
+    }),
+    [10, 20, 'follow', 'user', 10, null, null, '{}'],
+  );
 });
 
 test('buildFindLatestArticleLikeNotificationSql: finds the newest matching notification for cooldown checks', () => {
