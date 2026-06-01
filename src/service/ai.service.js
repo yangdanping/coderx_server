@@ -81,20 +81,22 @@ class AiService {
    * @param {Array} messages - 消息历史 [{role: 'user', content: '...'}, ...]
    * @param {String} model - 模型名称, 默认为 qwen2.5:7b
    * @param {String} context - 文章内容上下文（可选）
+   * @param {Array} selectionContexts - 用户本轮划词加入的高优先级上下文（可选）
    */
-  streamChat = async (messages, model = DEFAULT_CHAT_MODEL, context = null) => {
+  streamChat = async (messages, model = DEFAULT_CHAT_MODEL, context = null, selectionContexts = []) => {
     try {
       const resolvedModel = await this.resolveModel(model, DEFAULT_CHAT_MODEL);
       console.log(`\n🤖 [AI Request] 模型: ${resolvedModel}, 消息数: ${messages.length}`);
       const startTime = Date.now();
       const cleanContext = AiConstraintUtils.sanitizeArticleContext(context);
+      const cleanSelectionContexts = AiConstraintUtils.sanitizeSelectionContexts(selectionContexts);
       const managedMessages = messages.length > AI_LIMITS.maxMessages ? messages.slice(-AI_LIMITS.maxMessages) : messages;
       const tools = AiConstraintUtils.buildArticleContextTool(cleanContext);
 
       // 先构造纯文本问答的默认链路，只有在显式开启工具模式时才追加 tools/stopWhen。
       const streamOptions = {
         model: ollama.chat(resolvedModel),
-        system: AiConstraintUtils.buildSystemPrompt(cleanContext),
+        system: AiConstraintUtils.buildSystemPrompt(cleanContext, cleanSelectionContexts),
         messages: await convertToModelMessages(managedMessages),
         maxTokens: 4096,
       };

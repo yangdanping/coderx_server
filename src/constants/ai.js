@@ -28,6 +28,9 @@ const AI_LIMITS = Object.freeze({
   maxTotalMessageChars: 20000, // 单次请求所有消息文本合计最大字符数
   maxContextLength: 50000, // 注入 system 的文章正文清洗、截断后最大字符数（进模型前）
   maxRawContextLength: 120000, // 请求里 context 原始字符串最大长度（清洗前，controller 校验）
+  maxSelectionContexts: 10, // 单次问答最多允许携带的用户划词片段数量
+  maxSelectionContextLength: 1200, // 单个划词片段清洗、语义截断后最大字符数（进模型前）
+  maxRawSelectionContextLength: 12000, // 单个划词片段原始字符串最大长度（清洗前，controller 校验）
   maxCompletionBefore: 500, // 补全传给模型的光标前文本最大字符数（截断后）
   maxCompletionAfter: 200, // 补全传给模型的光标后文本最大字符数（截断后）
   maxCompletionBeforeRaw: 2000, // 补全请求 beforeText 最大长度（校验用，截断前）

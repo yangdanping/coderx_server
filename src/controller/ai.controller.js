@@ -36,8 +36,8 @@ class AiController {
 
   chat = async (ctx, next) => {
     // 从请求体中获取消息历史和上下文
-    const { messages, model, context } = ctx.request.body;
-    const validationError = AiValidUtils.validateChatPayload({ messages, model, context });
+    const { messages, model, context, selectionContexts } = ctx.request.body;
+    const validationError = AiValidUtils.validateChatPayload({ messages, model, context, selectionContexts });
     if (validationError) {
       ctx.status = 400;
       ctx.body = {
@@ -54,7 +54,7 @@ class AiController {
       // throw new Error('测试错误：模拟 AI 服务连接失败');
 
       // 获取 AI SDK 的 result 对象
-      const result = await aiService.streamChat(messages, model, context);
+      const result = await aiService.streamChat(messages, model, context, selectionContexts);
 
       // 保持 AI SDK 的 UIMessage Stream 协议，前端 Chat 组件可直接消费。
       const res = await result.toUIMessageStreamResponse();

@@ -40,11 +40,17 @@ class AiValidUtils {
     return null;
   };
 
+  static getSelectionContextText = (context) => {
+    if (typeof context === 'string') return context;
+    if (context && typeof context === 'object' && typeof context.text === 'string') return context.text;
+    return null;
+  };
+
   /**
-   * @param {{ messages: unknown; context?: unknown; model?: unknown }} payload
+   * @param {{ messages: unknown; context?: unknown; selectionContexts?: unknown; model?: unknown }} payload
    * @returns {string|null}
    */
-  static validateChatPayload = ({ messages, context, model }) => {
+  static validateChatPayload = ({ messages, context, selectionContexts, model }) => {
     if (!Array.isArray(messages) || messages.length === 0) {
       return 'messages 必须是非空数组';
     }
@@ -81,6 +87,27 @@ class AiValidUtils {
 
     if (typeof context === 'string' && context.length > AI_LIMITS.maxRawContextLength) {
       return `context 原始长度不能超过 ${AI_LIMITS.maxRawContextLength} 个字符`;
+    }
+
+    if (selectionContexts != null) {
+      if (!Array.isArray(selectionContexts)) {
+        return 'selectionContexts 必须是数组';
+      }
+
+      if (selectionContexts.length > AI_LIMITS.maxSelectionContexts) {
+        return `selectionContexts 数量不能超过 ${AI_LIMITS.maxSelectionContexts} 个`;
+      }
+
+      for (const item of selectionContexts) {
+        const text = AiValidUtils.getSelectionContextText(item);
+        if (typeof text !== 'string' || !text.trim()) {
+          return 'selectionContexts 中的 text 必须是非空字符串';
+        }
+
+        if (text.length > AI_LIMITS.maxRawSelectionContextLength) {
+          return `selectionContexts 中单个片段长度不能超过 ${AI_LIMITS.maxRawSelectionContextLength} 个字符`;
+        }
+      }
     }
 
     return AiValidUtils.validateModelName(model);

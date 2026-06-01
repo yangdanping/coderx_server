@@ -4,6 +4,9 @@ const { ollamaBaseURL } = require('@/constants/urls');
 const { AI_ALLOWED_MODELS, AI_CAPABILITY, AI_LIMITS } = require('@/constants/ai');
 const Utils = require('@/utils');
 
+const SENTENCE_END_RE = /(?:[。！？!?.;；]+["'”’）)\]]*|\n+)/g;
+const HEAD_TAIL_OMISSION = '[中间内容过长，已省略]';
+
 // ================= 「Prompt 引导 + 系统约束」配套：模型目录缓存/白名单、上下文截断、系统提示、可选只读工具、统一错误 =============================
 class AiConstraintUtils {
   // 模型列表做短时缓存，避免每次请求都先打一遍 /api/tags。
@@ -23,6 +26,87 @@ class AiConstraintUtils {
         value: model,
       }));
 
+  static findBoundaryBefore = (text, limit, minLength = 0) => {
+    if (limit >= text.length) return text.length;
+
+    let match;
+    let best = -1;
+    SENTENCE_END_RE.lastIndex = 0;
+    while ((match = SENTENCE_END_RE.exec(text)) !== null) {
+      const boundary = match.index + match[0].length;
+      if (boundary > limit) break;
+      if (boundary >= minLength) {
+        best = boundary;
+      }
+    }
+    SENTENCE_END_RE.lastIndex = 0;
+
+    return best;
+  };
+
+  static findBoundaryAfter = (text, index, maxStart) => {
+    let match;
+    SENTENCE_END_RE.lastIndex = 0;
+    while ((match = SENTENCE_END_RE.exec(text)) !== null) {
+      const boundary = match.index + match[0].length;
+      if (boundary >= index && boundary <= maxStart) {
+        SENTENCE_END_RE.lastIndex = 0;
+        return boundary;
+      }
+      if (boundary > maxStart) break;
+    }
+    SENTENCE_END_RE.lastIndex = 0;
+
+    return -1;
+  };
+
+  static sliceHeadBySemanticBoundary = (text, maxLength) => {
+    const minLength = Math.floor(maxLength * 0.45);
+    const boundary = AiConstraintUtils.findBoundaryBefore(text, maxLength, minLength);
+    return (boundary > 0 ? text.slice(0, boundary) : text.slice(0, maxLength)).trim();
+  };
+
+  static sliceTailBySemanticBoundary = (text, maxLength) => {
+    const targetStart = Math.max(0, text.length - maxLength);
+    const maxStart = Math.min(text.length - 1, targetStart + Math.floor(maxLength * 0.55));
+    const boundary = AiConstraintUtils.findBoundaryAfter(text, targetStart, maxStart);
+    return (boundary > 0 ? text.slice(boundary) : text.slice(targetStart)).trim();
+  };
+
+  static truncateTextBySemanticBoundary = (text, maxLength, options = {}) => {
+    const cleanText = String(text || '').trim();
+    const mode = options.mode || 'head';
+
+    if (!cleanText || cleanText.length <= maxLength) {
+      return {
+        text: cleanText,
+        truncated: false,
+        note: '',
+      };
+    }
+
+    if (mode === 'head-tail') {
+      const markerBudget = HEAD_TAIL_OMISSION.length + 2;
+      const contentBudget = Math.max(20, maxLength - markerBudget);
+      const headBudget = Math.max(8, Math.floor(contentBudget / 2));
+      const tailBudget = Math.max(8, contentBudget - headBudget);
+      const head = AiConstraintUtils.sliceHeadBySemanticBoundary(cleanText, headBudget);
+      const tail = AiConstraintUtils.sliceTailBySemanticBoundary(cleanText, tailBudget);
+
+      return {
+        text: `${head}\n${HEAD_TAIL_OMISSION}\n${tail}`.trim(),
+        truncated: true,
+        note: '已保留划词片段的开头和结尾，并按语义边界省略中间内容',
+      };
+    }
+
+    return {
+      text: AiConstraintUtils.sliceHeadBySemanticBoundary(cleanText, maxLength),
+      truncated: true,
+      note: '内容过长，已按语义边界截断',
+    };
+  };
+
   // 清洗并截断文章正文，避免注入模型的上下文超过上限。
   static sanitizeArticleContext = (context) => {
     if (!context) return '';
@@ -32,17 +116,50 @@ class AiConstraintUtils {
       return cleanContext;
     }
 
-    return `${cleanContext.substring(0, AI_LIMITS.maxContextLength)}\n[文章内容过长，已截断]`;
+    const result = AiConstraintUtils.truncateTextBySemanticBoundary(cleanContext, AI_LIMITS.maxContextLength, { mode: 'head' });
+    return `${result.text}\n[文章内容过长，${result.note}]`;
+  };
+
+  static getSelectionContextText = (context) => {
+    if (typeof context === 'string') return context;
+    if (context && typeof context === 'object' && typeof context.text === 'string') return context.text;
+    return '';
+  };
+
+  static sanitizeSelectionContexts = (selectionContexts = []) => {
+    if (!Array.isArray(selectionContexts)) return [];
+
+    return selectionContexts
+      .slice(0, AI_LIMITS.maxSelectionContexts)
+      .map((context, index) => {
+        const cleanText = Utils.cleanTextForAI(AiConstraintUtils.getSelectionContextText(context));
+        if (!cleanText) return null;
+
+        const result = AiConstraintUtils.truncateTextBySemanticBoundary(cleanText, AI_LIMITS.maxSelectionContextLength, { mode: 'head-tail' });
+        return {
+          id: typeof context?.id === 'string' && context.id.trim() ? context.id.trim().slice(0, 80) : `selection-${index + 1}`,
+          text: result.text,
+          truncated: result.truncated,
+          note: result.note,
+        };
+      })
+      .filter(Boolean);
   };
 
   // 组装系统提示词：声明助手边界、注入文章与可选只读工具说明；风格由 prompt 引导，硬约束由白名单/schema/限流承担。
-  static buildSystemPrompt = (cleanContext) => {
+  static buildSystemPrompt = (cleanContext, cleanSelectionContexts = []) => {
     let systemPrompt = `你是 CoderX 的 AI 助手，不是会执行站内写操作的自治 Agent。
 你的职责是解释代码、总结文章、辅助问答和提供写作建议。
 请优先给出准确、克制、可验证的回答；如果信息不足，要明确说明不确定。`;
 
     if (cleanContext) {
       systemPrompt += `\n\n当前文章内容：\n${cleanContext}\n\n请优先基于这篇文章的内容回答用户问题。`;
+    }
+
+    if (cleanSelectionContexts.length > 0) {
+      const selectionText = cleanSelectionContexts.map((item, index) => `[片段 ${index + 1}]${item.truncated ? '（已截断）' : ''}\n${item.text}`).join('\n\n');
+
+      systemPrompt += `\n\n用户选中的文章片段（本轮问题的高优先级上下文）：\n${selectionText}\n\n当用户使用“这段”“这句”“这里”等指代时，优先理解为以上选中的文章片段；如果片段与整篇文章背景冲突，先解释片段本身，再补充文章背景。`;
     }
 
     if (AI_CAPABILITY.supportsTools) {
