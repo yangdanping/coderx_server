@@ -20,7 +20,7 @@
     "@ai-sdk/openai-compatible": "^2.0.48",
     "@koa/cors": "^5.0.0",
     "@koa/multer": "^4.0.0",
-    "@koa/router": "^15.5.0",
+    "@koa/router": "^15.6.0",
     "@socket.io/redis-adapter": "^8.3.0",
     "@tiptap/core": "^3.24.0",
     "@tiptap/extension-image": "^3.24.0",
