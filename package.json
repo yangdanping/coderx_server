@@ -28,7 +28,7 @@
     "@tiptap/extension-underline": "^3.24.0",
     "@tiptap/html": "^3.24.0",
     "@tiptap/starter-kit": "^3.24.0",
-    "ai": "^6.0.193",
+    "ai": "^6.0.194",
     "bcryptjs": "^3.0.3",
     "dayjs": "^1.11.21",
     "dotenv": "^17.4.2",
@@ -50,7 +50,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "concurrently": "^10.0.1",
+    "concurrently": "^10.0.3",
     "prettier": "^3.8.3"
   },
   "_moduleAliases": {
