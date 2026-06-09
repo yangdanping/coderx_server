@@ -4,6 +4,7 @@ const path = require('node:path');
 
 require('module-alias/register');
 
+const { baseURL } = require('../../src/constants/urls');
 const controllerPath = path.resolve(__dirname, '../../src/controller/video.controller.js');
 const videoServicePath = path.resolve(__dirname, '../../src/service/video.service.js');
 
@@ -87,4 +88,56 @@ test('updateVideoArticle: rejects requests that exceed the article video limit w
   assert.deepEqual(calls, []);
   assert.equal(ctx.body.code, -1);
   assert.equal(ctx.body.msg, '每篇文章最多只能上传 2 个视频');
+});
+
+test('getVideoInfo: converts a poster filename into a public article video URL', async () => {
+  const videoService = {
+    async getVideoById(videoId) {
+      assert.equal(videoId, '464');
+      return {
+        id: 464,
+        filename: 'demo.mp4',
+        poster: 'demo-poster.jpg',
+        transcode_status: 'completed',
+      };
+    },
+  };
+
+  const controller = loadControllerWithMocks({ videoService });
+  const ctx = {
+    params: {
+      videoId: '464',
+    },
+  };
+
+  await controller.getVideoInfo(ctx, async () => {});
+
+  assert.equal(ctx.body.code, 0);
+  assert.equal(ctx.body.data.poster, `${baseURL}/article/video/demo-poster.jpg`);
+  assert.equal(ctx.body.data.transcode_status, 'completed');
+});
+
+test('getVideoInfo: keeps poster null while video processing has not produced one', async () => {
+  const videoService = {
+    async getVideoById() {
+      return {
+        id: 465,
+        filename: 'processing.mp4',
+        poster: null,
+        transcode_status: 'processing',
+      };
+    },
+  };
+
+  const controller = loadControllerWithMocks({ videoService });
+  const ctx = {
+    params: {
+      videoId: '465',
+    },
+  };
+
+  await controller.getVideoInfo(ctx, async () => {});
+
+  assert.equal(ctx.body.code, 0);
+  assert.equal(ctx.body.data.poster, null);
 });

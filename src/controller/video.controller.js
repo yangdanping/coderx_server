@@ -325,7 +325,12 @@ class VideoController {
       ctx.body = Result.fail('视频不存在');
       return;
     }
-    ctx.body = Result.success(video);
+
+    const posterFilename = typeof video.poster === 'string' ? video.poster.trim() : '';
+    ctx.body = Result.success({
+      ...video,
+      poster: posterFilename ? `${baseURL}/article/video/${posterFilename}` : null,
+    });
   };
 }
 
