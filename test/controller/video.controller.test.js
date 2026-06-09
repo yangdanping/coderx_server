@@ -90,6 +90,59 @@ test('updateVideoArticle: rejects requests that exceed the article video limit w
   assert.equal(ctx.body.msg, '每篇文章最多只能上传 2 个视频');
 });
 
+test('saveVideoInfo: keeps poster null while the background pipeline is processing', async () => {
+  const calls = [];
+  const videoService = {
+    async addVideo(userId, filename, mimetype, size) {
+      calls.push({ method: 'addVideo', userId, filename, mimetype, size });
+      return { insertId: 466 };
+    },
+    async updateTranscodeStatus(videoId, status) {
+      calls.push({ method: 'updateTranscodeStatus', videoId, status });
+    },
+  };
+
+  const controller = loadControllerWithMocks({ videoService });
+  controller.processVideoAsset = (...args) => {
+    calls.push({ method: 'processVideoAsset', args });
+  };
+  const ctx = {
+    user: { id: 1 },
+    file: {
+      filename: 'demo.mp4',
+      mimetype: 'video/mp4',
+      size: 1024,
+      path: __filename,
+    },
+  };
+
+  await controller.saveVideoInfo(ctx, async () => {});
+
+  assert.equal(ctx.body.code, 0);
+  assert.deepEqual(ctx.body.data, {
+    id: 466,
+    url: `${baseURL}/article/video/demo.mp4`,
+    poster: null,
+    filename: 'demo.mp4',
+    transcodeStatus: 'processing',
+  });
+  assert.deepEqual(calls.slice(0, 2), [
+    {
+      method: 'addVideo',
+      userId: 1,
+      filename: 'demo.mp4',
+      mimetype: 'video/mp4',
+      size: 1024,
+    },
+    {
+      method: 'updateTranscodeStatus',
+      videoId: 466,
+      status: 'processing',
+    },
+  ]);
+  assert.equal(calls[2]?.method, 'processVideoAsset');
+});
+
 test('getVideoInfo: converts a poster filename into a public article video URL', async () => {
   const videoService = {
     async getVideoById(videoId) {

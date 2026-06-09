@@ -55,11 +55,12 @@ class VideoController {
     this.processVideoAsset(videoPath, posterFilename, outputFolder, videoId);
 
     // 4. 立即返回响应（元数据 + 封面在后台补齐，前端可通过 GET /video/:videoId 轮询进度）
-    const posterUrl = `${baseURL}/article/video/${posterFilename}`;
     ctx.body = Result.success({
       id: videoId,
       url: videoUrl,
-      poster: posterUrl,
+      // 封面文件由后台流水线生成；processing 阶段返回预测 URL 会让浏览器先缓存一次 404，
+      // 后续即使写回相同 URL 也不会主动重试，因此只在 GET /video/:id 完成态返回真实地址。
+      poster: null,
       filename: filename,
       transcodeStatus: 'processing',
     });
