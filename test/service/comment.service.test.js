@@ -121,26 +121,63 @@ test('getCommentList hot: pg executes pg-safe hot comment SQL', async () => {
   assert.doesNotMatch(calls[0].statement, /JSON_OBJECT/i);
 });
 
-test('getUserCommentList: pg uses LIMIT ? OFFSET ? and limit-first params', async () => {
+test('getUserCommentList: returns a structured full page with hasMore', async () => {
   const calls = [];
   const service = loadServiceWithConnection({
     dialect: 'pg',
     async execute(statement, params) {
       calls.push({ statement, params });
       if (calls.length === 1) {
-        return [[{ id: 1, content: 'ok', status: 0, articleId: 3 }], []];
+        return [[
+          { id: 1, content: 'one', status: 0, articleId: 3 },
+          { id: 2, content: 'two', status: 0, articleId: 4 },
+          { id: 3, content: 'lookahead', status: 0, articleId: 5 },
+        ], []];
       }
-      return [[{ total: 1 }], []];
+      return [[{ total: 5 }], []];
     },
   });
 
-  const items = await service.getUserCommentList(9, '20', '10');
+  const page = await service.getUserCommentList(9, '0', '2');
 
-  assert.equal(items[0].articleUrl, '/article/3');
+  assert.deepEqual(page, {
+    items: [
+      { id: 1, content: 'one', status: 0, articleId: 3, articleUrl: '/article/3' },
+      { id: 2, content: 'two', status: 0, articleId: 4, articleUrl: '/article/4' },
+    ],
+    total: 5,
+    hasMore: true,
+    pageNum: 1,
+    pageSize: 2,
+  });
   assert.match(calls[0].statement, /LIMIT\s+\?\s+OFFSET\s+\?/i);
   assert.match(calls[0].statement, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
   assert.match(calls[0].statement, /LEFT JOIN\s+"user"\s+u\s+ON\s+u\.id\s*=\s*c\.user_id/i);
-  assert.deepEqual(calls[0].params, [9, '10', '20']);
+  assert.deepEqual(calls[0].params, [9, '3', '0']);
+  assert.match(calls[1].statement, /COUNT\(\*\)/i);
+  assert.deepEqual(calls[1].params, [9]);
+});
+
+test('getUserCommentList: returns an empty final page', async () => {
+  const service = loadServiceWithConnection({
+    dialect: 'pg',
+    async execute(statement) {
+      if (/^\s*SELECT COUNT\(\*\) AS total/i.test(statement)) {
+        return [[{ total: 0 }], []];
+      }
+      return [[], []];
+    },
+  });
+
+  const page = await service.getUserCommentList(9, '0', '10');
+
+  assert.deepEqual(page, {
+    items: [],
+    total: 0,
+    hasMore: false,
+    pageNum: 1,
+    pageSize: 10,
+  });
 });
 
 test('getReplyPreview: pg executes pg-safe replyTo SQL with quoted reply user alias', async () => {

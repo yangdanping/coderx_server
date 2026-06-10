@@ -13,6 +13,7 @@ const {
   buildGetRepliesSql,
   buildGetReplyPreviewSql,
   buildGetUserCommentListSql,
+  buildGetUserCommentCountSql,
   buildUserCommentListExecuteParams,
 } = require('./sql/comment.sql');
 
@@ -110,12 +111,21 @@ class CommentService {
    */
   getUserCommentList = async (userId, offset, limit) => {
     try {
+      const normalizedOffset = Math.max(0, Number(offset) || 0);
+      const normalizedLimit = Math.max(1, Number(limit) || 10);
       const statement = buildGetUserCommentListSql();
-      const executeParams = buildUserCommentListExecuteParams(userId, String(offset), String(limit));
+      const executeParams = buildUserCommentListExecuteParams(
+        userId,
+        String(normalizedOffset),
+        String(normalizedLimit + 1),
+      );
       const [comments] = await connection.execute(statement, executeParams);
+      const [[countResult]] = await connection.execute(buildGetUserCommentCountSql(), [userId]);
+      const hasMore = comments.length > normalizedLimit;
+      const pageItems = hasMore ? comments.slice(0, normalizedLimit) : comments;
 
       // 处理数据格式
-      const items = comments.map((item) => {
+      const items = pageItems.map((item) => {
         // 组装 articleUrl (假设路由结构)
         item.articleUrl = `/article/${item.articleId}`;
 
@@ -125,14 +135,16 @@ class CommentService {
         return item;
       });
 
-      return hydrateAvatarUrls(items, baseURL); // 前端似乎直接期望一个数组，或者 { items, total }?
-      // 查看前端 stores/comment.store.ts getCommentAction:
-      // this.userComments = res.data as any;
-      // UserComment.vue 使用 profile.commentCount 作为 total，所以这里只要返回列表即可?
-      // 但是通常 API 返回 { list, total } 比较好。
-      // 前端请求是: return myRequest.get<IResData<IComment[]>>
-      // 所以 res.data 应该是 IComment[] 数组。
-      // 这里的 items 就是数组。
+      return hydrateAvatarUrls(
+        {
+          items,
+          total: Number(countResult?.total) || 0,
+          hasMore,
+          pageNum: Math.floor(normalizedOffset / normalizedLimit) + 1,
+          pageSize: normalizedLimit,
+        },
+        baseURL,
+      );
     } catch (error) {
       console.error('getUserCommentList error:', error);
       throw error;

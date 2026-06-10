@@ -56,6 +56,7 @@ test('buildGetUserCommentListSql: uses LIMIT ? OFFSET ? and quoted user table', 
   assert.match(sql, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
   assert.doesNotMatch(sql, /JSON_OBJECT/i);
   assert.match(sql, /LEFT JOIN\s+"user"\s+u\s+ON\s+u\.id\s*=\s*c\.user_id/i);
+  assert.match(sql, /ORDER BY\s+c\.create_at\s+DESC,\s*c\.id\s+DESC/i);
   assert.match(sql, /LIMIT\s+\?\s+OFFSET\s+\?/i);
   assert.doesNotMatch(sql, /LIMIT\s+\?\s*,\s*\?/);
 });

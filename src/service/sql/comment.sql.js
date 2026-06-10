@@ -84,9 +84,13 @@ function buildGetUserCommentListSql() {
     LEFT JOIN profile p ON u.id = p.user_id
     LEFT JOIN article a ON a.id = c.article_id
     WHERE c.user_id = ?
-    ORDER BY c.create_at DESC
+    ORDER BY c.create_at DESC, c.id DESC
     LIMIT ? OFFSET ?
   `;
+}
+
+function buildGetUserCommentCountSql() {
+  return 'SELECT COUNT(*) AS total FROM comment WHERE user_id = ?';
 }
 
 function buildUserCommentListExecuteParams(userId, offset, limit) {
@@ -189,5 +193,6 @@ module.exports = {
   buildGetRepliesSql,
   buildGetReplyPreviewSql,
   buildGetUserCommentListSql,
+  buildGetUserCommentCountSql,
   buildUserCommentListExecuteParams,
 };

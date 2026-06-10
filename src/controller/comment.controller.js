@@ -22,7 +22,7 @@ class CommentController {
           ctx.body = Result.fail('获取用户评论列表失败!');
           return;
         }
-        result.forEach((comment) => {
+        result.items.forEach((comment) => {
           if (!comment.status) {
             // 清理HTML标签并截取内容长度
             comment.content = Utils.removeHTMLTag(comment.content);

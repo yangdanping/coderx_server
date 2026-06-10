@@ -51,16 +51,22 @@ async function withSilentConsole(callback) {
   }
 }
 
-test('getCommentList: userId branch sanitizes regular comments and masks banned comments', async () => {
+test('getCommentList: userId branch sanitizes items and preserves structured pagination metadata', async () => {
   const calls = [];
   const longHtml = '<b>ab</b>' + 'c'.repeat(60);
   const commentService = {
     async getUserCommentList(userId, offset, limit) {
       calls.push({ method: 'getUserCommentList', userId, offset, limit });
-      return [
-        { id: 1, content: longHtml, status: 0 },
-        { id: 2, content: 'secret', status: 3 },
-      ];
+      return {
+        items: [
+          { id: 1, content: longHtml, status: 0 },
+          { id: 2, content: 'secret', status: 3 },
+        ],
+        total: 12,
+        hasMore: true,
+        pageNum: 3,
+        pageSize: 10,
+      };
     },
   };
 
@@ -79,10 +85,16 @@ test('getCommentList: userId branch sanitizes regular comments and masks banned 
   assert.deepEqual(calls, [{ method: 'getUserCommentList', userId: '7', offset: '20', limit: '10' }]);
   assert.deepEqual(
     ctx.body,
-    Result.success([
-      { id: 1, content: expectedPlain, status: 0 },
-      { id: 2, content: '评论已被封禁', status: 3 },
-    ]),
+    Result.success({
+      items: [
+        { id: 1, content: expectedPlain, status: 0 },
+        { id: 2, content: '评论已被封禁', status: 3 },
+      ],
+      total: 12,
+      hasMore: true,
+      pageNum: 3,
+      pageSize: 10,
+    }),
   );
 });
 
