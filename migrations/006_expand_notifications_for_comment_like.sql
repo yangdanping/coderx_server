@@ -43,9 +43,8 @@ ALTER TABLE notifications
         OR (
             type = 'comment_like'
             AND target_type = 'comment'
-            AND target_id = comment_id
             AND article_id IS NOT NULL
-            AND comment_id IS NOT NULL
+            AND (comment_id IS NULL OR target_id = comment_id)
         )
     );
 

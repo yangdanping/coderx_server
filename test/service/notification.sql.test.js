@@ -103,6 +103,7 @@ test('comment like notification migration: adds comment targets while preserving
   );
   assert.match(sql, /type\s*=\s*'comment_like'[\s\S]*target_type\s*=\s*'comment'/i);
   assert.match(sql, /target_id\s*=\s*comment_id/i);
+  assert.match(sql, /comment_id\s+IS\s+NULL\s+OR\s+target_id\s*=\s*comment_id/i);
 });
 
 test('buildCreateArticleLikeNotificationSql: inserts a new notification without permanent dedupe', () => {
