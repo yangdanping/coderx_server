@@ -7,6 +7,7 @@ const migrationPath = path.resolve(__dirname, '../../migrations/002_create_notif
 const cooldownMigrationPath = path.resolve(__dirname, '../../migrations/003_update_notifications_cooldown_index.sql');
 const articleCommentMigrationPath = path.resolve(__dirname, '../../migrations/004_expand_notifications_for_article_comment.sql');
 const commentReplyMigrationPath = path.resolve(__dirname, '../../migrations/005_expand_notifications_for_comment_reply.sql');
+const commentLikeMigrationPath = path.resolve(__dirname, '../../migrations/006_expand_notifications_for_comment_like.sql');
 const helperPath = path.resolve(__dirname, '../../src/service/sql/notification.sql.js');
 
 const compactSql = (sql) => sql.replace(/\s+/g, ' ').trim();
@@ -86,6 +87,22 @@ test('comment reply notification migration: expands notification types without a
   assert.match(sql, /CHECK\s*\(\s*type\s+IN\s*\(\s*'article_like'\s*,\s*'article_comment'\s*,\s*'comment_reply'\s*\)\s*\)/i);
   assert.match(sql, /CHECK\s*\(\s*target_type\s+IN\s*\(\s*'article'\s*\)\s*\)/i);
   assert.doesNotMatch(sql, /ADD\s+COLUMN/i);
+});
+
+test('comment like notification migration: adds comment targets while preserving existing notification types', () => {
+  assert.equal(fs.existsSync(commentLikeMigrationPath), true, 'Expected comment like notifications migration to exist');
+  const sql = fs.readFileSync(commentLikeMigrationPath, 'utf8');
+
+  assert.match(
+    sql,
+    /CHECK\s*\(\s*type\s+IN\s*\(\s*'article_like'\s*,\s*'article_comment'\s*,\s*'comment_reply'\s*,\s*'follow'\s*,\s*'comment_like'\s*\)\s*\)/i,
+  );
+  assert.match(
+    sql,
+    /CHECK\s*\(\s*target_type\s+IN\s*\(\s*'article'\s*,\s*'user'\s*,\s*'comment'\s*\)\s*\)/i,
+  );
+  assert.match(sql, /type\s*=\s*'comment_like'[\s\S]*target_type\s*=\s*'comment'/i);
+  assert.match(sql, /target_id\s*=\s*comment_id/i);
 });
 
 test('buildCreateArticleLikeNotificationSql: inserts a new notification without permanent dedupe', () => {

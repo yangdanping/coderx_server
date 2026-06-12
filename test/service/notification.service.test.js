@@ -125,6 +125,72 @@ test('createArticleLikeNotification: first like locks key, inserts notification,
   ]);
 });
 
+test('createCommentLikeNotification: locks the concrete comment and stores reply navigation metadata', async () => {
+  const notification = {
+    id: 89,
+    recipientId: 10,
+    actorId: 20,
+    type: 'comment_like',
+    targetType: 'comment',
+    targetId: 40,
+    articleId: 30,
+    commentId: 40,
+    metadata: {
+      commentExcerpt: 'liked reply',
+      parentCommentId: 35,
+    },
+  };
+  const { conn, calls } = createTransactionalMock((statement) => {
+    if (/pg_advisory_xact_lock/i.test(statement)) {
+      return [[{}], []];
+    }
+
+    if (/FROM notifications/i.test(statement) && /ORDER BY created_at DESC/i.test(statement)) {
+      return [[], []];
+    }
+
+    if (/INSERT INTO notifications/i.test(statement)) {
+      return [{ insertId: notification.id, affectedRows: 1 }, []];
+    }
+
+    if (/FROM notifications/i.test(statement) && /WHERE n\.id = \?/i.test(statement)) {
+      return [[notification], []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return conn;
+    },
+  });
+
+  const result = await service.createCommentLikeNotification({
+    recipientId: 10,
+    actorId: 20,
+    articleId: 30,
+    commentId: 40,
+    parentCommentId: 35,
+    content: '<p>liked reply</p>',
+  });
+
+  assert.deepEqual(result, { created: true, notification });
+  const executeCalls = calls.filter((call) => call.type === 'execute');
+  assert.deepEqual(executeCalls[0].params, ['comment_like:10:20:comment:40']);
+  assert.deepEqual(executeCalls[1].params, [10, 20, 'comment_like', 'comment', 40]);
+  assert.deepEqual(executeCalls[2].params, [
+    10,
+    20,
+    'comment_like',
+    'comment',
+    40,
+    30,
+    40,
+    JSON.stringify({ commentExcerpt: 'liked reply', parentCommentId: 35 }),
+  ]);
+  assert.deepEqual(executeCalls[3].params, [89]);
+});
+
 test('createCommentReplyNotification: stores the created reply id in metadata', async () => {
   const notification = {
     id: 401,

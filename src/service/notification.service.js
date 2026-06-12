@@ -20,6 +20,7 @@ const {
 } = require('./sql/notification.sql');
 
 const ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS = 60 * 60 * 1000;
+const COMMENT_LIKE_NOTIFICATION_COOLDOWN_MS = 60 * 60 * 1000;
 const FOLLOW_NOTIFICATION_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const COMMENT_EXCERPT_LIMIT = 60;
 
@@ -48,6 +49,7 @@ function truncateText(value, limit) {
 
 class NotificationService {
   ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS = ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS;
+  COMMENT_LIKE_NOTIFICATION_COOLDOWN_MS = COMMENT_LIKE_NOTIFICATION_COOLDOWN_MS;
   FOLLOW_NOTIFICATION_COOLDOWN_MS = FOLLOW_NOTIFICATION_COOLDOWN_MS;
 
   createNotification = async (payload, options = {}) => {
@@ -156,6 +158,39 @@ class NotificationService {
         },
         lockKey: buildAcquireArticleLikeNotificationLockParams({ recipientId, actorId, articleId })[0],
         cooldownMs: ARTICLE_LIKE_NOTIFICATION_COOLDOWN_MS,
+      },
+      options,
+    );
+  };
+
+  createCommentLikeNotification = async (
+    { recipientId, actorId, articleId, commentId, parentCommentId, content },
+    options = {},
+  ) => {
+    if (isSameUser(recipientId, actorId)) {
+      return { created: false, notification: null, reason: 'self' };
+    }
+
+    const commentExcerpt = truncateText(Utils.removeHTMLTag(content), COMMENT_EXCERPT_LIMIT);
+    const metadata = { commentExcerpt };
+    if (parentCommentId != null) {
+      metadata.parentCommentId = parentCommentId;
+    }
+
+    return this.createNotificationWithCooldown(
+      {
+        payload: {
+          recipientId,
+          actorId,
+          type: 'comment_like',
+          targetType: 'comment',
+          targetId: commentId,
+          articleId,
+          commentId,
+          metadata,
+        },
+        lockKey: `comment_like:${recipientId}:${actorId}:comment:${commentId}`,
+        cooldownMs: COMMENT_LIKE_NOTIFICATION_COOLDOWN_MS,
       },
       options,
     );
