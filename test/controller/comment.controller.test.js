@@ -6,6 +6,7 @@ require('module-alias/register');
 
 const controllerPath = path.resolve(__dirname, '../../src/controller/comment.controller.js');
 const commentServicePath = path.resolve(__dirname, '../../src/service/comment.service.js');
+const commentLikeServicePath = path.resolve(__dirname, '../../src/service/commentLike.service.js');
 const userServicePath = path.resolve(__dirname, '../../src/service/user.service.js');
 
 const Result = require('@/app/Result');
@@ -20,13 +21,19 @@ function injectCache(modulePath, exports) {
   };
 }
 
-function loadControllerWithCommentServiceMock(commentService) {
+function loadControllerWithCommentServiceMock(commentService, commentLikeService = {}) {
   delete require.cache[controllerPath];
   delete require.cache[commentServicePath];
+  delete require.cache[commentLikeServicePath];
   delete require.cache[userServicePath];
 
   injectCache(commentServicePath, commentService);
-  injectCache(userServicePath, {});
+  injectCache(commentLikeServicePath, commentLikeService);
+  injectCache(userServicePath, {
+    async toggleLike() {
+      throw new Error('comment likes must use commentLikeService');
+    },
+  });
 
   return require(controllerPath);
 }
@@ -34,6 +41,7 @@ function loadControllerWithCommentServiceMock(commentService) {
 test.afterEach(() => {
   delete require.cache[controllerPath];
   delete require.cache[commentServicePath];
+  delete require.cache[commentLikeServicePath];
   delete require.cache[userServicePath];
 });
 
@@ -260,6 +268,35 @@ test('getReplies: passes through explicit cursor and positive limit', async () =
 
   assert.deepEqual(calls, [{ method: 'getReplies', commentId: '13', cursor: 'cursor-2', limit: 3 }]);
   assert.deepEqual(ctx.body, Result.success(serviceResult));
+});
+
+test('likeComment: delegates to commentLikeService and preserves the response shape', async () => {
+  const calls = [];
+  const commentService = {
+    async getCommentById(commentId) {
+      calls.push({ method: 'getCommentById', commentId });
+      return { id: Number(commentId), likes: 7 };
+    },
+  };
+  const commentLikeService = {
+    async toggleCommentLike(commentId, userId) {
+      calls.push({ method: 'toggleCommentLike', commentId, userId });
+      return { isLiked: true, action: 'liked' };
+    },
+  };
+  const controller = loadControllerWithCommentServiceMock(commentService, commentLikeService);
+  const ctx = {
+    user: { id: 20 },
+    params: { commentId: '40' },
+  };
+
+  await withSilentConsole(() => controller.likeComment(ctx));
+
+  assert.deepEqual(calls, [
+    { method: 'toggleCommentLike', commentId: '40', userId: 20 },
+    { method: 'getCommentById', commentId: '40' },
+  ]);
+  assert.deepEqual(ctx.body, Result.success({ liked: true, likes: 7 }));
 });
 
 test('getReplies: returns fail payload when commentService.getReplies throws', async () => {

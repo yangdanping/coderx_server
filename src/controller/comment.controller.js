@@ -1,5 +1,5 @@
 const commentService = require('@/service/comment.service.js');
-const userService = require('@/service/user.service.js');
+const commentLikeService = require('@/service/commentLike.service.js');
 const Result = require('@/app/Result');
 const Utils = require('@/utils');
 
@@ -180,7 +180,7 @@ class CommentController {
 
     try {
       // 切换点赞状态
-      const result = await userService.toggleLike('comment', commentId, userId);
+      const result = await commentLikeService.toggleCommentLike(commentId, userId);
 
       // 获取更新后的点赞总数
       const comment = await commentService.getCommentById(commentId);
