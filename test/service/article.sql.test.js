@@ -75,11 +75,35 @@ test('buildArticleListExecuteParams: orders limit before offset', () => {
   assert.deepEqual(buildArticleListExecuteParams([1, 2], 20, 10), [1, 2, 10, 20]);
 });
 
-test('buildGetArticlesByKeyWordsSql: uses LIMIT ? OFFSET ?', () => {
+test('buildGetArticleListSql: keyword filter uses PostgreSQL ILIKE and preserves filter/pagination parameter order', () => {
+  const { buildArticleListExecuteParams, buildArticleListQueryParams, buildGetArticleListSql } = loadHelper();
+  const filters = {
+    tagId: 'tag-1',
+    userId: 'user-2',
+    idList: [3, 4],
+    keywords: 'Node',
+    pageOrder: 'date',
+  };
+
+  const sql = buildGetArticleListSql('https://api.example', 'https://app.example', filters);
+  assert.match(
+    sql,
+    /WHERE\s+1=1[\s\S]*?a\.id\s+IN\s*\(SELECT\s+article_id\s+FROM\s+article_tag\s+WHERE\s+tag_id\s*=\s*\?\)[\s\S]*?a\.user_id\s*=\s*\?[\s\S]*?a\.id\s+IN\s*\(\?,\?\)[\s\S]*?a\.title\s+ILIKE\s*\?[\s\S]*?LIMIT\s+\?\s+OFFSET\s+\?/i,
+  );
+  assert.doesNotMatch(sql, /a\.title\s+LIKE\s*\?/i);
+
+  const queryParams = buildArticleListQueryParams(filters.tagId, filters.userId, filters.idList, filters.keywords);
+  assert.deepEqual(queryParams, ['tag-1', 'user-2', 3, 4, '%Node%']);
+  assert.deepEqual(buildArticleListExecuteParams(queryParams, 20, 10), ['tag-1', 'user-2', 3, 4, '%Node%', 10, 20]);
+});
+
+test('buildGetArticlesByKeyWordsSql: uses PostgreSQL ILIKE with LIMIT ? OFFSET ?', () => {
   const { buildGetArticlesByKeyWordsSql } = loadHelper();
   const redirect = 'https://app.example';
 
   const sql = buildGetArticlesByKeyWordsSql(redirect);
+  assert.match(sql, /\btitle\s+ILIKE\s*\?/i);
+  assert.doesNotMatch(sql, /\btitle\s+LIKE\s*\?/i);
   assert.match(sql, /LIMIT\s+\?\s+OFFSET\s+\?/i);
   assert.match(sql, /CONCAT\('[^']*\/article\/',\s*a\.id\)\s+AS\s+"articleUrl"/i);
   assert.doesNotMatch(sql, /LIMIT\s+0\s*,\s*10/i);
@@ -88,6 +112,22 @@ test('buildGetArticlesByKeyWordsSql: uses LIMIT ? OFFSET ?', () => {
 test('buildGetArticlesByKeyWordsExecuteParams: appends limit and offset after pattern', () => {
   const { buildGetArticlesByKeyWordsExecuteParams } = loadHelper();
   assert.deepEqual(buildGetArticlesByKeyWordsExecuteParams('kw'), ['%kw%', 10, 0]);
+});
+
+test('buildGetTotalSql: exports total SQL with PostgreSQL ILIKE and list-compatible parameter order', () => {
+  const { buildArticleListQueryParams, buildGetTotalSql } = loadHelper();
+  const filters = {
+    tagId: 'tag-1',
+    userId: 'user-2',
+    idList: [3, 4],
+    keywords: 'Node',
+  };
+
+  const sql = buildGetTotalSql(filters);
+  assert.match(sql, /SELECT\s+COUNT\s*\(DISTINCT\s+a\.id\)\s+total/i);
+  assert.match(sql, /WHERE\s+tag\.id\s*=\s*\?[\s\S]*?a\.user_id\s*=\s*\?[\s\S]*?a\.id\s+IN\s*\(\?,\?\)[\s\S]*?a\.title\s+ILIKE\s*\?/i);
+  assert.doesNotMatch(sql, /a\.title\s+LIKE\s*\?/i);
+  assert.deepEqual(buildArticleListQueryParams(filters.tagId, filters.userId, filters.idList, filters.keywords), ['tag-1', 'user-2', 3, 4, '%Node%']);
 });
 
 test('buildGetRecommendArticleListSql: uses LIMIT ? OFFSET ?', () => {
@@ -150,8 +190,5 @@ test('buildGetArticleListSql: cover uses LATERAL + LIMIT 1 instead of MAX(f.file
 test('buildAddArticleSql: appends RETURNING id', () => {
   const { buildAddArticleSql } = loadHelper();
 
-  assert.match(
-    buildAddArticleSql(),
-    /INSERT INTO article \(user_id,title, content, excerpt\) VALUES \(\?,\?,\?::jsonb,\?\) RETURNING id;$/i
-  );
+  assert.match(buildAddArticleSql(), /INSERT INTO article \(user_id,title, content, excerpt\) VALUES \(\?,\?,\?::jsonb,\?\) RETURNING id;$/i);
 });

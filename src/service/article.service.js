@@ -1,12 +1,6 @@
 const connection = require('@/app/database');
 const { baseURL, redirectURL } = require('@/constants/urls');
-const SqlUtils = require('@/utils/SqlUtils');
-const {
-  docToExcerpt,
-  docToHtml,
-  hydrateStructuredContentMediaSources,
-  resolveStructuredArticleContent,
-} = require('@/utils/articleContent');
+const { docToExcerpt, docToHtml, hydrateStructuredContentMediaSources, resolveStructuredArticleContent } = require('@/utils/articleContent');
 const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const BusinessError = require('@/errors/BusinessError');
 const {
@@ -16,6 +10,7 @@ const {
   buildGetArticleByIdSql,
   buildGetArticleListOptimizedSql,
   buildGetArticleListSql,
+  buildGetTotalSql,
   buildGetArticlesByKeyWordsExecuteParams,
   buildGetArticlesByKeyWordsSql,
   buildGetRecommendArticleListExecuteParams,
@@ -257,26 +252,8 @@ class ArticleService {
   };
 
   getTotal = async (tagId = '', userId = '', idList = [], keywords = '') => {
-    let queryByTag = tagId ? `WHERE tag.id = ?` : `WHERE 1=1`;
-    let queryByUserId = userId ? `AND a.user_id = ?` : '';
-    let queryByCollectId = SqlUtils.queryIn('a.id', idList, 'AND');
-    let queryByTitle = keywords ? `AND a.title LIKE ?` : '';
-
-    const queryParams = [];
-    if (tagId) queryParams.push(tagId);
-    if (userId) queryParams.push(userId);
-    if (idList.length) queryParams.push(...idList);
-    if (keywords) queryParams.push(`%${keywords}%`);
-
-    const statement = `
-      SELECT COUNT(DISTINCT a.id) total
-      FROM article a
-      LEFT JOIN article_tag ag ON a.id = ag.article_id
-      LEFT JOIN tag ON tag.id = ag.tag_id
-      ${queryByTag}
-      ${queryByUserId}
-      ${queryByCollectId}
-      ${queryByTitle};`;
+    const queryParams = buildArticleListQueryParams(tagId, userId, idList, keywords);
+    const statement = buildGetTotalSql({ tagId, userId, idList, keywords });
     const [result] = await connection.execute(statement, queryParams);
     const { total } = result[0];
     return total;

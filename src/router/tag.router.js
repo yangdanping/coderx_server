@@ -9,6 +9,9 @@ const { verifyAuth } = require('@/middleware/auth.middleware');
 而一个动态可以拥有多个标签,所以中间应建一个关系表 --> tag_label表 */
 tagRouter.post('/', verifyAuth, tagController.addTag);
 
+tagRouter.get('/order', verifyAuth, tagController.getUserOrder);
+tagRouter.put('/order', verifyAuth, tagController.replaceUserOrder);
+
 /* ★<用户展示标签>的实现----------------------------------
 当然用户是要登陆才能创建一个新的东西,所以要验证 --> verifyAuth */
 tagRouter.get('/', tagController.getList);

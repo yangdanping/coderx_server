@@ -70,11 +70,8 @@ function buildPgArticleListSql(baseURL, redirectURL, { tagId, userId, idList, ke
   const queryByTag = tagId ? `AND a.id IN (SELECT article_id FROM article_tag WHERE tag_id = ?)` : '';
   const queryByUserId = userId ? `AND a.user_id = ?` : '';
   const queryByCollectId = SqlUtils.queryIn('a.id', idList, 'AND');
-  const queryByTitle = keywords ? `AND a.title LIKE ?` : '';
-  const listOrder =
-    pageOrder === 'date'
-      ? `ORDER BY a.create_at DESC`
-      : `ORDER BY COALESCE(likes_agg.likes, 0)+a.views+COALESCE(comment_agg.commentCount, 0) DESC`;
+  const queryByTitle = keywords ? `AND a.title ILIKE ?` : '';
+  const listOrder = pageOrder === 'date' ? `ORDER BY a.create_at DESC` : `ORDER BY COALESCE(likes_agg.likes, 0)+a.views+COALESCE(comment_agg.commentCount, 0) DESC`;
 
   return `
       SELECT
@@ -135,11 +132,28 @@ function buildGetArticleListOptimizedSql(baseURL, redirectURL, { tagId, userId, 
   return buildPgArticleListSql(baseURL, redirectURL, { tagId, userId, idList, keywords, pageOrder });
 }
 
+function buildGetTotalSql({ tagId, userId, idList, keywords }) {
+  const queryByTag = tagId ? `WHERE tag.id = ?` : `WHERE 1=1`;
+  const queryByUserId = userId ? `AND a.user_id = ?` : '';
+  const queryByCollectId = SqlUtils.queryIn('a.id', idList, 'AND');
+  const queryByTitle = keywords ? `AND a.title ILIKE ?` : '';
+
+  return `
+      SELECT COUNT(DISTINCT a.id) total
+      FROM article a
+      LEFT JOIN article_tag ag ON a.id = ag.article_id
+      LEFT JOIN tag ON tag.id = ag.tag_id
+      ${queryByTag}
+      ${queryByUserId}
+      ${queryByCollectId}
+      ${queryByTitle};`;
+}
+
 function buildGetArticlesByKeyWordsSql(redirectURL) {
   return `
       SELECT a.id,a.title,
       CONCAT('${redirectURL}/article/',a.id) AS "articleUrl"
-      FROM article a where title LIKE ? LIMIT ? OFFSET ?`;
+      FROM article a where title ILIKE ? LIMIT ? OFFSET ?`;
 }
 
 function buildGetArticlesByKeyWordsExecuteParams(keywords) {
@@ -165,6 +179,7 @@ module.exports = {
   buildGetArticleByIdSql,
   buildGetArticleListOptimizedSql,
   buildGetArticleListSql,
+  buildGetTotalSql,
   buildGetArticlesByKeyWordsExecuteParams,
   buildGetArticlesByKeyWordsSql,
   buildGetRecommendArticleListExecuteParams,

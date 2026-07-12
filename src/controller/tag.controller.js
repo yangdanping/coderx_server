@@ -13,6 +13,16 @@ class TagController {
     const result = await tagService.getTagList(offset, limit);
     ctx.body = Result.success(result);
   };
+
+  getUserOrder = async (ctx, next) => {
+    const result = await tagService.getUserTagOrder(ctx.user.id);
+    ctx.body = Result.success(result);
+  };
+
+  replaceUserOrder = async (ctx, next) => {
+    const result = await tagService.replaceUserTagOrder(ctx.user.id, ctx.request.body?.tagIds);
+    ctx.body = Result.success(result);
+  };
 }
 
 module.exports = new TagController();
