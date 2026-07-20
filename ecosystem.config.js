@@ -20,6 +20,8 @@ module.exports = {
       env: {
         // 设置生产环境标识，供应用内部逻辑（如日志、数据库连接）判断
         NODE_ENV: 'production',
+        // 无 TTY 的 PM2 环境下，避免 pnpm 依赖自检因无法确认而中止
+        CI: 'true',
       },
       // 自动重启配置
       autorestart: true,

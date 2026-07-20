@@ -36,7 +36,8 @@ deploy:
       echo "✅ 代码已是最新，无需重新安装依赖和重启服务"
     else
       echo "📦 检测到代码更新，开始安装依赖..."
-      pnpm i
+      # SSH/非交互环境必须设置 CI，否则 pnpm 可能因无 TTY 中止并破坏 node_modules
+      CI=true pnpm i
       echo "🔄 重启服务..."
       pm2 restart ecosystem.config.js
       echo "✅ 部署完成"
