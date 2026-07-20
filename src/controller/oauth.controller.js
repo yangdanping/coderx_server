@@ -8,6 +8,38 @@ const Result = require('@/app/Result');
  * 处理 Google 和 GitHub OAuth 2.0 登录流程
  */
 class OAuthController {
+  signToken(user) {
+    return jwt.sign({ id: user.id, name: user.name }, PRIVATE_KEY, {
+      expiresIn: 60 * 60 * 24 * 7, // 7 天
+      algorithm: 'RS256',
+      allowInsecureKeySizes: true,
+    });
+  }
+
+  /**
+   * 按 Google 身份查找 / 关联 / 创建用户
+   * @param {object} googleUser
+   * @returns {Promise<{ id: number, name: string }>}
+   */
+  async resolveGoogleUser(googleUser) {
+    let user = await oauthService.findUserByGoogleId(googleUser.googleId);
+
+    if (!user) {
+      const existingUser = await oauthService.findUserByEmail(googleUser.email);
+
+      if (existingUser) {
+        await oauthService.linkGoogleAccount(existingUser.id, googleUser.googleId);
+        user = { id: existingUser.id, name: existingUser.name };
+        console.log('[OAuth] 已关联现有账号:', user.name);
+      } else {
+        user = await oauthService.createOAuthUser(googleUser);
+        console.log('[OAuth] 已创建新用户:', user.name);
+      }
+    }
+
+    return user;
+  }
+
   /**
    * 获取 Google 授权 URL
    * GET /oauth/google
@@ -44,41 +76,14 @@ class OAuthController {
     }
 
     try {
-      // 1. 用 code 换取 Google 用户信息
       const googleUser = await oauthService.getGoogleUserInfo(code);
       console.log('[OAuth] Google 用户信息:', googleUser);
 
-      let user = null;
-
-      // 2. 检查是否已通过 Google 登录过
-      user = await oauthService.findUserByGoogleId(googleUser.googleId);
-
-      if (!user) {
-        // 3. 检查邮箱是否已注册（账号关联场景）
-        const existingUser = await oauthService.findUserByEmail(googleUser.email);
-
-        if (existingUser) {
-          // 关联现有账号
-          await oauthService.linkGoogleAccount(existingUser.id, googleUser.googleId);
-          user = { id: existingUser.id, name: existingUser.name };
-          console.log('[OAuth] 已关联现有账号:', user.name);
-        } else {
-          // 4. 创建新用户
-          user = await oauthService.createOAuthUser(googleUser);
-          console.log('[OAuth] 已创建新用户:', user.name);
-        }
-      }
-
-      // 5. 颁发 JWT token（复用现有逻辑）
-      const token = jwt.sign({ id: user.id, name: user.name }, PRIVATE_KEY, {
-        expiresIn: 60 * 60 * 24 * 7, // 7 天
-        algorithm: 'RS256',
-        allowInsecureKeySizes: true,
-      });
+      const user = await this.resolveGoogleUser(googleUser);
+      const token = this.signToken(user);
 
       console.log('[OAuth] 登录成功，用户:', user.name);
 
-      // 6. 重定向到前端回调页面，携带 token 和用户信息
       const params = new URLSearchParams({
         token,
         userId: user.id,
@@ -92,13 +97,48 @@ class OAuthController {
   };
 
   /**
+   * Google One Tap / GIS id_token 登录
+   * POST /oauth/google/idtoken
+   * body: { credential: string } 或 { idToken: string }
+   */
+  googleIdTokenLogin = async (ctx) => {
+    if (!oauthService.isConfigured()) {
+      ctx.body = Result.fail('Google OAuth 未配置，请联系管理员');
+      return;
+    }
+
+    const idToken = ctx.request.body?.credential || ctx.request.body?.idToken;
+    if (!idToken) {
+      ctx.body = Result.fail('缺少 Google credential');
+      return;
+    }
+
+    try {
+      const googleUser = await oauthService.getGoogleUserInfoFromIdToken(idToken);
+      console.log('[OAuth] Google One Tap 用户信息:', googleUser);
+
+      const user = await this.resolveGoogleUser(googleUser);
+      const token = this.signToken(user);
+
+      console.log('[OAuth] One Tap 登录成功，用户:', user.name);
+      ctx.body = Result.success({ id: user.id, name: user.name, token });
+    } catch (error) {
+      console.error('[OAuth] One Tap 登录失败:', error.message);
+      ctx.body = Result.fail(error.message || 'Google 登录失败');
+    }
+  };
+
+  /**
    * 检查 OAuth 配置状态
    * GET /oauth/status
    */
   getStatus = async (ctx) => {
+    const googleConfigured = oauthService.isConfigured();
     ctx.body = Result.success({
-      google: oauthService.isConfigured(),
+      google: googleConfigured,
       github: oauthService.isGitHubConfigured(),
+      // Client ID 本身可公开；前端 GIS One Tap 需要用它初始化
+      googleClientId: googleConfigured ? process.env.GOOGLE_CLIENT_ID || null : null,
     });
   };
 
@@ -170,11 +210,7 @@ class OAuthController {
       }
 
       // 5. 颁发 JWT token（复用现有逻辑）
-      const token = jwt.sign({ id: user.id, name: user.name }, PRIVATE_KEY, {
-        expiresIn: 60 * 60 * 24 * 7, // 7 天
-        algorithm: 'RS256',
-        allowInsecureKeySizes: true,
-      });
+      const token = this.signToken(user);
 
       console.log('[OAuth] GitHub 登录成功，用户:', user.name);
 

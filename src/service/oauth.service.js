@@ -69,6 +69,33 @@ class OAuthService {
   }
 
   /**
+   * 校验 Google id_token（One Tap / GIS credential）并解析用户信息
+   * @param {string} idToken - Google 返回的 JWT id_token
+   * @returns {object} Google 用户信息
+   */
+  async getGoogleUserInfoFromIdToken(idToken) {
+    const client = this.getClient();
+    if (!client) throw new Error('Google OAuth 未配置');
+    if (!idToken) throw new Error('缺少 Google id_token');
+
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload?.sub) throw new Error('无效的 Google token');
+
+    return {
+      googleId: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      avatarUrl: payload.picture,
+      emailVerified: payload.email_verified,
+    };
+  }
+
+  /**
    * 用授权码换取用户信息
    * @param {string} code - Google 返回的授权码
    * @returns {object} Google 用户信息
@@ -81,20 +108,7 @@ class OAuthService {
     const { tokens } = await client.getToken(code);
     client.setCredentials(tokens);
 
-    // 获取用户信息
-    const ticket = await client.verifyIdToken({
-      idToken: tokens.id_token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    return {
-      googleId: payload.sub,
-      email: payload.email,
-      name: payload.name,
-      avatarUrl: payload.picture,
-      emailVerified: payload.email_verified,
-    };
+    return this.getGoogleUserInfoFromIdToken(tokens.id_token);
   }
 
   /**

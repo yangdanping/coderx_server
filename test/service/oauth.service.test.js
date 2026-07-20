@@ -179,3 +179,55 @@ test('createGitHubOAuthUser: pg transaction requests insertId via RETURNING id a
     Date.now = originalDateNow;
   }
 });
+
+test('getGoogleUserInfoFromIdToken: verifies id_token and maps payload', async () => {
+  const service = loadServiceWithConnection({
+    dialect: 'pg',
+    async execute() {
+      return [[], []];
+    },
+  });
+
+  const originalEnv = {
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI,
+  };
+
+  process.env.GOOGLE_CLIENT_ID = 'test-client-id';
+  process.env.GOOGLE_CLIENT_SECRET = 'test-client-secret'; // pragma: allowlist secret
+  process.env.GOOGLE_REDIRECT_URI = 'http://localhost/callback';
+
+  try {
+    service.client = {
+      async verifyIdToken({ idToken, audience }) {
+        assert.equal(idToken, 'fake-id-token');
+        assert.equal(audience, 'test-client-id');
+        return {
+          getPayload() {
+            return {
+              sub: 'gid-99',
+              email: 'one@example.com',
+              name: 'One Tap',
+              picture: 'https://example.com/a.png',
+              email_verified: true,
+            };
+          },
+        };
+      },
+    };
+
+    const user = await service.getGoogleUserInfoFromIdToken('fake-id-token');
+    assert.deepEqual(user, {
+      googleId: 'gid-99',
+      email: 'one@example.com',
+      name: 'One Tap',
+      avatarUrl: 'https://example.com/a.png',
+      emailVerified: true,
+    });
+  } finally {
+    process.env.GOOGLE_CLIENT_ID = originalEnv.GOOGLE_CLIENT_ID;
+    process.env.GOOGLE_CLIENT_SECRET = originalEnv.GOOGLE_CLIENT_SECRET;
+    process.env.GOOGLE_REDIRECT_URI = originalEnv.GOOGLE_REDIRECT_URI;
+  }
+});
