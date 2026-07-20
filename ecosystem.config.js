@@ -47,6 +47,7 @@ module.exports = {
       env_file: '/root/coderx_server/.env.production',
       env: {
         NODE_ENV: 'production',
+        CI: 'true',
       },
       autorestart: true,
       watch: false,
