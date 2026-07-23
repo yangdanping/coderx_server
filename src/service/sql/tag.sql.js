@@ -17,7 +17,13 @@ function buildGetUserTagOrderSql() {
     LEFT JOIN user_tag_preference utp
       ON utp.tag_id = t.id
      AND utp.user_id = ?
-    ORDER BY utp.sort_order ASC NULLS LAST, t.id ASC;
+    ORDER BY
+      utp.sort_order ASC NULLS LAST,
+      CASE
+        WHEN utp.sort_order IS NULL AND t.name = '人工智能' THEN 0
+        ELSE 1
+      END ASC,
+      t.id ASC;
   `;
 }
 

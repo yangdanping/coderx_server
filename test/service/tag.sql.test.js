@@ -29,14 +29,17 @@ test('buildGetTagListExecuteParams: orders limit before offset', () => {
   assert.deepEqual(buildGetTagListExecuteParams('20', '10'), ['10', '20']);
 });
 
-test('buildGetUserTagOrderSql: appends tags without preferences after the saved order', () => {
+test('buildGetUserTagOrderSql: keeps saved order and defaults unranked AI first', () => {
   const { buildGetUserTagOrderSql } = loadHelper();
   const statement = buildGetUserTagOrderSql();
 
   assert.match(statement, /FROM tag t/i);
   assert.match(statement, /LEFT JOIN user_tag_preference utp/i);
   assert.match(statement, /utp\.user_id = \?/i);
-  assert.match(statement, /ORDER BY utp\.sort_order ASC NULLS LAST, t\.id ASC/i);
+  assert.match(
+    statement,
+    /ORDER BY\s+utp\.sort_order ASC NULLS LAST,[\s\S]*CASE\s+WHEN utp\.sort_order IS NULL AND t\.name = '人工智能'\s+THEN 0\s+ELSE 1\s+END ASC,[\s\S]*t\.id ASC;/i,
+  );
 });
 
 test('buildDeleteUserTagOrderSql: scopes replacement to one user', () => {

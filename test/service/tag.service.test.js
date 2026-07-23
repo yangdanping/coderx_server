@@ -83,6 +83,10 @@ test('getUserTagOrder: reads the current user ordered list', async () => {
 
   assert.deepEqual(result, expected);
   assert.match(calls[0].statement, /LEFT JOIN user_tag_preference/i);
+  assert.match(
+    calls[0].statement,
+    /ORDER BY\s+utp\.sort_order ASC NULLS LAST,[\s\S]*CASE\s+WHEN utp\.sort_order IS NULL AND t\.name = '人工智能'\s+THEN 0\s+ELSE 1\s+END ASC,[\s\S]*t\.id ASC;/i,
+  );
   assert.deepEqual(calls[0].params, [7]);
 });
 

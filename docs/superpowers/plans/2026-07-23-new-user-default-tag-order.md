@@ -21,6 +21,7 @@
 
 **Files:**
 - Modify: `test/service/tag.service.test.js:69-87`
+- Modify: `test/service/tag.sql.test.js:32-41`
 - Modify: `src/service/sql/tag.sql.js:13-21`
 
 **Interfaces:**
@@ -36,6 +37,20 @@ assert.match(
   calls[0].statement,
   /ORDER BY\s+utp\.sort_order ASC NULLS LAST,[\s\S]*CASE\s+WHEN utp\.sort_order IS NULL AND t\.name = '人工智能'\s+THEN 0 ELSE 1 END ASC,[\s\S]*t\.id ASC;/i,
 );
+```
+
+同时把 `buildGetUserTagOrderSql: appends tags without preferences after the saved order` 更新为：
+
+```js
+test('buildGetUserTagOrderSql: keeps saved order and defaults unranked AI first', () => {
+  const { buildGetUserTagOrderSql } = loadHelper();
+  const statement = buildGetUserTagOrderSql();
+
+  assert.match(
+    statement,
+    /ORDER BY\s+utp\.sort_order ASC NULLS LAST,[\s\S]*CASE\s+WHEN utp\.sort_order IS NULL AND t\.name = '人工智能'\s+THEN 0\s+ELSE 1\s+END ASC,[\s\S]*t\.id ASC;/i,
+  );
+});
 ```
 
 - [ ] **Step 2: 运行测试并确认按预期失败**
@@ -94,7 +109,7 @@ Expected: 全部测试通过，失败数为 0。
 - [ ] **Step 6: 提交实现**
 
 ```bash
-git add src/service/sql/tag.sql.js test/service/tag.service.test.js
+git add docs/superpowers/plans/2026-07-23-new-user-default-tag-order.md src/service/sql/tag.sql.js test/service/tag.service.test.js test/service/tag.sql.test.js
 git commit -m "fix(tags): default new users to AI first"
 ```
 
