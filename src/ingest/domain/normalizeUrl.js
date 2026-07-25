@@ -1,12 +1,4 @@
-const TRACKING_PARAM_NAMES = new Set([
-  'fbclid',
-  'gclid',
-  'mc_cid',
-  'mc_eid',
-  'ref',
-  'ref_src',
-  'source',
-]);
+const TRACKING_PARAM_NAMES = new Set(['fbclid', 'gclid', 'mc_cid', 'mc_eid', 'ref', 'ref_src', 'source']);
 
 function isTrackingParam(name) {
   const normalizedName = name.toLowerCase();
