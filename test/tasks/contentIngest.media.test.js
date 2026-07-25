@@ -4,6 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { Jimp } = require('jimp');
+const sharp = require('sharp');
 
 require('module-alias/register');
 
@@ -78,5 +79,42 @@ test('localizeArticleImages rejects a batch without a usable cover', async () =>
       }),
     /usable article image/i,
   );
+  await fs.rm(outputDir, { recursive: true, force: true });
+});
+
+test('localizeArticleImages decodes a WebP source into local JPEG assets', async () => {
+  const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), 'coderx-rich-media-webp-'));
+  const webp = await sharp({
+    create: {
+      width: 1200,
+      height: 675,
+      channels: 4,
+      background: '#336699',
+    },
+  })
+    .webp()
+    .toBuffer();
+
+  const result = await localizeArticleImages({
+    candidateId: 54,
+    outputDir,
+    images: [{ url: 'https://img.example/cover.webp', alt: 'GitHub Copilot cover', isCover: true }],
+    fetchImage: async () => ({ buffer: webp, contentType: 'image/webp' }),
+  });
+
+  assert.equal(result.assets.length, 1);
+  assert.equal(result.assets[0].mimetype, 'image/jpeg');
+  assert.equal(result.assets[0].width, 1200);
+  assert.equal(result.assets[0].height, 675);
+  assert.deepEqual(await sharp(result.assets[0].temporaryPath).metadata().then(({ format, width }) => ({ format, width })), {
+    format: 'jpeg',
+    width: 1200,
+  });
+  assert.deepEqual(await sharp(result.assets[0].smallTemporaryPath).metadata().then(({ format, width }) => ({ format, width })), {
+    format: 'jpeg',
+    width: 320,
+  });
+
+  await result.cleanup();
   await fs.rm(outputDir, { recursive: true, force: true });
 });

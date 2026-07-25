@@ -1,7 +1,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { Jimp } = require('jimp');
+const sharp = require('sharp');
 const { safeRemoteFetch } = require('@/ingest/extraction/safeRemoteFetch');
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -59,20 +59,33 @@ async function localizeArticleImages({ candidateId, images, outputDir, fetchImag
       }
       if (!Buffer.isBuffer(fetched?.buffer)) continue;
 
-      let image;
+      let sourceImage;
+      let metadata;
       try {
-        image = await Jimp.read(fetched.buffer);
+        sourceImage = sharp(fetched.buffer, { failOn: 'warning' }).rotate();
+        metadata = await sourceImage.metadata();
       } catch {
         continue;
       }
-      const originalWidth = image.bitmap.width;
-      const originalHeight = image.bitmap.height;
+      const originalWidth = Number(metadata.width);
+      const originalHeight = Number(metadata.height);
       if (originalWidth < MIN_WIDTH || originalHeight < MIN_HEIGHT) continue;
-      if (image.bitmap.width > 1600) image.resize({ w: 1600 });
 
-      const fullBuffer = await image.getBuffer('image/jpeg', { quality: 82 });
-      const thumbnail = image.clone().resize({ w: 320 });
-      const thumbnailBuffer = await thumbnail.getBuffer('image/jpeg', { quality: 80 });
+      let fullBuffer;
+      let fullInfo;
+      let thumbnailBuffer;
+      try {
+        const rendered = await sourceImage
+          .clone()
+          .resize({ width: 1600, withoutEnlargement: true })
+          .jpeg({ quality: 82 })
+          .toBuffer({ resolveWithObject: true });
+        fullBuffer = rendered.data;
+        fullInfo = rendered.info;
+        thumbnailBuffer = await sharp(fullBuffer).resize({ width: 320, withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer();
+      } catch {
+        continue;
+      }
       const index = assets.length + 1;
       const filename = `ingest-${candidateId}-${index}-${imageHash(fullBuffer)}.jpg`;
       const thumbnailFilename = smallFilename(filename);
@@ -88,8 +101,8 @@ async function localizeArticleImages({ candidateId, images, outputDir, fetchImag
         smallFilename: thumbnailFilename,
         mimetype: 'image/jpeg',
         size: fullBuffer.byteLength,
-        width: image.bitmap.width,
-        height: image.bitmap.height,
+        width: fullInfo.width,
+        height: fullInfo.height,
         alt: String(candidate.alt || '')
           .trim()
           .slice(0, 180),
