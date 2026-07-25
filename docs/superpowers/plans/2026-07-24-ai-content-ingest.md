@@ -6,7 +6,7 @@
 
 **Architecture:** A standalone `src/ingest` package owns source collection, normalization, scoring, enrichment, persistence, approval, and publication. PM2 keeps one scheduling process alive, node-cron triggers runs, and a PostgreSQL advisory lock plus unique constraints make collection and publication idempotent.
 
-**Tech Stack:** Node.js CommonJS, node:test, PostgreSQL 18, `pg`, `node-cron`, `fast-xml-parser`, AI SDK/OpenAI-compatible Ollama, PM2.
+**Tech Stack:** Node.js CommonJS, node:test, PostgreSQL 18, `pg`, `node-cron`, `xml2js`, `happy-dom`, AI SDK/OpenAI-compatible Ollama, PM2.
 
 ## Global Constraints
 
@@ -121,11 +121,11 @@ Run: `node --test test/tasks/contentIngest.domain.test.js`
 
 Expected: FAIL because `src/ingest/domain/normalizeUrl.js` does not exist.
 
-- [ ] **Step 3: Install parser and implement minimal pure functions**
+- [ ] **Step 3: Reuse the cached XML/HTML parsers and implement minimal pure functions**
 
-Run: `pnpm add fast-xml-parser`
+Run: `pnpm add --offline xml2js@0.5.0`
 
-Implement RSS 2.0 and Atom parsing, HTML-to-text cleanup for summaries, deterministic URL normalization, recency/keyword/source scoring, and an immutable source catalog containing only public feeds.
+Implement RSS 2.0 and Atom parsing with `xml2js`, HTML-to-text cleanup with the existing `happy-dom` dependency, deterministic URL normalization, recency/keyword/source scoring, and an immutable source catalog containing only public feeds.
 
 - [ ] **Step 4: Verify GREEN**
 

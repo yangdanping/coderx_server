@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Example Research</title>
+  <link href="https://research.example.com" />
+  <entry>
+    <title>New agent research</title>
+    <link rel="alternate" href="https://research.example.com/agent?ref=feed&amp;id=8" />
+    <id>tag:research.example.com,2026:agent-8</id>
+    <updated>2026-07-23T10:30:00Z</updated>
+    <summary type="html">&lt;p&gt;Agent research summary&lt;/p&gt;</summary>
+    <author>
+      <name>Research Team</name>
+    </author>
+  </entry>
+</feed>
