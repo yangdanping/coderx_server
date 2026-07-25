@@ -180,6 +180,38 @@ function createIngestRepository(database, options = {}) {
     return rows;
   }
 
+  async function saveEnrichment(id, { titleZh, summaryZh, recommendation, content }) {
+    const [result] = await database.execute(
+      `
+        UPDATE ingest_candidate
+        SET title_zh = ?,
+            summary_zh = ?,
+            recommendation = ?,
+            content = ?::jsonb,
+            failure_reason = NULL,
+            status = 'enriched',
+            updated_at = clock_timestamp()
+        WHERE id = ?;
+      `,
+      [titleZh, summaryZh, recommendation, JSON.stringify(content), id],
+    );
+    return result;
+  }
+
+  async function recordEnrichmentFailure(id, message) {
+    const [result] = await database.execute(
+      `
+        UPDATE ingest_candidate
+        SET failure_reason = ?,
+            status = 'pending',
+            updated_at = clock_timestamp()
+        WHERE id = ?;
+      `,
+      [message, id],
+    );
+    return result;
+  }
+
   async function withAdvisoryLock(callback) {
     const connection = await database.getConnection();
     let acquired = false;
@@ -204,6 +236,8 @@ function createIngestRepository(database, options = {}) {
     createRun,
     finishRun,
     listCandidates,
+    recordEnrichmentFailure,
+    saveEnrichment,
     syncSources,
     upsertCandidates,
     withAdvisoryLock,

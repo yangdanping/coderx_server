@@ -60,13 +60,10 @@ test('syncSources upserts stable source keys and returns their database ids', as
 
   const result = await repository.syncSources([buildSource('source-a'), buildSource('source-b')]);
 
-  assert.deepEqual(
-    Array.from(result.entries()),
-    [
-      ['source-a', { id: 11, sourceKey: 'source-a' }],
-      ['source-b', { id: 12, sourceKey: 'source-b' }],
-    ],
-  );
+  assert.deepEqual(Array.from(result.entries()), [
+    ['source-a', { id: 11, sourceKey: 'source-a' }],
+    ['source-b', { id: 12, sourceKey: 'source-b' }],
+  ]);
   assert.equal(database.calls.length, 2);
 });
 
@@ -185,4 +182,31 @@ test('withAdvisoryLock unlocks and releases after failed work', async () => {
 
   assert.match(connectionCalls[1], /pg_advisory_unlock/);
   assert.equal(connectionCalls[2], 'release');
+});
+
+test('enrichment persistence marks success enriched but leaves failures pending for retry', async () => {
+  const database = createDatabaseDouble(async (statement, params) => {
+    if (/SET title_zh/i.test(statement)) {
+      assert.match(statement, /status = 'enriched'/i);
+      assert.deepEqual(params.slice(0, 3), ['中文标题', '中文摘要', '推荐理由']);
+      return [{ affectedRows: 1, insertId: 0 }, []];
+    }
+    if (/SET failure_reason/i.test(statement)) {
+      assert.match(statement, /status = 'pending'/i);
+      assert.deepEqual(params, ['model unavailable', 31]);
+      return [{ affectedRows: 1, insertId: 0 }, []];
+    }
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const repository = createIngestRepository(database);
+
+  await repository.saveEnrichment(31, {
+    titleZh: '中文标题',
+    summaryZh: '中文摘要',
+    recommendation: '推荐理由',
+    content: { type: 'doc', content: [] },
+  });
+  await repository.recordEnrichmentFailure(31, 'model unavailable');
+
+  assert.equal(database.calls.length, 2);
 });
