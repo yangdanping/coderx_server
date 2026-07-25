@@ -212,6 +212,149 @@ function createIngestRepository(database, options = {}) {
     return result;
   }
 
+  async function approveCandidates({ ids = [], limit = 10 } = {}) {
+    const safeLimit = Number.isSafeInteger(limit) && limit > 0 ? Math.min(limit, 100) : 10;
+    const safeIds = Array.isArray(ids) ? [...new Set(ids.filter((id) => Number.isSafeInteger(id) && id > 0))] : [];
+    const idFilter = safeIds.length > 0 ? 'AND id = ANY(?::bigint[])' : '';
+    const params = safeIds.length > 0 ? [safeIds, safeLimit] : [safeLimit];
+    const [result] = await database.execute(
+      `
+        WITH selected AS (
+          SELECT id
+          FROM ingest_candidate
+          WHERE status = 'enriched'
+            ${idFilter}
+          ORDER BY score DESC, source_published_at DESC NULLS LAST, id ASC
+          LIMIT ?
+          FOR UPDATE SKIP LOCKED
+        )
+        UPDATE ingest_candidate AS candidate
+        SET status = 'approved',
+            failure_reason = NULL,
+            updated_at = clock_timestamp()
+        FROM selected
+        WHERE candidate.id = selected.id;
+      `,
+      params,
+    );
+    return { approved: result.affectedRows };
+  }
+
+  async function publishApproved({ authorName, tagName, limit = 10 }) {
+    const safeLimit = Number.isSafeInteger(limit) && limit > 0 ? Math.min(limit, 100) : 10;
+    const connection = await database.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      const [authors] = await connection.execute(
+        `
+          SELECT id
+          FROM "user"
+          WHERE name = ? AND status = 0
+          LIMIT 1;
+        `,
+        [authorName],
+      );
+      const author = authors[0];
+      if (!author) throw new Error(`Publish author not found: ${authorName}`);
+
+      const [tags] = await connection.execute(
+        `
+          SELECT id
+          FROM tag
+          WHERE name = ?
+          LIMIT 1;
+        `,
+        [tagName],
+      );
+      const tag = tags[0];
+      if (!tag) throw new Error(`Publish tag not found: ${tagName}`);
+
+      const [candidates] = await connection.execute(
+        `
+          SELECT
+            c.id,
+            c.source_id AS "sourceId",
+            c.canonical_url AS "canonicalUrl",
+            c.title_original AS "titleOriginal",
+            c.title_zh AS "titleZh",
+            c.summary_zh AS "summaryZh",
+            c.source_published_at AS "sourcePublishedAt",
+            c.content_mode AS "contentMode",
+            c.license_code AS "licenseCode",
+            c.content
+          FROM ingest_candidate c
+          WHERE c.status = 'approved'
+            AND c.article_id IS NULL
+          ORDER BY c.score DESC, c.source_published_at DESC NULLS LAST, c.id ASC
+          LIMIT ?
+          FOR UPDATE OF c SKIP LOCKED;
+        `,
+        [safeLimit],
+      );
+
+      const articleIds = [];
+      for (const candidate of candidates) {
+        const [articleResult] = await connection.execute(
+          `
+            INSERT INTO article (user_id, title, content, excerpt)
+            VALUES (?, ?, ?::jsonb, ?)
+            RETURNING id;
+          `,
+          [author.id, candidate.titleZh, JSON.stringify(candidate.content), candidate.summaryZh],
+        );
+        const articleId = articleResult.insertId;
+
+        await connection.execute(
+          `
+            INSERT INTO article_tag (article_id, tag_id)
+            VALUES (?, ?);
+          `,
+          [articleId, tag.id],
+        );
+        await connection.execute(
+          `
+            INSERT INTO article_source (
+              article_id, candidate_id, source_id, canonical_url, source_title,
+              source_published_at, content_mode, license_code
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+          `,
+          [articleId, candidate.id, candidate.sourceId, candidate.canonicalUrl, candidate.titleOriginal, candidate.sourcePublishedAt, candidate.contentMode, candidate.licenseCode],
+        );
+        const [candidateResult] = await connection.execute(
+          `
+            UPDATE ingest_candidate
+            SET article_id = ?,
+                status = 'published',
+                failure_reason = NULL,
+                updated_at = clock_timestamp()
+            WHERE id = ?
+              AND status = 'approved'
+              AND article_id IS NULL;
+          `,
+          [articleId, candidate.id],
+        );
+        if (candidateResult.affectedRows !== 1) {
+          throw new Error(`Candidate ${candidate.id} changed during publication`);
+        }
+        articleIds.push(articleId);
+      }
+
+      await connection.commit();
+      return {
+        published: articleIds.length,
+        articleIds,
+      };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
   async function withAdvisoryLock(callback) {
     const connection = await database.getConnection();
     let acquired = false;
@@ -233,9 +376,11 @@ function createIngestRepository(database, options = {}) {
   }
 
   return {
+    approveCandidates,
     createRun,
     finishRun,
     listCandidates,
+    publishApproved,
     recordEnrichmentFailure,
     saveEnrichment,
     syncSources,
