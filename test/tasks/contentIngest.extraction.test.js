@@ -82,6 +82,37 @@ test('extractArticlePage returns readable sections and absolute image candidates
   assert.doesNotMatch(page.textContent, /Home Products Pricing Contact/);
 });
 
+test('extractArticlePage prefers structured multi-author names over a profile byline', () => {
+  const paragraphs = Array.from(
+    { length: 6 },
+    (_, index) =>
+      `<p>Paragraph ${index + 1} explains how a production artificial intelligence system preserves source structure, attribution, and operational details for readers across the complete publication workflow.</p>`,
+  ).join('');
+  const page = extractArticlePage({
+    canonicalUrl: 'https://news.example/posts/structured-authors',
+    html: `
+      <html>
+        <head><title>Structured source authors</title></head>
+        <body>
+          <article>
+            <h1>Structured source authors</h1>
+            <footer>
+              <span>by
+                <span property="author" typeof="Person"><span property="name">Zohreh Norouzi</span></span>,
+                <span property="author" typeof="Person"><span property="name">Chris Dickens</span></span>
+              </span>
+            </footer>
+            <div class="byline">Wrong Author Wrong is a profile biography selected by generic readability heuristics.</div>
+            ${paragraphs}
+          </article>
+        </body>
+      </html>
+    `,
+  });
+
+  assert.equal(page.byline, 'Zohreh Norouzi, Chris Dickens');
+});
+
 test('extractArticlePage rejects pages without enough source material', () => {
   assert.throws(
     () =>

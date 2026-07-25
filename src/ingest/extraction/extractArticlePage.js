@@ -35,6 +35,18 @@ function firstMetaContent(document, selectors) {
   return '';
 }
 
+function structuredByline(document) {
+  const names = [];
+  const seen = new Set();
+  for (const node of document.querySelectorAll('[property="author"][typeof="Person"] [property="name"]')) {
+    const name = normalizedText(node.textContent);
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    names.push(name);
+  }
+  return names.join(', ');
+}
+
 function readPublishedAt(document) {
   const raw =
     firstMetaContent(document, ['meta[property="article:published_time"]', 'meta[name="date"]', 'meta[name="pubdate"]']) ||
@@ -111,6 +123,7 @@ function extractArticlePage({ canonicalUrl, html }) {
   const finalCanonical = declaredCanonical || pageUrl;
   const images = extractImages(window.document, finalCanonical);
   const metadataByline = firstMetaContent(window.document, ['meta[name="author"]', 'meta[property="article:author"]']);
+  const sourceByline = structuredByline(window.document) || metadataByline;
   const publishedAt = readPublishedAt(window.document);
   const parsed = new Readability(window.document.cloneNode(true), {
     charThreshold: MIN_SOURCE_CHARACTERS,
@@ -124,7 +137,7 @@ function extractArticlePage({ canonicalUrl, html }) {
   const title = normalizedText(parsed.title || firstMetaContent(window.document, ['meta[property="og:title"]']) || window.document.title);
   const { sections, paragraphs } = extractSections(parsed.content, finalCanonical, title);
   const textContent = paragraphs.join('\n\n');
-  const byline = normalizedText(parsed.byline || metadataByline) || null;
+  const byline = normalizedText(sourceByline || parsed.byline) || null;
   window.close();
 
   if (textContent.length < MIN_SOURCE_CHARACTERS || paragraphs.length < MIN_PARAGRAPHS) {
