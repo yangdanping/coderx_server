@@ -146,6 +146,12 @@ INGEST_AUTHOR_IDS=1,2,3,4,5 \
 INGEST_OLLAMA_BASE_URL=http://127.0.0.1:11434/v1 \
 INGEST_OLLAMA_MODEL=qwen2.5:7b \
 pnpm ingest backfill-rich --ids 70,21,54,149,60 --limit 5
+
+# 查看固定“摘要 / 为什么值得阅读 / 来源”旧模板文章；默认只输出清单
+pnpm ingest purge-placeholders
+
+# 审核清单后显式事务删除，并将对应候选标记为 rejected
+pnpm ingest purge-placeholders --apply
 ```
 
 `run` 组合命令会执行 collect 和 enrich。只有显式设置 `INGEST_AUTO_PUBLISH=true` 时，它才会继续尝试发布已经 approved 的候选；默认值为 `false`。
@@ -153,6 +159,8 @@ pnpm ingest backfill-rich --ids 70,21,54,149,60 --limit 5
 `backfill-raw` 是默认的人工触发内容准备命令，只接受明确的候选 ID，单次最多 5 篇。它会读取公开原文页，保留可读标题、章节和段落，将合格图片保存到本站，并原位更新已经发布的文章；不会调用 Ollama、创建用户或加入 `run`。`INGEST_AUTHOR_IDS` 必须列出已授权参与自动整理的现有活跃用户，多篇批次需要为每篇提供不同用户。
 
 `backfill-rich` 保留为可选的旧命令，用于明确需要中文重写稿的批次，不再作为默认路径。
+
+`purge-placeholders` 只匹配同时包含 `摘要`、`为什么值得阅读`、`来源` 和带链接的 `阅读原文 ↗` 四个精确 Tiptap 标记的文章。必须增加 `--apply` 才会删除；不带参数时输出包含完整正文和来源信息的审核清单。
 
 生产环境启用原图下载前，必须逐个审核来源的图片转载许可。许可不明确的来源应禁用原图，改用自有图库或另行生成的封面。
 

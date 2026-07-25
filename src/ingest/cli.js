@@ -3,7 +3,7 @@ require('module-alias/register');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const KNOWN_COMMANDS = new Set(['collect', 'enrich', 'list', 'approve', 'publish', 'backfill-rich', 'backfill-raw', 'run']);
+const KNOWN_COMMANDS = new Set(['collect', 'enrich', 'list', 'approve', 'publish', 'backfill-rich', 'backfill-raw', 'purge-placeholders', 'run']);
 const KNOWN_STATUSES = new Set(['pending', 'enriched', 'approved', 'rejected', 'published', 'failed']);
 
 function positiveInteger(value, optionName) {
@@ -30,6 +30,11 @@ function parseCliArgs(argv) {
     const token = tokens[index];
     if (token === '--json') {
       options.json = true;
+      continue;
+    }
+    if (token === '--apply') {
+      if (command !== 'purge-placeholders') throw new Error('--apply is only valid with purge-placeholders');
+      options.apply = true;
       continue;
     }
 
@@ -122,6 +127,7 @@ function createDefaultActions(config) {
   const { collectCandidates } = require('@/ingest/pipeline/collectCandidates');
   const { enrichCandidates } = require('@/ingest/pipeline/enrichCandidates');
   const { publishCandidates } = require('@/ingest/pipeline/publishCandidates');
+  const { purgePlaceholderArticles } = require('@/ingest/pipeline/purgePlaceholderArticles');
   const { runWithLock } = require('@/ingest/pipeline/runWithLock');
   const { createIngestRepository } = require('@/ingest/repositories/ingestRepository');
   const { createRichArticleRepository } = require('@/ingest/repositories/richArticleRepository');
@@ -223,6 +229,12 @@ function createDefaultActions(config) {
           });
         },
         localizeImages: localizeArticleImages,
+      });
+    },
+    async 'purge-placeholders'(options) {
+      return await purgePlaceholderArticles({
+        repository: richRepository,
+        apply: options.apply === true,
       });
     },
     async close() {

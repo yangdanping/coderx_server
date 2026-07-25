@@ -171,3 +171,103 @@ test('replacePublishedArticle rolls back the entire mutation on persistence fail
     ['getConnection', 'begin', 'rollback', 'release'],
   );
 });
+
+test('listPlaceholderArticles returns only exact candidate-linked placeholder documents', async () => {
+  const placeholder = {
+    type: 'doc',
+    content: [
+      { type: 'heading', content: [{ type: 'text', text: '摘要' }] },
+      { type: 'heading', content: [{ type: 'text', text: '为什么值得阅读' }] },
+      { type: 'heading', content: [{ type: 'text', text: '来源' }] },
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: '阅读原文 ↗', marks: [{ type: 'link', attrs: { href: 'https://example.com' } }] }],
+      },
+    ],
+  };
+  const database = createDatabase();
+  database.execute = async (statement, params = []) => {
+    database.calls.push({ op: 'rootExecute', statement, params });
+    return [
+      [
+        {
+          articleId: 144,
+          candidateId: 71,
+          title: 'Placeholder',
+          canonicalUrl: 'https://example.com',
+          sourceName: 'Example',
+          content: placeholder,
+          filenames: [],
+        },
+        {
+          articleId: 143,
+          candidateId: 70,
+          title: 'Rich article',
+          canonicalUrl: 'https://example.com/rich',
+          sourceName: 'Example',
+          content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Full body' }] }] },
+          filenames: [],
+        },
+      ],
+      [],
+    ];
+  };
+  const repository = createRichArticleRepository(database);
+
+  const rows = await repository.listPlaceholderArticles();
+
+  assert.deepEqual(rows.map((row) => row.articleId), [144]);
+});
+
+test('deletePlaceholderArticles rechecks locked rows and rejects their candidates transactionally', async () => {
+  const database = createDatabase();
+  const placeholder = {
+    type: 'doc',
+    content: [
+      { type: 'heading', content: [{ type: 'text', text: '摘要' }] },
+      { type: 'heading', content: [{ type: 'text', text: '为什么值得阅读' }] },
+      { type: 'heading', content: [{ type: 'text', text: '来源' }] },
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: '阅读原文 ↗', marks: [{ type: 'link', attrs: { href: 'https://example.com' } }] }],
+      },
+    ],
+  };
+  const connection = await database.getConnection();
+  connection.execute = async (statement, params = []) => {
+    database.calls.push({ op: 'execute', statement, params });
+    if (/FOR UPDATE OF a/i.test(statement)) {
+      return [
+        [
+          {
+            articleId: 144,
+            candidateId: 71,
+            title: 'Placeholder',
+            canonicalUrl: 'https://example.com',
+            sourceName: 'Example',
+            content: placeholder,
+            filenames: [],
+          },
+        ],
+        [],
+      ];
+    }
+    return [{ affectedRows: 1 }, []];
+  };
+  database.getConnection = async () => connection;
+  const repository = createRichArticleRepository(database);
+
+  const rows = await repository.deletePlaceholderArticles([144]);
+
+  assert.deepEqual(rows.map((row) => row.articleId), [144]);
+  const statements = database.calls.filter((call) => call.statement);
+  assert.match(statements[0].statement, /FOR UPDATE OF a/i);
+  assert.match(statements[1].statement, /DELETE FROM article/i);
+  assert.match(statements[2].statement, /UPDATE ingest_candidate/i);
+  assert.deepEqual(statements[1].params, [[144]]);
+  assert.deepEqual(statements[2].params, [[71]]);
+  assert.deepEqual(
+    database.calls.filter((call) => call.op !== 'execute' && call.op !== 'getConnection').map((call) => call.op),
+    ['begin', 'commit', 'release'],
+  );
+});

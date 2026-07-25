@@ -1,4 +1,27 @@
+const { isPlaceholderArticle } = require('@/ingest/domain/isPlaceholderArticle');
+
 function createRichArticleRepository(database) {
+  const placeholderSelect = `
+    SELECT
+      a.id AS "articleId",
+      c.id AS "candidateId",
+      a.title,
+      a.content,
+      c.canonical_url AS "canonicalUrl",
+      s.name AS "sourceName",
+      COALESCE(
+        (
+          SELECT jsonb_agg(f.filename ORDER BY f.id)
+          FROM file f
+          WHERE f.article_id = a.id
+        ),
+        '[]'::jsonb
+      ) AS filenames
+    FROM article a
+    JOIN ingest_candidate c ON c.article_id = a.id
+    JOIN ingest_source s ON s.id = c.source_id
+  `;
+
   async function listPublishedCandidatesByIds(ids) {
     const safeIds = Array.isArray(ids) ? ids.map(Number) : [];
     if (safeIds.length === 0 || safeIds.some((id) => !Number.isSafeInteger(id) || id <= 0) || new Set(safeIds).size !== safeIds.length) {
@@ -140,8 +163,66 @@ function createRichArticleRepository(database) {
     }
   }
 
+  async function listPlaceholderArticles() {
+    const [rows] = await database.execute(`${placeholderSelect} WHERE a.content IS NOT NULL ORDER BY a.id;`);
+    return rows.filter((row) => isPlaceholderArticle(row.content));
+  }
+
+  async function deletePlaceholderArticles(ids) {
+    const safeIds = Array.isArray(ids) ? ids.map(Number) : [];
+    if (safeIds.length === 0 || safeIds.some((id) => !Number.isSafeInteger(id) || id <= 0) || new Set(safeIds).size !== safeIds.length) {
+      throw new Error('placeholder article IDs must be unique positive integers');
+    }
+
+    const connection = await database.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [rows] = await connection.execute(
+        `
+          ${placeholderSelect}
+          WHERE a.id = ANY(?::bigint[])
+          ORDER BY a.id
+          FOR UPDATE OF a, c;
+        `,
+        [safeIds],
+      );
+      if (rows.length !== safeIds.length || rows.some((row) => !isPlaceholderArticle(row.content))) {
+        throw new Error('Placeholder article set changed before deletion');
+      }
+      const candidateIds = rows.map((row) => Number(row.candidateId));
+      const [deleteResult] = await connection.execute(
+        `
+          DELETE FROM article
+          WHERE id = ANY(?::bigint[]);
+        `,
+        [safeIds],
+      );
+      if (deleteResult.affectedRows !== safeIds.length) throw new Error('Placeholder article deletion count changed');
+      const [candidateResult] = await connection.execute(
+        `
+          UPDATE ingest_candidate
+          SET status = 'rejected',
+              failure_reason = 'Removed fixed-format placeholder article',
+              updated_at = clock_timestamp()
+          WHERE id = ANY(?::bigint[]);
+        `,
+        [candidateIds],
+      );
+      if (candidateResult.affectedRows !== candidateIds.length) throw new Error('Placeholder candidate update count changed');
+      await connection.commit();
+      return rows;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
   return {
+    deletePlaceholderArticles,
     listPublishedCandidatesByIds,
+    listPlaceholderArticles,
     replacePublishedArticle,
   };
 }

@@ -70,6 +70,14 @@ test('parseCliArgs accepts known commands and typed options', () => {
       limit: 1,
     },
   });
+  assert.deepEqual(parseCliArgs(['purge-placeholders']), {
+    command: 'purge-placeholders',
+    options: {},
+  });
+  assert.deepEqual(parseCliArgs(['purge-placeholders', '--apply']), {
+    command: 'purge-placeholders',
+    options: { apply: true },
+  });
 });
 
 test('parseCliArgs rejects unknown commands, options and invalid positive integers', () => {
@@ -82,6 +90,7 @@ test('parseCliArgs rejects unknown commands, options and invalid positive intege
   assert.throws(() => parseCliArgs(['backfill-raw', '--limit', '1']), /requires --ids/i);
   assert.throws(() => parseCliArgs(['backfill-raw', '--ids', '1,2,3,4,5,6']), /at most 5/i);
   assert.throws(() => parseCliArgs(['backfill-raw', '--ids', '1,1']), /duplicate/i);
+  assert.throws(() => parseCliArgs(['list', '--apply']), /only valid with purge-placeholders/i);
 });
 
 test('run command collects and enriches but cannot publish with the safe default', async () => {
@@ -200,6 +209,21 @@ test('backfill-raw is an explicit model-free action', async () => {
 
   assert.deepEqual(calls, [{ ids: [54] }]);
   assert.deepEqual(result, { updated: 1 });
+});
+
+test('purge-placeholders is dry-run by default and forwards an explicit apply flag', async () => {
+  const calls = [];
+  const actions = {
+    async 'purge-placeholders'(options) {
+      calls.push(options);
+      return { matched: 5, deleted: options.apply ? 5 : 0, manifest: [] };
+    },
+  };
+
+  await runCli(['purge-placeholders'], { actions, config: {}, write() {} });
+  await runCli(['purge-placeholders', '--apply'], { actions, config: {}, write() {} });
+
+  assert.deepEqual(calls, [{}, { apply: true }]);
 });
 
 test('list renders machine-readable JSON without requiring framework state', async () => {
