@@ -38,8 +38,9 @@ coderx_server/
   - 支持长文分析与问答（智能 HTML 清洗 + 50k 上下文支持）。
   - 流式响应（Stream）输出。
 - **AI 内容供给**：
-  - 从公开 RSS/Atom 来源采集摘要与原文链接，不依赖 Koa、登录态或网页全文抓取。
-  - 候选先进入独立暂存池，经中文化、人工审批后才允许事务发布。
+  - 从公开 RSS/Atom 来源建立候选，再按明确 ID 抓取原文正文与图片，不依赖 Koa 或登录态。
+  - 原文清洗后转换为可编辑的 Tiptap JSON，图片下载到本站；默认不调用翻译模型。
+  - 候选先进入独立暂存池，经人工审批后才允许事务发布或原文回填。
   - node-cron、PM2 单实例和 PostgreSQL advisory lock 共同避免任务重叠。
 
 ## 快速开始
@@ -94,18 +95,18 @@ npm run socket
 
 ## AI 内容采集
 
-这条流水线用于每天补充约 8–10 篇“人工智能”候选内容。它只保存来源摘要、中文导读和原文链接，不复制第三方全文；所有正式文章都必须先经过候选池。
+这条流水线用于每天补充约 8–10 篇“人工智能”候选内容。正式文章必须先经过候选池；当前默认内容准备方式是抓取公开原文的可读正文和相关图片，保留原语言供站内人工编辑。
 
 数据流如下：
 
 ```text
 公开 RSS/Atom → 规范化/评分/去重 → ingest_candidate
                                       ↓
-                               Ollama 中文化
+                               人工 approve
                                       ↓
-                              人工 approve
+                         发布文章并建立来源映射
                                       ↓
-               article + article_tag + article_source（单事务）
+               backfill-raw 原文 + 本地图片（单篇事务）
 ```
 
 ### 本地首次运行
@@ -122,7 +123,7 @@ psql -v ON_ERROR_STOP=1 -f migrations/008_create_content_ingest_pipeline.sql
 # 回填最近 30 天，每个来源最多 20 条，总共最多暂存 100 条；不会写入 article
 pnpm ingest collect --days 30 --limit 100 --per-source-limit 20
 
-# 使用 Ollama 生成中文标题、摘要和推荐理由
+# 可选的旧流程：使用 Ollama 生成中文标题、摘要和推荐理由
 pnpm ingest enrich --limit 60
 
 # 查看候选
@@ -136,16 +137,22 @@ pnpm ingest approve --ids 31,32 --limit 2
 # 仅发布已 approved 的候选；作者和标签必须已存在
 pnpm ingest publish --limit 10
 
-# 显式将 5 篇已发布的摘要文章改造成中文图文长文；不会被 cron 自动调用
+# 默认内容准备方式：将已发布候选原位替换成原文图文文章；不会调用 Ollama
 INGEST_AUTHOR_IDS=1,2,3,4,5 \
-INGEST_OLLAMA_BASE_URL=http://100.119.144.76:11434/v1 \
+pnpm ingest backfill-raw --ids 70,21,54,149,60 --limit 5
+
+# 可选的旧流程：生成中文重写稿
+INGEST_AUTHOR_IDS=1,2,3,4,5 \
+INGEST_OLLAMA_BASE_URL=http://127.0.0.1:11434/v1 \
 INGEST_OLLAMA_MODEL=qwen2.5:7b \
 pnpm ingest backfill-rich --ids 70,21,54,149,60 --limit 5
 ```
 
 `run` 组合命令会执行 collect 和 enrich。只有显式设置 `INGEST_AUTO_PUBLISH=true` 时，它才会继续尝试发布已经 approved 的候选；默认值为 `false`。
 
-`backfill-rich` 是独立的人工触发命令，只接受明确的候选 ID，单次最多 5 篇。它会读取公开原文页，生成 800–1500 字中文重写稿，将合格图片保存到本站，并原位更新已经发布的文章；不会创建新用户，也不会加入 `run` 或定时任务。`INGEST_AUTHOR_IDS` 必须列出已授权参与自动整理的现有活跃用户，首批 5 篇需要 5 个不同用户。
+`backfill-raw` 是默认的人工触发内容准备命令，只接受明确的候选 ID，单次最多 5 篇。它会读取公开原文页，保留可读标题、章节和段落，将合格图片保存到本站，并原位更新已经发布的文章；不会调用 Ollama、创建用户或加入 `run`。`INGEST_AUTHOR_IDS` 必须列出已授权参与自动整理的现有活跃用户，多篇批次需要为每篇提供不同用户。
+
+`backfill-rich` 保留为可选的旧命令，用于明确需要中文重写稿的批次，不再作为默认路径。
 
 生产环境启用原图下载前，必须逐个审核来源的图片转载许可。许可不明确的来源应禁用原图，改用自有图库或另行生成的封面。
 

@@ -3,7 +3,7 @@ require('module-alias/register');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const KNOWN_COMMANDS = new Set(['collect', 'enrich', 'list', 'approve', 'publish', 'backfill-rich', 'run']);
+const KNOWN_COMMANDS = new Set(['collect', 'enrich', 'list', 'approve', 'publish', 'backfill-rich', 'backfill-raw', 'run']);
 const KNOWN_STATUSES = new Set(['pending', 'enriched', 'approved', 'rejected', 'published', 'failed']);
 
 function positiveInteger(value, optionName) {
@@ -59,10 +59,10 @@ function parseCliArgs(argv) {
     }
   }
 
-  if (command === 'backfill-rich') {
-    if (!options.ids?.length) throw new Error('backfill-rich requires --ids');
-    if (options.ids.length > 5) throw new Error('backfill-rich accepts at most 5 IDs');
-    if (new Set(options.ids).size !== options.ids.length) throw new Error('backfill-rich does not accept duplicate IDs');
+  if (command === 'backfill-rich' || command === 'backfill-raw') {
+    if (!options.ids?.length) throw new Error(`${command} requires --ids`);
+    if (options.ids.length > 5) throw new Error(`${command} accepts at most 5 IDs`);
+    if (new Set(options.ids).size !== options.ids.length) throw new Error(`${command} does not accept duplicate IDs`);
   }
 
   return { command, options };
@@ -117,6 +117,7 @@ function createDefaultActions(config) {
   const { extractArticlePage } = require('@/ingest/extraction/extractArticlePage');
   const { IMG_PATH } = require('@/constants/filePaths');
   const { localizeArticleImages } = require('@/ingest/media/localizeArticleImages');
+  const { backfillRawArticles } = require('@/ingest/pipeline/backfillRawArticles');
   const { backfillRichArticles } = require('@/ingest/pipeline/backfillRichArticles');
   const { collectCandidates } = require('@/ingest/pipeline/collectCandidates');
   const { enrichCandidates } = require('@/ingest/pipeline/enrichCandidates');
@@ -189,6 +190,28 @@ function createDefaultActions(config) {
         outputDir: path.resolve(IMG_PATH),
         publicBaseURL: config.publicBaseURL,
         enricher,
+        extractor: async (candidate) => {
+          const response = await safeRemoteFetch(candidate.canonicalUrl, {
+            timeoutMs: config.timeoutMs,
+            maxBytes: 2 * 1024 * 1024,
+          });
+          return extractArticlePage({
+            canonicalUrl: response.url,
+            html: response.buffer.toString('utf8'),
+          });
+        },
+        localizeImages: localizeArticleImages,
+      });
+    },
+    async 'backfill-raw'(options) {
+      const ids = options.ids.slice(0, options.limit || options.ids.length);
+      return await backfillRawArticles({
+        repository: richRepository,
+        ids,
+        authorIds: config.authorIds,
+        days: options.days || 30,
+        outputDir: path.resolve(IMG_PATH),
+        publicBaseURL: config.publicBaseURL,
         extractor: async (candidate) => {
           const response = await safeRemoteFetch(candidate.canonicalUrl, {
             timeoutMs: config.timeoutMs,
