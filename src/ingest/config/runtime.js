@@ -10,6 +10,19 @@ function parsePositiveInteger(value, fallback) {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function parseIdList(value) {
+  const text = String(value || '').trim();
+  if (!text) return [];
+  const ids = text.split(',').map((item) => Number(item.trim()));
+  if (ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+    throw new Error('INGEST_AUTHOR_IDS must contain positive integers');
+  }
+  if (new Set(ids).size !== ids.length) {
+    throw new Error('INGEST_AUTHOR_IDS must not contain duplicate IDs');
+  }
+  return ids;
+}
+
 function loadRuntimeEnvironment({ cwd = process.cwd(), nodeEnv = process.env.NODE_ENV } = {}) {
   const envFile = nodeEnv === 'production' ? '.env.production' : '.env.development';
   dotenv.config({
@@ -40,6 +53,7 @@ function loadRuntimeConfig(env = process.env) {
     limit: parsePositiveInteger(env.INGEST_DAILY_LIMIT, 10),
     timeoutMs: parsePositiveInteger(env.INGEST_HTTP_TIMEOUT_MS, 15_000),
     authorName: String(env.INGEST_AUTHOR_NAME || '').trim(),
+    authorIds: parseIdList(env.INGEST_AUTHOR_IDS),
     tagName: String(env.INGEST_TAG_NAME || '人工智能').trim(),
     ollamaBaseURL: String(env.INGEST_OLLAMA_BASE_URL || '').trim() || `http://${ollamaHost}:${ollamaPort}/v1`,
     ollamaModel: String(env.INGEST_OLLAMA_MODEL || 'qwen2.5:7b').trim(),
@@ -50,4 +64,5 @@ function loadRuntimeConfig(env = process.env) {
 module.exports = {
   loadRuntimeConfig,
   loadRuntimeEnvironment,
+  parseIdList,
 };
