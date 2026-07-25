@@ -1,4 +1,32 @@
 function createRichArticleRepository(database) {
+  async function listPublishedCandidatesByIds(ids) {
+    const safeIds = Array.isArray(ids) ? ids.map(Number) : [];
+    if (safeIds.length === 0 || safeIds.some((id) => !Number.isSafeInteger(id) || id <= 0) || new Set(safeIds).size !== safeIds.length) {
+      throw new Error('ids must be unique positive integers');
+    }
+    const [rows] = await database.execute(
+      `
+        SELECT
+          c.id,
+          c.article_id AS "articleId",
+          c.canonical_url AS "canonicalUrl",
+          c.source_published_at AS "sourcePublishedAt",
+          s.name AS "sourceName"
+        FROM ingest_candidate c
+        JOIN ingest_source s ON s.id = c.source_id
+        JOIN article_source ars
+          ON ars.candidate_id = c.id
+         AND ars.article_id = c.article_id
+        WHERE c.status = 'published'
+          AND c.article_id IS NOT NULL
+          AND c.id = ANY(?::bigint[])
+        ORDER BY c.id;
+      `,
+      [safeIds],
+    );
+    return rows;
+  }
+
   async function replacePublishedArticle({ articleId, candidateId, authorId, createAt, title, excerpt, assets, buildContent }) {
     if (!Number.isSafeInteger(articleId) || articleId <= 0) throw new Error('articleId must be a positive integer');
     if (!Number.isSafeInteger(candidateId) || candidateId <= 0) throw new Error('candidateId must be a positive integer');
@@ -113,6 +141,7 @@ function createRichArticleRepository(database) {
   }
 
   return {
+    listPublishedCandidatesByIds,
     replacePublishedArticle,
   };
 }

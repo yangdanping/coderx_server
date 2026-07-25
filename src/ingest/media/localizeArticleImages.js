@@ -10,8 +10,8 @@ const MAX_IMAGES = 3;
 const MIN_WIDTH = 480;
 const MIN_HEIGHT = 270;
 
-function imageHash(url) {
-  return crypto.createHash('sha256').update(url).digest('hex').slice(0, 10);
+function imageHash(buffer) {
+  return crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 10);
 }
 
 function smallFilename(filename) {
@@ -70,14 +70,14 @@ async function localizeArticleImages({ candidateId, images, outputDir, fetchImag
       if (originalWidth < MIN_WIDTH || originalHeight < MIN_HEIGHT) continue;
       if (image.bitmap.width > 1600) image.resize({ w: 1600 });
 
-      const index = assets.length + 1;
-      const filename = `ingest-${candidateId}-${index}-${imageHash(candidate.url)}.jpg`;
-      const thumbnailFilename = smallFilename(filename);
-      const temporaryPath = path.resolve(outputDir, filename);
-      const smallTemporaryPath = path.resolve(outputDir, thumbnailFilename);
       const fullBuffer = await image.getBuffer('image/jpeg', { quality: 82 });
       const thumbnail = image.clone().resize({ w: 320 });
       const thumbnailBuffer = await thumbnail.getBuffer('image/jpeg', { quality: 80 });
+      const index = assets.length + 1;
+      const filename = `ingest-${candidateId}-${index}-${imageHash(fullBuffer)}.jpg`;
+      const thumbnailFilename = smallFilename(filename);
+      const temporaryPath = path.resolve(outputDir, filename);
+      const smallTemporaryPath = path.resolve(outputDir, thumbnailFilename);
 
       await fs.writeFile(temporaryPath, fullBuffer);
       createdPaths.push(temporaryPath);

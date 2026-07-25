@@ -43,6 +43,9 @@ function loadRuntimeConfig(env = process.env) {
     PGUSER: env.PGUSER,
     PGPASSWORD: env.PGPASSWORD,
   });
+  const appHost = String(env.APP_HOST || '127.0.0.1').replace(/\/+$/, '');
+  const appPort = String(env.APP_PORT || '8000');
+  const normalizedAppHost = /^https?:\/\//i.test(appHost) ? appHost : `http://${appHost}`;
 
   return Object.freeze({
     enabled: parseBoolean(env.INGEST_ENABLED),
@@ -55,6 +58,10 @@ function loadRuntimeConfig(env = process.env) {
     authorName: String(env.INGEST_AUTHOR_NAME || '').trim(),
     authorIds: parseIdList(env.INGEST_AUTHOR_IDS),
     tagName: String(env.INGEST_TAG_NAME || '人工智能').trim(),
+    publicBaseURL:
+      String(env.PUBLIC_API_ORIGIN || '')
+        .trim()
+        .replace(/\/+$/, '') || `${normalizedAppHost}:${appPort}`,
     ollamaBaseURL: String(env.INGEST_OLLAMA_BASE_URL || '').trim() || `http://${ollamaHost}:${ollamaPort}/v1`,
     ollamaModel: String(env.INGEST_OLLAMA_MODEL || 'qwen2.5:7b').trim(),
     database,

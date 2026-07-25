@@ -38,12 +38,40 @@ function createDatabase({ failOn, articleRows = [{ articleId: 143 }], authorRows
 
   return {
     calls,
+    async execute(statement, params = []) {
+      calls.push({ op: 'rootExecute', statement, params });
+      return [
+        [
+          {
+            id: 70,
+            articleId: 143,
+            canonicalUrl: 'https://aws.example/article',
+            sourceName: 'AWS',
+            sourcePublishedAt: '2026-07-24T00:00:00.000Z',
+          },
+        ],
+        [],
+      ];
+    },
     async getConnection() {
       calls.push({ op: 'getConnection' });
       return connection;
     },
   };
 }
+
+test('listPublishedCandidatesByIds returns only mapped published candidates', async () => {
+  const database = createDatabase();
+  const repository = createRichArticleRepository(database);
+
+  const rows = await repository.listPublishedCandidatesByIds([70]);
+
+  assert.equal(rows[0].articleId, 143);
+  const call = database.calls.find((item) => item.op === 'rootExecute');
+  assert.match(call.statement, /c\.status = 'published'/i);
+  assert.match(call.statement, /c\.id = ANY\(\?::bigint\[\]\)/i);
+  assert.deepEqual(call.params, [[70]]);
+});
 
 function buildInput(overrides = {}) {
   return {

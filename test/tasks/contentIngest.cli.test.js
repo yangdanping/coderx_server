@@ -56,12 +56,22 @@ test('parseCliArgs accepts known commands and typed options', () => {
       output: 'data/batch.json',
     },
   });
+  assert.deepEqual(parseCliArgs(['backfill-rich', '--ids', '70,21,54,149,60', '--limit', '5']), {
+    command: 'backfill-rich',
+    options: {
+      ids: [70, 21, 54, 149, 60],
+      limit: 5,
+    },
+  });
 });
 
 test('parseCliArgs rejects unknown commands, options and invalid positive integers', () => {
   assert.throws(() => parseCliArgs(['delete']), /Unknown command/);
   assert.throws(() => parseCliArgs(['list', '--password', 'secret']), /Unknown option/);
   assert.throws(() => parseCliArgs(['collect', '--limit', '0']), /positive integer/);
+  assert.throws(() => parseCliArgs(['backfill-rich', '--limit', '5']), /requires --ids/i);
+  assert.throws(() => parseCliArgs(['backfill-rich', '--ids', '1,2,3,4,5,6']), /at most 5/i);
+  assert.throws(() => parseCliArgs(['backfill-rich', '--ids', '1,1']), /duplicate/i);
 });
 
 test('run command collects and enriches but cannot publish with the safe default', async () => {
@@ -122,6 +132,45 @@ test('run only publishes approved candidates when auto-publish is explicitly ena
   });
 
   assert.deepEqual(calls, ['collect', 'enrich', 'publish']);
+});
+
+test('backfill-rich is an explicit command and is never part of scheduled run', async () => {
+  const calls = [];
+  const actions = {
+    async collect() {
+      calls.push('collect');
+      return {};
+    },
+    async enrich() {
+      calls.push('enrich');
+      return {};
+    },
+    async publish() {
+      calls.push('publish');
+      return {};
+    },
+    async 'backfill-rich'(options) {
+      calls.push({ action: 'backfill-rich', options });
+      return { updated: options.ids.length };
+    },
+  };
+
+  await runCli(['run'], {
+    actions,
+    config: { autoPublish: false },
+    write() {},
+  });
+  assert.deepEqual(calls, ['collect', 'enrich']);
+
+  await runCli(['backfill-rich', '--ids', '70,21,54,149,60'], {
+    actions,
+    config: { autoPublish: false },
+    write() {},
+  });
+  assert.deepEqual(calls[2], {
+    action: 'backfill-rich',
+    options: { ids: [70, 21, 54, 149, 60] },
+  });
 });
 
 test('list renders machine-readable JSON without requiring framework state', async () => {

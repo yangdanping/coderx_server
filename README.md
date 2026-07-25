@@ -135,9 +135,19 @@ pnpm ingest approve --ids 31,32 --limit 2
 
 # 仅发布已 approved 的候选；作者和标签必须已存在
 pnpm ingest publish --limit 10
+
+# 显式将 5 篇已发布的摘要文章改造成中文图文长文；不会被 cron 自动调用
+INGEST_AUTHOR_IDS=1,2,3,4,5 \
+INGEST_OLLAMA_BASE_URL=http://100.119.144.76:11434/v1 \
+INGEST_OLLAMA_MODEL=qwen2.5:7b \
+pnpm ingest backfill-rich --ids 70,21,54,149,60 --limit 5
 ```
 
 `run` 组合命令会执行 collect 和 enrich。只有显式设置 `INGEST_AUTO_PUBLISH=true` 时，它才会继续尝试发布已经 approved 的候选；默认值为 `false`。
+
+`backfill-rich` 是独立的人工触发命令，只接受明确的候选 ID，单次最多 5 篇。它会读取公开原文页，生成 800–1500 字中文重写稿，将合格图片保存到本站，并原位更新已经发布的文章；不会创建新用户，也不会加入 `run` 或定时任务。`INGEST_AUTHOR_IDS` 必须列出已授权参与自动整理的现有活跃用户，首批 5 篇需要 5 个不同用户。
+
+生产环境启用原图下载前，必须逐个审核来源的图片转载许可。许可不明确的来源应禁用原图，改用自有图库或另行生成的封面。
 
 日常采集默认采用各来源的 `dailyLimit`（1–2 条），再按总分选出全局前 10 条，避免单个来源占满当天内容。`--per-source-limit` 仅用于首次回填等明确需要放宽来源上限的场景。
 
@@ -151,6 +161,7 @@ pnpm ingest publish --limit 10
 | `INGEST_TIMEZONE`        | `Asia/Shanghai`             | 调度时区                         |
 | `INGEST_DAILY_LIMIT`     | `10`                        | 单次默认处理上限                 |
 | `INGEST_AUTHOR_NAME`     | 空                          | 正式文章使用的现有用户名         |
+| `INGEST_AUTHOR_IDS`      | 空                          | 富媒体回填允许使用的现有用户 ID  |
 | `INGEST_TAG_NAME`        | `人工智能`                  | 正式文章标签                     |
 | `INGEST_OLLAMA_BASE_URL` | `http://127.0.0.1:11434/v1` | OpenAI 兼容的 Ollama 地址        |
 | `INGEST_OLLAMA_MODEL`    | `qwen2.5:7b`                | 中文化模型                       |

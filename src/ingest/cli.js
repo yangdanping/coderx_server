@@ -3,7 +3,7 @@ require('module-alias/register');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const KNOWN_COMMANDS = new Set(['collect', 'enrich', 'list', 'approve', 'publish', 'run']);
+const KNOWN_COMMANDS = new Set(['collect', 'enrich', 'list', 'approve', 'publish', 'backfill-rich', 'run']);
 const KNOWN_STATUSES = new Set(['pending', 'enriched', 'approved', 'rejected', 'published', 'failed']);
 
 function positiveInteger(value, optionName) {
@@ -59,6 +59,12 @@ function parseCliArgs(argv) {
     }
   }
 
+  if (command === 'backfill-rich') {
+    if (!options.ids?.length) throw new Error('backfill-rich requires --ids');
+    if (options.ids.length > 5) throw new Error('backfill-rich accepts at most 5 IDs');
+    if (new Set(options.ids).size !== options.ids.length) throw new Error('backfill-rich does not accept duplicate IDs');
+  }
+
   return { command, options };
 }
 
@@ -106,13 +112,21 @@ function createDefaultActions(config) {
   const { collectFeed } = require('@/ingest/collectors/rssCollector');
   const { createIngestDatabase } = require('@/ingest/database');
   const { createOllamaEnricher } = require('@/ingest/enrichment/createOllamaEnricher');
+  const { createRichArticleEnricher } = require('@/ingest/enrichment/createRichArticleEnricher');
+  const { safeRemoteFetch } = require('@/ingest/extraction/safeRemoteFetch');
+  const { extractArticlePage } = require('@/ingest/extraction/extractArticlePage');
+  const { IMG_PATH } = require('@/constants/filePaths');
+  const { localizeArticleImages } = require('@/ingest/media/localizeArticleImages');
+  const { backfillRichArticles } = require('@/ingest/pipeline/backfillRichArticles');
   const { collectCandidates } = require('@/ingest/pipeline/collectCandidates');
   const { enrichCandidates } = require('@/ingest/pipeline/enrichCandidates');
   const { publishCandidates } = require('@/ingest/pipeline/publishCandidates');
   const { runWithLock } = require('@/ingest/pipeline/runWithLock');
   const { createIngestRepository } = require('@/ingest/repositories/ingestRepository');
+  const { createRichArticleRepository } = require('@/ingest/repositories/richArticleRepository');
   const database = createIngestDatabase(config.database);
   const repository = createIngestRepository(database);
+  const richRepository = createRichArticleRepository(database);
 
   return {
     async collect(options) {
@@ -159,6 +173,33 @@ function createDefaultActions(config) {
         authorName: config.authorName,
         tagName: config.tagName,
         limit: options.limit || config.limit,
+      });
+    },
+    async 'backfill-rich'(options) {
+      const ids = options.ids.slice(0, options.limit || options.ids.length);
+      const enricher = createRichArticleEnricher({
+        baseURL: config.ollamaBaseURL,
+        model: config.ollamaModel,
+      });
+      return await backfillRichArticles({
+        repository: richRepository,
+        ids,
+        authorIds: config.authorIds,
+        days: options.days || 30,
+        outputDir: path.resolve(IMG_PATH),
+        publicBaseURL: config.publicBaseURL,
+        enricher,
+        extractor: async (candidate) => {
+          const response = await safeRemoteFetch(candidate.canonicalUrl, {
+            timeoutMs: config.timeoutMs,
+            maxBytes: 2 * 1024 * 1024,
+          });
+          return extractArticlePage({
+            canonicalUrl: response.url,
+            html: response.buffer.toString('utf8'),
+          });
+        },
+        localizeImages: localizeArticleImages,
       });
     },
     async close() {
