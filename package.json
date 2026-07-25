@@ -23,6 +23,7 @@
     "@koa/cors": "^5.0.0",
     "@koa/multer": "^4.0.0",
     "@koa/router": "^15.7.0",
+    "@mozilla/readability": "^0.6.0",
     "@socket.io/redis-adapter": "^8.3.0",
     "@tiptap/core": "^3.27.3",
     "@tiptap/extension-image": "^3.27.3",

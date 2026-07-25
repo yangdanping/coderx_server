@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Practical AI Systems in Production</title>
+    <meta property="og:title" content="Practical AI Systems in Production" />
+    <meta property="og:image" content="/media/cover.jpg" />
+    <meta name="author" content="Example Research Team" />
+    <meta property="article:published_time" content="2026-07-20T09:30:00.000Z" />
+    <link rel="canonical" href="/posts/ai-systems" />
+  </head>
+  <body>
+    <nav>Home Products Pricing Contact</nav>
+    <main>
+      <article>
+        <h1>Practical AI Systems in Production</h1>
+        <p>
+          Teams moving artificial intelligence systems into production have learned that model quality is only one part of the engineering problem. Reliable products also need
+          observable data pipelines, predictable latency, careful evaluation, and clear operating limits that remain understandable when traffic or user behavior changes.
+        </p>
+        <h2>Start with measurable behavior</h2>
+        <p>
+          A useful evaluation begins with representative tasks and explicit success criteria. Offline benchmarks can compare model versions quickly, while sampled production traces
+          reveal failures that curated test sets miss. The two forms of evidence should be reviewed together so a strong benchmark score does not hide regressions in a real
+          workflow.
+        </p>
+        <img src="/media/evaluation.jpg" alt="A dashboard comparing AI evaluation results" />
+        <h2>Design for failure</h2>
+        <p>
+          Production requests can encounter unavailable tools, malformed documents, rate limits, and incomplete context. Systems should return bounded results, expose the reason
+          for a fallback, and avoid repeating expensive operations without limits. These controls make incidents easier to diagnose and keep a partial outage from becoming a
+          cascade.
+        </p>
+        <h2>Keep humans in the loop</h2>
+        <p>
+          Human review is most effective when it focuses on uncertain or high-impact decisions rather than every response. Confidence signals, policy checks, and targeted sampling
+          can route the right cases to reviewers while preserving a responsive experience for routine work. Review outcomes should then become new evaluation examples.
+        </p>
+        <img src="https://cdn.example.net/architecture.png" alt="Production AI architecture" />
+        <h2>Operate the complete system</h2>
+        <p>
+          Monitoring must cover model outputs, retrieval quality, tool execution, cost, and end-to-end latency. A single aggregate score is rarely enough. Teams need dashboards
+          that connect user-visible symptoms to the component that caused them, plus deployment controls that make rollback and comparison safe under normal operating pressure.
+        </p>
+        <p>
+          The practical lesson is to treat an AI feature as a continuously operated software system. Models will change, data will drift, and integrations will fail. Clear
+          contracts between components and a repeatable evaluation process make those changes manageable without requiring every release to become a risky experiment.
+        </p>
+      </article>
+    </main>
+    <footer>Copyright Example</footer>
+  </body>
+</html>
