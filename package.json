@@ -8,6 +8,7 @@
     "dev:socket": "NODE_ENV=development node --watch ./src/socket_server.js",
     "ingest": "NODE_ENV=development node ./src/ingest/cli.js",
     "start": "NODE_ENV=production node ./src/main.js",
+    "start:ingest": "NODE_ENV=production node ./src/ingest/worker.js",
     "start:socket": "NODE_ENV=production node ./src/socket_server.js",
     "test": "node --test \"test/service/*.test.js\" \"test/tasks/*.test.js\" \"test/controller/*.test.js\"",
     "prettier": "prettier --write .",
