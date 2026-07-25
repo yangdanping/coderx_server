@@ -119,8 +119,8 @@ psql -v ON_ERROR_STOP=1 -f migrations/008_create_content_ingest_pipeline.sql
 常用命令：
 
 ```bash
-# 抓取最近 30 天，最多暂存 100 条；不会写入 article
-pnpm ingest collect --days 30 --limit 100
+# 回填最近 30 天，每个来源最多 20 条，总共最多暂存 100 条；不会写入 article
+pnpm ingest collect --days 30 --limit 100 --per-source-limit 20
 
 # 使用 Ollama 生成中文标题、摘要和推荐理由
 pnpm ingest enrich --limit 60
@@ -128,6 +128,7 @@ pnpm ingest enrich --limit 60
 # 查看候选
 pnpm ingest list --status enriched,pending --limit 60
 pnpm ingest list --status enriched,pending --limit 60 --json
+pnpm ingest list --status enriched,pending --limit 60 --json --output data/ingest-batches/ai-backfill.json
 
 # 明确审批候选；不带 --ids 时按分数审批指定数量
 pnpm ingest approve --ids 31,32 --limit 2
@@ -137,6 +138,8 @@ pnpm ingest publish --limit 10
 ```
 
 `run` 组合命令会执行 collect 和 enrich。只有显式设置 `INGEST_AUTO_PUBLISH=true` 时，它才会继续尝试发布已经 approved 的候选；默认值为 `false`。
+
+日常采集默认采用各来源的 `dailyLimit`（1–2 条），再按总分选出全局前 10 条，避免单个来源占满当天内容。`--per-source-limit` 仅用于首次回填等明确需要放宽来源上限的场景。
 
 ### 调度配置
 

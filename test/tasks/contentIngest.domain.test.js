@@ -27,17 +27,11 @@ const source = {
 };
 
 test('normalizeCanonicalUrl removes tracking, fragments and an empty trailing slash', () => {
-  assert.equal(
-    normalizeCanonicalUrl('https://Example.com/post/?utm_source=x&id=7#top'),
-    'https://example.com/post?id=7',
-  );
+  assert.equal(normalizeCanonicalUrl('https://Example.com/post/?utm_source=x&id=7#top'), 'https://example.com/post?id=7');
 });
 
 test('normalizeCanonicalUrl sorts meaningful params and rejects non-http protocols', () => {
-  assert.equal(
-    normalizeCanonicalUrl('https://example.com/post?z=2&fbclid=gone&a=1'),
-    'https://example.com/post?a=1&z=2',
-  );
+  assert.equal(normalizeCanonicalUrl('https://example.com/post?z=2&fbclid=gone&a=1'), 'https://example.com/post?a=1&z=2');
   assert.equal(normalizeCanonicalUrl('javascript:alert(1)'), '');
   assert.equal(normalizeCanonicalUrl('not a url'), '');
 });
@@ -132,4 +126,11 @@ test('source catalog is immutable, public, summary-only and broad enough for dai
     assert.match(item.feedUrl, /^https:\/\//);
     assert.ok(item.dailyLimit >= 1 && item.dailyLimit <= 2);
   }
+
+  assert.equal(sources.find((item) => item.sourceKey === 'microsoft-ai')?.feedUrl, 'https://www.microsoft.com/en-us/ai/blog/feed/');
+  assert.equal(sources.find((item) => item.sourceKey === 'aws-machine-learning')?.feedUrl, 'https://aws.amazon.com/blogs/machine-learning/feed/');
+  assert.equal(
+    sources.some((item) => item.sourceKey === 'deeplearning-ai-batch'),
+    false,
+  );
 });

@@ -133,6 +133,35 @@ test('collectCandidates applies one global score order and limit across sources'
   assert.equal(upserts[0].candidates[0].externalId, 'source-b-entry');
 });
 
+test('collectCandidates respects source daily limits unless a backfill override is explicit', async () => {
+  const entries = [1, 2, 3].map((id) =>
+    buildEntry({
+      externalId: `entry-${id}`,
+      url: `https://source-a.example/post-${id}`,
+    }),
+  );
+  const dailyRepository = createRepositoryDouble();
+  await collectCandidates({
+    sources: [buildSource('source-a', { dailyLimit: 1 })],
+    collector: async () => entries,
+    repository: dailyRepository,
+    limit: 10,
+    now: new Date('2026-07-24T08:00:00.000Z'),
+  });
+  assert.equal(dailyRepository.calls.find((call) => call.method === 'upsertCandidates').candidates.length, 1);
+
+  const backfillRepository = createRepositoryDouble();
+  await collectCandidates({
+    sources: [buildSource('source-a', { dailyLimit: 1 })],
+    collector: async () => entries,
+    repository: backfillRepository,
+    limit: 10,
+    perSourceLimit: 3,
+    now: new Date('2026-07-24T08:00:00.000Z'),
+  });
+  assert.equal(backfillRepository.calls.find((call) => call.method === 'upsertCandidates').candidates.length, 3);
+});
+
 test('collectCandidates marks the run failed when every source fails', async () => {
   const repository = createRepositoryDouble();
 

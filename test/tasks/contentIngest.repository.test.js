@@ -51,6 +51,12 @@ function buildCandidate(overrides = {}) {
 
 test('syncSources upserts stable source keys and returns their database ids', async () => {
   const database = createDatabaseDouble(async (statement, params) => {
+    if (/UPDATE ingest_source/i.test(statement)) {
+      assert.match(statement, /enabled = FALSE/i);
+      assert.match(statement, /source_key = ANY\(\?::text\[\]\)/i);
+      assert.deepEqual(params, [['source-a', 'source-b']]);
+      return [{ affectedRows: 1, insertId: 0 }, []];
+    }
     assert.match(statement, /INSERT INTO ingest_source/i);
     assert.match(statement, /ON CONFLICT \(source_key\) DO UPDATE/i);
     assert.match(statement, /RETURNING id/i);
@@ -64,7 +70,8 @@ test('syncSources upserts stable source keys and returns their database ids', as
     ['source-a', { id: 11, sourceKey: 'source-a' }],
     ['source-b', { id: 12, sourceKey: 'source-b' }],
   ]);
-  assert.equal(database.calls.length, 2);
+  assert.equal(database.calls.length, 3);
+  assert.match(database.calls[0].statement, /UPDATE ingest_source/i);
 });
 
 test('upsertCandidates inserts new rows and refreshes duplicates found by any unique identity', async () => {

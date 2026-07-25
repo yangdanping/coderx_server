@@ -43,6 +43,19 @@ test('parseCliArgs accepts known commands and typed options', () => {
       limit: 8,
     },
   });
+  assert.deepEqual(parseCliArgs(['collect', '--per-source-limit', '20']), {
+    command: 'collect',
+    options: {
+      perSourceLimit: 20,
+    },
+  });
+  assert.deepEqual(parseCliArgs(['list', '--json', '--output', 'data/batch.json']), {
+    command: 'list',
+    options: {
+      json: true,
+      output: 'data/batch.json',
+    },
+  });
 });
 
 test('parseCliArgs rejects unknown commands, options and invalid positive integers', () => {
@@ -129,4 +142,27 @@ test('list renders machine-readable JSON without requiring framework state', asy
 
   assert.deepEqual(result, rows);
   assert.deepEqual(JSON.parse(output.join('')), rows);
+});
+
+test('list can write a JSON review snapshot without shell redirection', async () => {
+  const files = [];
+  const rows = [{ id: 31, status: 'pending', titleOriginal: 'AI update' }];
+
+  await runCli(['list', '--json', '--output', 'data/ingest-batches/batch.json'], {
+    actions: {
+      async list() {
+        return rows;
+      },
+    },
+    config: {},
+    write() {
+      throw new Error('stdout should not be used when --output is set');
+    },
+    writeFile(filePath, content) {
+      files.push({ filePath, content });
+    },
+  });
+
+  assert.equal(files[0].filePath, 'data/ingest-batches/batch.json');
+  assert.deepEqual(JSON.parse(files[0].content), rows);
 });

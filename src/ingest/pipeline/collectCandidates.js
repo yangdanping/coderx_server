@@ -3,11 +3,7 @@ const { normalizeCanonicalUrl } = require('@/ingest/domain/normalizeUrl');
 const { scoreCandidate } = require('@/ingest/domain/scoreCandidate');
 
 function createContentHash(title, summary) {
-  const normalizedText = `${title || ''}\n${summary || ''}`
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
+  const normalizedText = `${title || ''}\n${summary || ''}`.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
   return normalizedText ? crypto.createHash('sha256').update(normalizedText).digest('hex') : null;
 }
 
@@ -49,17 +45,7 @@ function buildStats(runId, enabledSources) {
   };
 }
 
-async function collectCandidates({
-  sources,
-  collector,
-  repository,
-  days = 30,
-  limit = 100,
-  perSourceLimit = 20,
-  minScore = 20,
-  triggerType = 'manual',
-  now = new Date(),
-}) {
+async function collectCandidates({ sources, collector, repository, days = 30, limit = 100, perSourceLimit, minScore = 20, triggerType = 'manual', now = new Date() }) {
   const enabledSources = sources.filter((source) => source.enabled !== false);
   const sourceMap = await repository.syncSources(enabledSources);
   const runId = await repository.createRun({ triggerType, runMode: 'collect' });
@@ -77,7 +63,7 @@ async function collectCandidates({
         .map((entry) => normalizeEntry(entry, source, now, cutoffTime, minScore))
         .filter(Boolean)
         .sort((left, right) => right.score - left.score || Date.parse(right.sourcePublishedAt) - Date.parse(left.sourcePublishedAt))
-        .slice(0, perSourceLimit);
+        .slice(0, Number.isSafeInteger(perSourceLimit) && perSourceLimit > 0 ? perSourceLimit : source.dailyLimit);
 
       collected.push(...normalizedEntries);
     } catch (error) {

@@ -1,5 +1,8 @@
 require('module-alias/register');
 
+const fs = require('node:fs');
+const path = require('node:path');
+
 const KNOWN_COMMANDS = new Set(['collect', 'enrich', 'list', 'approve', 'publish', 'run']);
 const KNOWN_STATUSES = new Set(['pending', 'enriched', 'approved', 'rejected', 'published', 'failed']);
 
@@ -40,6 +43,8 @@ function parseCliArgs(argv) {
       options.days = positiveInteger(value, '--days');
     } else if (token === '--limit') {
       options.limit = positiveInteger(value, '--limit');
+    } else if (token === '--per-source-limit') {
+      options.perSourceLimit = positiveInteger(value, '--per-source-limit');
     } else if (token === '--status') {
       options.statuses = csvValues(value);
       if (options.statuses.length === 0 || options.statuses.some((status) => !KNOWN_STATUSES.has(status))) {
@@ -47,6 +52,8 @@ function parseCliArgs(argv) {
       }
     } else if (token === '--ids') {
       options.ids = csvValues(value).map((id) => positiveInteger(id, '--ids'));
+    } else if (token === '--output') {
+      options.output = value;
     } else {
       throw new Error(`Unknown option: ${token}`);
     }
@@ -61,8 +68,17 @@ function renderList(rows) {
   return [header, ...lines].join('\n');
 }
 
-async function runCli(argv, { actions, config, write = process.stdout.write.bind(process.stdout) }) {
+function writeJsonFile(filePath, content) {
+  const absolutePath = path.resolve(process.cwd(), filePath);
+  fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+  fs.writeFileSync(absolutePath, content, 'utf8');
+}
+
+async function runCli(argv, { actions, config, write = process.stdout.write.bind(process.stdout), writeFile = writeJsonFile }) {
   const { command, options } = parseCliArgs(argv);
+  if (options.output && (command !== 'list' || !options.json)) {
+    throw new Error('--output requires list --json');
+  }
   let result;
 
   if (command === 'run') {
@@ -77,7 +93,11 @@ async function runCli(argv, { actions, config, write = process.stdout.write.bind
   }
 
   const output = command === 'list' && !options.json ? `${renderList(result)}\n` : `${JSON.stringify(result, null, 2)}\n`;
-  write(output);
+  if (options.output) {
+    await writeFile(options.output, output);
+  } else {
+    write(output);
+  }
   return result;
 }
 
@@ -106,6 +126,7 @@ function createDefaultActions(config) {
           repository,
           days: options.days || config.days,
           limit: options.limit || config.limit,
+          perSourceLimit: options.perSourceLimit,
         }),
       );
     },

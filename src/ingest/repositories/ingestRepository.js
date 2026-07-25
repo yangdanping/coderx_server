@@ -5,6 +5,7 @@ function createIngestRepository(database, options = {}) {
 
   async function syncSources(sources) {
     const sourceMap = new Map();
+    const sourceKeys = sources.map((source) => source.sourceKey);
     const statement = `
       INSERT INTO ingest_source (
         source_key, name, feed_url, homepage_url, feed_type,
@@ -24,6 +25,17 @@ function createIngestRepository(database, options = {}) {
         updated_at = clock_timestamp()
       RETURNING id;
     `;
+
+    await database.execute(
+      `
+        UPDATE ingest_source
+        SET enabled = FALSE,
+            updated_at = clock_timestamp()
+        WHERE enabled = TRUE
+          AND NOT (source_key = ANY(?::text[]));
+      `,
+      [sourceKeys],
+    );
 
     for (const source of sources) {
       const [result] = await database.execute(statement, [
