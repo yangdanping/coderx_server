@@ -13,6 +13,17 @@ articleRouter.get('/recommend', articleController.getRecommendList);
 /* ★模糊查询接口---------------------------------- */
 articleRouter.get('/search', articleController.search);
 
+/* ★<获取文章图片>的实现
+到时前端是通过返回的数据进行对该接口的请求,<img :src="momentInfo.images">
+注意,上传图像那边的接口增加中间件,增加不同尺寸的图片
+到时起前端通过拼接上query参数来这里获取对应对应尺寸的图片*/
+articleRouter.get('/images/:filename', articleController.getFileInfo);
+
+/* ★<获取文章视频>的实现
+前端通过返回的视频URL进行访问,<video :src="videoUrl">
+支持视频文件和封面图的访问*/
+articleRouter.get('/video/:filename', articleController.getVideoInfo);
+
 /* ★获取文章接口---------------------------------- */
 articleRouter.get('/:articleId', articleController.getDetail);
 
@@ -37,16 +48,5 @@ articleRouter.put('/:articleId', verifyAuth, verifyPermission, articleController
 
 /* ★删除文章接口---------------------------------- */
 articleRouter.delete('/:articleId', verifyAuth, verifyPermission, articleController.delete);
-
-/* ★<获取文章图片>的实现
-到时前端是通过返回的数据进行对该接口的请求,<img :src="momentInfo.images">
-注意,上传图像那边的接口增加中间件,增加不同尺寸的图片
-到时起前端通过拼接上query参数来这里获取对应对应尺寸的图片*/
-articleRouter.get('/images/:filename', articleController.getFileInfo);
-
-/* ★<获取文章视频>的实现
-前端通过返回的视频URL进行访问,<video :src="videoUrl">
-支持视频文件和封面图的访问*/
-articleRouter.get('/video/:filename', articleController.getVideoInfo);
 
 module.exports = articleRouter;
