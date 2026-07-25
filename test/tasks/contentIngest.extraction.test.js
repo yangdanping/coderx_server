@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 require('module-alias/register');
 
 const { assertPublicHttpUrl, safeRemoteFetch } = require('@/ingest/extraction/safeRemoteFetch');
-const { extractArticlePage } = require('@/ingest/extraction/extractArticlePage');
+const { extractArticlePage, prepareHtmlForReadability } = require('@/ingest/extraction/extractArticlePage');
 
 const fixtureHtml = fs.readFileSync(path.resolve(__dirname, '../fixtures/ingest/article-page.html'), 'utf8');
 const publicLookup = async () => [{ address: '93.184.216.34', family: 4 }];
@@ -91,4 +91,22 @@ test('extractArticlePage rejects pages without enough source material', () => {
       }),
     /source material is too short/i,
   );
+});
+
+test('prepareHtmlForReadability removes executable page chrome before DOM parsing', () => {
+  const sanitized = prepareHtmlForReadability(`
+    <html>
+      <head>
+        <script>window.largeWidget = "${'navigation '.repeat(1_000)}";</script>
+        <style>.navigation { display: block; }</style>
+      </head>
+      <body>
+        <noscript>Enable scripts to continue.</noscript>
+        <article><h1>Useful source</h1><p>Readable paragraph.</p></article>
+      </body>
+    </html>
+  `);
+
+  assert.doesNotMatch(sanitized, /largeWidget|display: block|Enable scripts/);
+  assert.match(sanitized, /<article><h1>Useful source/);
 });

@@ -4,6 +4,13 @@ const { Window } = require('happy-dom');
 const MIN_SOURCE_CHARACTERS = 600;
 const MIN_PARAGRAPHS = 4;
 
+function prepareHtmlForReadability(html) {
+  return String(html || '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
+    .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript\s*>/gi, '');
+}
+
 function normalizedText(value) {
   return String(value || '')
     .replace(/\s+/g, ' ')
@@ -98,7 +105,7 @@ function extractArticlePage({ canonicalUrl, html }) {
   const pageUrl = resolveHttpUrl(canonicalUrl, canonicalUrl);
   if (!pageUrl) throw new Error('canonicalUrl must be an HTTP URL');
   const window = new Window({ url: pageUrl });
-  window.document.write(String(html || ''));
+  window.document.write(prepareHtmlForReadability(html));
 
   const declaredCanonical = resolveHttpUrl(window.document.querySelector('link[rel="canonical"]')?.getAttribute('href'), pageUrl);
   const finalCanonical = declaredCanonical || pageUrl;
@@ -137,4 +144,5 @@ function extractArticlePage({ canonicalUrl, html }) {
 
 module.exports = {
   extractArticlePage,
+  prepareHtmlForReadability,
 };

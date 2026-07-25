@@ -70,11 +70,22 @@ test('createRichArticleEnricher validates an 800–1500 character structured rew
 });
 
 test('createRichArticleEnricher rejects rewrites that are too short or structurally incomplete', async () => {
+  let generationCount = 0;
   const shortEnricher = createRichArticleEnricher({
     baseURL: 'http://127.0.0.1:11434/v1',
     model: 'qwen2.5:7b',
-    generateTextImpl: async () => ({
-      output: buildRichOutput({
+    generateTextImpl: async () => {
+      generationCount += 1;
+      if (generationCount === 3) {
+        return {
+          output: {
+            heading: '补充内容',
+            paragraph: '这段补充严格基于来源材料，但原始草稿的信息量过低，即使补足一个完整段落也无法达到发布所需的正文长度。'.repeat(6),
+          },
+        };
+      }
+      return {
+        output: buildRichOutput({
         lead: '这是一个长度足够通过字段校验、但整体内容仍明显不足的简短导语，用来验证总长度门槛能够在基础结构正确时继续阻止过短文章进入后续流程。',
         sections: [
           { heading: '第一部分', paragraphs: [paragraphA] },
@@ -82,11 +93,68 @@ test('createRichArticleEnricher rejects rewrites that are too short or structura
           { heading: '第三部分', paragraphs: [paragraphC] },
         ],
         conclusion: '这段结语已经达到字段规定的最低长度要求，但不会让整篇文章因此达到八百字的完整质量门槛。',
-      }),
-    }),
+        }),
+      };
+    },
   });
 
   await assert.rejects(() => shortEnricher.enrich(buildSourcePage()), /800–1500/);
+});
+
+test('createRichArticleEnricher retries once when the first structured rewrite is too short', async () => {
+  const requests = [];
+  const shortDraft = buildRichOutput({
+    lead: '这是一个长度足够通过字段校验、但整体内容仍明显不足的简短导语，用来验证总长度门槛能够在基础结构正确时触发一次有边界的自动修订。',
+    sections: [
+      { heading: '第一部分', paragraphs: [paragraphA] },
+      { heading: '第二部分', paragraphs: [paragraphB] },
+      { heading: '第三部分', paragraphs: [paragraphC] },
+    ],
+    conclusion: '这段结语已经达到字段规定的最低长度要求，但不会让整篇文章因此达到八百字的完整质量门槛。',
+  });
+  const enricher = createRichArticleEnricher({
+    baseURL: 'http://127.0.0.1:11434/v1',
+    model: 'qwen2.5:7b',
+    generateTextImpl: async (input) => {
+      requests.push(input);
+      return { output: requests.length === 1 ? shortDraft : buildRichOutput() };
+    },
+  });
+
+  const result = await enricher.enrich(buildSourcePage());
+
+  assert.equal(requests.length, 2);
+  assert.ok(richArticleLength(result) >= 800);
+  assert.match(requests[1].prompt, /上一版草稿|950–1200/);
+});
+
+test('createRichArticleEnricher adds one grounded supplement when the revised draft is still short', async () => {
+  const requests = [];
+  const nearCompleteDraft = buildRichOutput({
+    sections: [
+      { heading: '第一部分', paragraphs: [paragraphA, paragraphD] },
+      { heading: '第二部分', paragraphs: [paragraphB, paragraphE] },
+      { heading: '第三部分', paragraphs: [paragraphC] },
+    ],
+  });
+  const supplement = `${paragraphF}因此，补充内容仍然围绕来源材料中的工程实践展开，并且不会引入未经来源支持的新事实或结论。`;
+  assert.ok(richArticleLength(nearCompleteDraft) < 800);
+
+  const enricher = createRichArticleEnricher({
+    baseURL: 'http://127.0.0.1:11434/v1',
+    model: 'qwen2.5:7b',
+    generateTextImpl: async (input) => {
+      requests.push(input);
+      if (requests.length < 3) return { output: nearCompleteDraft };
+      return { output: { heading: '补充观察', paragraph: supplement } };
+    },
+  });
+
+  const result = await enricher.enrich(buildSourcePage());
+
+  assert.equal(requests.length, 3);
+  assert.ok(richArticleLength(result) >= 800);
+  assert.match(requests[2].prompt, /补充一个信息段|不得重复已有段落/);
 });
 
 test('buildRichArticleContent renders headings, local images and source disclosure', () => {
