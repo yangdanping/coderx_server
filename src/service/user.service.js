@@ -3,6 +3,7 @@ const { baseURL } = require('@/constants/urls');
 const BusinessError = require('@/errors/BusinessError');
 const notificationService = require('@/service/notification.service');
 const { publishNotificationCreated } = require('@/socket/notification/notificationEventBus');
+const { validateOptionalNickname } = require('@/utils/nickname');
 const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const {
   buildGetArticleByCollectIdExecuteParams,
@@ -15,6 +16,18 @@ const {
   buildGetProfileByIdSql,
   buildGetUserByNameSql,
 } = require('./sql/user.sql');
+
+const PROFILE_COLUMN_BY_API_KEY = {
+  avatarUrl: 'avatar_url',
+  age: 'age',
+  sex: 'sex',
+  phone: 'phone',
+  email: 'email',
+  career: 'career',
+  address: 'address',
+  sign: 'sign',
+  nickname: 'nickname',
+};
 
 class UserService {
   getUserByName = async (name) => {
@@ -29,15 +42,16 @@ class UserService {
       // 开始事务
       await conn.beginTransaction();
 
-      const { name, password } = user;
+      const { name, password, nickname } = user;
+      const normalizedNickname = validateOptionalNickname(nickname);
 
       // 第一步：插入用户表
       const statement1 = 'INSERT INTO "user" (name, password) VALUES (?, ?) RETURNING id;';
       const [result] = await conn.execute(statement1, [name, password]);
 
       // 第二步：插入用户信息表，关联新用户ID
-      const statement2 = 'INSERT INTO profile (user_id) VALUES (?);';
-      await conn.execute(statement2, [result.insertId]);
+      const statement2 = 'INSERT INTO profile (user_id, nickname) VALUES (?, ?);';
+      await conn.execute(statement2, [result.insertId, normalizedNickname]);
 
       // 提交事务：两条SQL一起生效
       await conn.commit();
@@ -85,8 +99,13 @@ class UserService {
     const keys = Object.keys(profile);
     if (keys.length === 0) return null;
 
-    const updateItem = keys.map((key) => `${key} = ?`).join(', ');
-    const updateValues = Object.values(profile);
+    const unsupportedKey = keys.find((key) => !PROFILE_COLUMN_BY_API_KEY[key]);
+    if (unsupportedKey) {
+      throw new BusinessError('个人资料字段不受支持', 400);
+    }
+
+    const updateItem = keys.map((key) => `${PROFILE_COLUMN_BY_API_KEY[key]} = ?`).join(', ');
+    const updateValues = keys.map((key) => (key === 'nickname' ? validateOptionalNickname(profile[key]) : profile[key]));
     const statement = `UPDATE profile SET ${updateItem} WHERE user_id = ?;`;
 
     const [result] = await connection.execute(statement, [...updateValues, userId]);

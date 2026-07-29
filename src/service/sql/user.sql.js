@@ -10,6 +10,7 @@ function buildGetProfileByIdSql() {
           u.id,
           u.name,
           u.status,
+          p.nickname,
           p.avatar_url AS "avatarUrl",
           p.age,
           p.sex,
@@ -27,7 +28,7 @@ function buildGetProfileByIdSql() {
 function buildGetCommentByIdSql() {
   return `
     SELECT c.id, a.title,c.content, c.comment_id AS "commentId", c.create_at AS "createAt",
-    jsonb_build_object('id', u.id, 'name', u.name,'avatarUrl',p.avatar_url) AS "user",
+    jsonb_build_object('id', u.id, 'name', u.name, 'nickname', p.nickname, 'avatarUrl', p.avatar_url) AS "user",
     (SELECT COUNT(*) FROM comment_like cl WHERE cl.comment_id = c.id) likes
     FROM comment c
     LEFT JOIN article a ON c.article_id = a.id
@@ -68,6 +69,7 @@ function buildGetFollowInfoSql() {
                 WHEN COUNT(*) > 0 THEN jsonb_agg(jsonb_build_object(
                     'id', fu.id,
                     'name', fu.name,
+                    'nickname', fp.nickname,
                     'avatarUrl', fp.avatar_url,
                     'sex', fp.sex,
                     'career', fp.career
@@ -81,6 +83,7 @@ function buildGetFollowInfoSql() {
             (SELECT jsonb_agg(jsonb_build_object(
                 'id', us.id,
                 'name', us.name,
+                'nickname', pf.nickname,
                 'avatarUrl', pf.avatar_url,
                 'sex', pf.sex,
                 'career', pf.career
@@ -114,6 +117,7 @@ function buildGetHotUsersSql() {
         SELECT
             u.id,
             u.name,
+            p.nickname,
             p.avatar_url AS "avatarUrl",
             p.age,
             p.sex,

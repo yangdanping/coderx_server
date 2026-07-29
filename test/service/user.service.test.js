@@ -179,7 +179,7 @@ test('toggleLike: invalid table name throws BusinessError instead of ReferenceEr
   );
 });
 
-test('addUser: pg quotes reserved user table in insert statement while keeping transaction flow', async () => {
+test('addUser: persists a normalized optional nickname in the profile transaction', async () => {
   const calls = [];
   const connectionMock = {
     dialect: 'pg',
@@ -209,7 +209,7 @@ test('addUser: pg quotes reserved user table in insert statement while keeping t
   };
 
   const service = loadServiceWithConnection(connectionMock);
-  const result = await service.addUser({ name: 'alice', password: 'secret' }); // pragma: allowlist secret
+  const result = await service.addUser({ name: 'alice', password: 'secret', nickname: '  小杨  ' }); // pragma: allowlist secret
 
   assert.equal(result.insertId, 11);
   const firstExecute = calls.find((call) => call.type === 'execute');
@@ -217,7 +217,86 @@ test('addUser: pg quotes reserved user table in insert statement while keeping t
   assert.match(firstExecute.statement, /RETURNING\s+id/i);
   assert.deepEqual(firstExecute.params, ['alice', 'secret']);
   const secondExecute = calls.filter((call) => call.type === 'execute')[1];
-  assert.deepEqual(secondExecute.params, [11]);
+  assert.match(secondExecute.statement, /INSERT INTO\s+profile\s*\(user_id,\s*nickname\)\s*VALUES\s*\(\?,\s*\?\)/i);
+  assert.deepEqual(secondExecute.params, [11, '小杨']);
+});
+
+test('addUser: stores null when nickname is omitted', async () => {
+  const calls = [];
+  const connectionMock = {
+    async getConnection() {
+      return {
+        async beginTransaction() {},
+        async execute(statement, params) {
+          calls.push({ statement, params });
+          if (calls.length === 1) return [{ insertId: 12, affectedRows: 1 }, []];
+          return [{ affectedRows: 1 }, []];
+        },
+        async commit() {},
+        async rollback() {},
+        release() {},
+      };
+    },
+  };
+  const service = loadServiceWithConnection(connectionMock);
+
+  await service.addUser({ name: 'alice', password: 'secret' }); // pragma: allowlist secret
+
+  assert.deepEqual(calls[1].params, [12, null]);
+});
+
+test('updateProfileById: maps allowed API keys to columns and normalizes nickname', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      return [{ affectedRows: 1 }, []];
+    },
+  });
+
+  await service.updateProfileById(7, {
+    nickname: '  小杨  ',
+    avatarUrl: '/user/7/avatar',
+    career: '前端',
+  });
+
+  assert.match(calls[0].statement, /UPDATE\s+profile\s+SET\s+nickname\s*=\s*\?,\s*avatar_url\s*=\s*\?,\s*career\s*=\s*\?\s+WHERE\s+user_id\s*=\s*\?/i);
+  assert.deepEqual(calls[0].params, ['小杨', '/user/7/avatar', '前端', 7]);
+});
+
+test('updateProfileById: clearing nickname stores null', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      return [{ affectedRows: 1 }, []];
+    },
+  });
+
+  await service.updateProfileById(7, { nickname: '   ' });
+
+  assert.deepEqual(calls[0].params, [null, 7]);
+});
+
+test('updateProfileById: rejects unsupported fields before executing SQL', async () => {
+  let executeCount = 0;
+  const service = loadServiceWithConnection({
+    async execute() {
+      executeCount += 1;
+      return [{ affectedRows: 1 }, []];
+    },
+  });
+
+  await assert.rejects(
+    () => service.updateProfileById(7, { user_id: 99 }),
+    (error) => {
+      assert.equal(error.name, 'BusinessError');
+      assert.equal(error.httpStatus, 400);
+      assert.equal(error.message, '个人资料字段不受支持');
+      return true;
+    },
+  );
+  assert.equal(executeCount, 0);
 });
 
 test('toggleFollow: unfollow commits silently without creating or publishing notifications', async () => {

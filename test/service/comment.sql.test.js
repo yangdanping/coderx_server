@@ -19,6 +19,7 @@ test('buildGetCommentListSql: uses jsonb_build_object and quoted user table', ()
   });
 
   assert.match(sql, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
+  assert.match(sql, /'nickname',\s*p\.nickname/i);
   assert.doesNotMatch(sql, /JSON_OBJECT/i);
   assert.match(sql, /LEFT JOIN\s+"user"\s+u\s+ON\s+u\.id\s*=\s*c\.user_id/i);
   assert.doesNotMatch(sql, /LEFT JOIN\s+user\s+u\s+ON\s+u\.id\s*=\s*c\.user_id/i);

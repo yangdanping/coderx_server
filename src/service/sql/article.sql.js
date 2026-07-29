@@ -37,7 +37,7 @@ function buildGetArticleByIdSql(baseURL, redirectURL) {
           a.status,
           a.create_at AS "createAt",
           a.update_at AS "updateAt",
-          jsonb_build_object('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author,
+          jsonb_build_object('id', u.id, 'name', u.name, 'nickname', p.nickname, 'avatarUrl', p.avatar_url) author,
           (SELECT COUNT(al.user_id) FROM article_like al WHERE al.article_id = a.id) likes,
           (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id) AS "commentCount",
           (SELECT jsonb_agg(jsonb_build_object('id', tag.id, 'name', tag.name))
@@ -82,7 +82,7 @@ function buildPgArticleListSql(baseURL, redirectURL, { tagId, userId, idList, ke
           a.status,
           a.create_at AS "createAt",
           a.update_at AS "updateAt",
-          jsonb_build_object('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url, 'sex', p.sex, 'career', p.career) author,
+          jsonb_build_object('id', u.id, 'name', u.name, 'nickname', p.nickname, 'avatarUrl', p.avatar_url, 'sex', p.sex, 'career', p.career) author,
           COALESCE(likes_agg.likes, 0) likes,
           COALESCE(comment_agg.commentCount, 0) AS "commentCount",
           tags_agg.tags,

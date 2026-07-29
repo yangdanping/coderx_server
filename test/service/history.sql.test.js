@@ -25,6 +25,7 @@ test('buildGetUserHistorySql: uses jsonb_build_object and LIMIT ? OFFSET ?', () 
 
   const sql = buildGetUserHistorySql(base, redirect);
   assert.match(sql, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
+  assert.match(sql, /'nickname',\s*p\.nickname/i);
   assert.match(sql, /a\.excerpt\s+AS\s+"excerpt"/i);
   assert.doesNotMatch(sql, /\ba\.content\b/i);
   assert.doesNotMatch(sql, /JSON_OBJECT/i);

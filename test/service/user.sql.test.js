@@ -18,12 +18,14 @@ test('buildGetUserByNameSql: quotes reserved user table', () => {
   assert.match(sql, /FROM\s+"user"\s+WHERE\s+name\s*=\s*\?/i);
 });
 
-test('buildGetProfileByIdSql: quotes reserved user table', () => {
+test('buildGetProfileByIdSql: quotes reserved user table and returns nickname with account name', () => {
   const { buildGetProfileByIdSql } = loadHelper();
 
   const sql = buildGetProfileByIdSql();
   assert.match(sql, /FROM\s+"user"\s+u/i);
   assert.doesNotMatch(sql, /FROM\s+user\s+u/i);
+  assert.match(sql, /u\.name/i);
+  assert.match(sql, /p\.nickname/i);
 });
 
 test('buildGetCommentByIdSql: uses jsonb_build_object, quoted user table, and limit offset pagination', () => {
@@ -31,6 +33,7 @@ test('buildGetCommentByIdSql: uses jsonb_build_object, quoted user table, and li
 
   const sql = buildGetCommentByIdSql();
   assert.match(sql, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
+  assert.match(sql, /'nickname',\s*p\.nickname/i);
   assert.match(sql, /jsonb_build_object[\s\S]*?AS\s+"user"/i);
   assert.doesNotMatch(sql, /JSON_OBJECT/i);
   assert.match(sql, /LEFT JOIN\s+"user"\s+u\s+ON\s+u\.id\s*=\s*c\.user_id/i);
@@ -61,6 +64,8 @@ test('buildGetFollowInfoSql: uses case when, jsonb builders, and quoted user tab
   assert.doesNotMatch(sql, /\bIF\s*\(/i);
   assert.match(sql, /jsonb_agg\s*\(/i);
   assert.match(sql, /jsonb_build_object\s*\(\s*'id'/i);
+  assert.match(sql, /'nickname',\s*fp\.nickname/i);
+  assert.match(sql, /'nickname',\s*pf\.nickname/i);
   assert.match(sql, /FROM\s+"user"\s+u/i);
 });
 
@@ -85,6 +90,7 @@ test('buildGetHotUsersSql: uses jsonb_build_object, quoted user table, and fixed
   assert.match(sql, /jsonb_build_object\s*\(\s*'totalLikes'/i);
   assert.doesNotMatch(sql, /JSON_OBJECT/i);
   assert.match(sql, /FROM\s+"user"\s+u/i);
+  assert.match(sql, /p\.nickname/i);
   assert.match(sql, /LIMIT\s+5\b/i);
   assert.doesNotMatch(sql, /LIMIT\s+0\s*,\s*5/i);
 });

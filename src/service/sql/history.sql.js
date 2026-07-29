@@ -7,7 +7,7 @@ function buildAddHistorySql() {
 }
 
 function authorSelectExpr() {
-  return `jsonb_build_object('id', u.id, 'name', u.name, 'avatarUrl', p.avatar_url) author`;
+  return `jsonb_build_object('id', u.id, 'name', u.name, 'nickname', p.nickname, 'avatarUrl', p.avatar_url) author`;
 }
 
 function paginationClause() {

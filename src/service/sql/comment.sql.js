@@ -1,7 +1,7 @@
 const USER_TABLE = '"user"';
 
 function authorSelectExpr(alias = 'u', profileAlias = 'p') {
-  return `jsonb_build_object('id', ${alias}.id, 'name', ${alias}.name, 'avatarUrl', ${profileAlias}.avatar_url) author`;
+  return `jsonb_build_object('id', ${alias}.id, 'name', ${alias}.name, 'nickname', ${profileAlias}.nickname, 'avatarUrl', ${profileAlias}.avatar_url) author`;
 }
 
 function articleSelectExpr(alias = 'a') {

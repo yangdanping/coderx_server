@@ -1,6 +1,7 @@
 const errorTypes = require('@/constants/errorTypes');
 const userService = require('@/service/user.service.js');
 const Utils = require('@/utils');
+const { validateOptionalNickname } = require('@/utils/nickname');
 
 // ★1.用户注册验证中间件---------------------------------------------------
 const verifyUserRegister = async (ctx, next) => {
@@ -13,6 +14,7 @@ const verifyUserRegister = async (ctx, next) => {
   } else {
     console.log('verifyUserRegister<用户名/密码>校验---用户名/密码不为空,可进行用户<存在>校验');
   }
+  ctx.request.body.nickname = validateOptionalNickname(ctx.request.body.nickname);
   // 3.判断这次注册的用户名是没有被注册过
   const user = await userService.getUserByName(name); //若没查到,则user为undefined
   if (user) {

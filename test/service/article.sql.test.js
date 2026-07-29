@@ -17,6 +17,7 @@ test('buildGetArticleByIdSql: uses jsonb_build_object/jsonb_agg and quoted user 
 
   const sql = buildGetArticleByIdSql(base, redirect);
   assert.match(sql, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
+  assert.match(sql, /'nickname',\s*p\.nickname/i);
   assert.match(sql, /jsonb_agg\s*\(\s*jsonb_build_object/i);
   assert.match(sql, /a\.create_at\s+AS\s+"createAt"/i);
   assert.match(sql, /a\.update_at\s+AS\s+"updateAt"/i);
@@ -47,6 +48,7 @@ test('buildGetArticleListSql: uses optimized-style shape (no GROUP BY), jsonb_*,
   });
   assert.doesNotMatch(sql, /\bGROUP BY\s+a\.id\b/i);
   assert.match(sql, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
+  assert.match(sql, /'nickname',\s*p\.nickname/i);
   assert.match(sql, /jsonb_agg\s*\(\s*jsonb_build_object/i);
   assert.match(sql, /a\.create_at\s+AS\s+"createAt"/i);
   assert.match(sql, /a\.update_at\s+AS\s+"updateAt"/i);
