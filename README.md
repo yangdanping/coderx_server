@@ -40,7 +40,7 @@ coderx_server/
 - **AI 内容供给**：
   - 从公开 RSS/Atom 来源建立候选，再按明确 ID 抓取原文正文与图片，不依赖 Koa 或登录态。
   - 原文清洗后转换为可编辑的 Tiptap JSON，图片下载到本站；默认不调用翻译模型。
-  - 候选先进入独立暂存池，经人工审批后才允许事务发布或原文回填。
+  - 候选先进入独立暂存池；人工确认明确 ID 后，待处理候选可事务发布，已发布候选可原文回填。
   - node-cron、PM2 单实例和 PostgreSQL advisory lock 共同避免任务重叠。
 
 ## 快速开始
@@ -102,11 +102,9 @@ npm run socket
 ```text
 公开 RSS/Atom → 规范化/评分/去重 → ingest_candidate
                                       ↓
-                               人工 approve
+                             显式 backfill-raw IDs
                                       ↓
-                         发布文章并建立来源映射
-                                      ↓
-               backfill-raw 原文 + 本地图片（单篇事务）
+              pending: 原文发布 / published: 原文回填
 ```
 
 ### 本地首次运行
@@ -137,9 +135,9 @@ pnpm ingest approve --ids 31,32 --limit 2
 # 仅发布已 approved 的候选；作者和标签必须已存在
 pnpm ingest publish --limit 10
 
-# 默认内容准备方式：将已发布候选原位替换成原文图文文章；不会调用 Ollama
+# 默认内容准备方式：pending 候选直接发布，published 候选原位回填；不会调用 Ollama
 INGEST_AUTHOR_IDS=1,2,3,4,5 \
-pnpm ingest backfill-raw --ids 70,21,54,149,60 --limit 5
+pnpm ingest backfill-raw --ids 72,3,35,23,55 --limit 5
 
 # 可选的旧流程：生成中文重写稿
 INGEST_AUTHOR_IDS=1,2,3,4,5 \
@@ -156,7 +154,7 @@ pnpm ingest purge-placeholders --apply
 
 `run` 组合命令会执行 collect 和 enrich。只有显式设置 `INGEST_AUTO_PUBLISH=true` 时，它才会继续尝试发布已经 approved 的候选；默认值为 `false`。
 
-`backfill-raw` 是默认的人工触发内容准备命令，只接受明确的候选 ID，单次最多 5 篇。它会读取公开原文页，保留可读标题、章节和段落，将合格图片保存到本站，并原位更新已经发布的文章；不会调用 Ollama、创建用户或加入 `run`。`INGEST_AUTHOR_IDS` 必须列出已授权参与自动整理的现有活跃用户，多篇批次需要为每篇提供不同用户。
+`backfill-raw` 是默认的人工触发内容准备命令，只接受明确的候选 ID，单次最多 5 篇。它会读取公开原文页，保留可读标题、章节和段落，将合格图片保存到本站：未映射的 `pending` 候选会使用现有 `INGEST_TAG_NAME` 标签直接发布，已映射的 `published` 候选会原位更新。两条路径都不会调用 Ollama、创建用户或加入 `run`。`INGEST_AUTHOR_IDS` 必须列出已授权参与自动整理的现有活跃用户，多篇批次需要为每篇提供不同用户。
 
 `backfill-rich` 保留为可选的旧命令，用于明确需要中文重写稿的批次，不再作为默认路径。
 
