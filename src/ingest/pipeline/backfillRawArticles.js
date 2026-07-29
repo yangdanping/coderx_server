@@ -14,6 +14,7 @@ async function backfillRawArticles({
   extractor,
   localizeImages,
   authorIds,
+  tagName,
   ids,
   now = new Date(),
   days = 30,
@@ -33,17 +34,23 @@ async function backfillRawArticles({
   if (safeAuthorIds.some((id) => !Number.isSafeInteger(id) || id <= 0) || new Set(safeAuthorIds).size !== safeAuthorIds.length) {
     throw new Error('Raw backfill author IDs must be unique positive integers');
   }
-  if (!repository || typeof repository.listPublishedCandidatesByIds !== 'function' || typeof repository.replacePublishedArticle !== 'function') {
+  if (
+    !repository ||
+    typeof repository.listRawCandidatesByIds !== 'function' ||
+    typeof repository.publishRawArticle !== 'function' ||
+    typeof repository.replacePublishedArticle !== 'function'
+  ) {
     throw new Error('raw article repository is required');
   }
   if (typeof extractor !== 'function' || typeof localizeImages !== 'function') {
     throw new Error('extractor and localizeImages are required');
   }
+  if (!String(tagName || '').trim()) throw new Error('tagName is required');
   if (!outputDir || !publicBaseURL) throw new Error('outputDir and publicBaseURL are required');
 
-  const candidates = await repository.listPublishedCandidatesByIds(safeIds);
+  const candidates = await repository.listRawCandidatesByIds(safeIds);
   if (candidates.length !== safeIds.length) {
-    throw new Error(`Expected ${safeIds.length} mapped published candidates; found ${candidates.length}`);
+    throw new Error(`Expected ${safeIds.length} eligible raw candidates; found ${candidates.length}`);
   }
   if (new Set(candidates.map((candidate) => candidate.sourceName)).size !== candidates.length) {
     throw new Error('Raw backfill requires one distinct source per article');
@@ -54,6 +61,7 @@ async function backfillRawArticles({
   const orderedCandidates = safeIds.map((id) => candidates.find((candidate) => candidate.id === id));
   const result = {
     attempted: orderedCandidates.length,
+    created: 0,
     updated: 0,
     failed: 0,
     articles: [],
@@ -79,8 +87,7 @@ async function backfillRawArticles({
       });
       const authorId = authorAssignments.get(candidate.id);
       const createAt = dateAssignments.get(candidate.id);
-      const replacement = await repository.replacePublishedArticle({
-        articleId: candidate.articleId,
+      const writeInput = {
         candidateId: candidate.id,
         authorId,
         createAt,
@@ -97,19 +104,31 @@ async function backfillRawArticles({
             },
             images,
           }),
-      });
+      };
+      const isPending = candidate.status === 'pending' && candidate.articleId == null;
+      const persistence = isPending
+        ? await repository.publishRawArticle({
+            ...writeInput,
+            tagName,
+          })
+        : await repository.replacePublishedArticle({
+            ...writeInput,
+            articleId: candidate.articleId,
+          });
       const currentFilenames = new Set(promoted.assets.map((asset) => asset.filename));
       await deleteStoredFiles(
-        replacement.oldFilenames.filter((filename) => !currentFilenames.has(filename)),
+        persistence.oldFilenames.filter((filename) => !currentFilenames.has(filename)),
         { outputDir },
       );
-      result.updated += 1;
+      const operation = isPending ? 'created' : 'updated';
+      result[operation] += 1;
       result.articles.push({
         candidateId: candidate.id,
-        articleId: candidate.articleId,
+        articleId: persistence.articleId,
+        operation,
         authorId,
         createAt,
-        imageCount: replacement.images.length,
+        imageCount: persistence.images.length,
       });
     } catch (error) {
       if (promoted?.copiedPaths?.length) {

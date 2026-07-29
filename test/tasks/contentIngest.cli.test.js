@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 require('module-alias/register');
 
@@ -197,7 +199,7 @@ test('backfill-raw is an explicit model-free action', async () => {
   const actions = {
     async 'backfill-raw'(options) {
       calls.push(options);
-      return { updated: options.ids.length };
+      return { created: options.ids.length, updated: 0 };
     },
   };
 
@@ -208,7 +210,13 @@ test('backfill-raw is an explicit model-free action', async () => {
   });
 
   assert.deepEqual(calls, [{ ids: [54] }]);
-  assert.deepEqual(result, { updated: 1 });
+  assert.deepEqual(result, { created: 1, updated: 0 });
+});
+
+test('backfill-raw forwards the configured article tag to raw publication', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../../src/ingest/cli.js'), 'utf8');
+
+  assert.match(source, /backfillRawArticles\(\{[\s\S]*tagName:\s*config\.tagName[\s\S]*\}\)/);
 });
 
 test('purge-placeholders is dry-run by default and forwards an explicit apply flag', async () => {

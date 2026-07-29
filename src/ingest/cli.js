@@ -215,6 +215,7 @@ function createDefaultActions(config) {
         repository: richRepository,
         ids,
         authorIds: config.authorIds,
+        tagName: config.tagName,
         days: options.days || 30,
         outputDir: path.resolve(IMG_PATH),
         publicBaseURL: config.publicBaseURL,
