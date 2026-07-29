@@ -30,4 +30,5 @@ psql "$DATABASE_URL" -f migrations/001_fix_file_size_bigint.sql
 | 005  | `005_expand_notifications_for_comment_reply.sql`   | 扩展评论回复通知类型                                          |
 | 006  | `006_expand_notifications_for_comment_like.sql`    | 扩展评论点赞通知并新增评论目标类型                            |
 | 007  | `007_create_user_tag_preference.sql`               | 新增用户专栏标签个性化顺序关系表                              |
+| 008  | `008_create_content_ingest_pipeline.sql`           | 新增 AI 内容来源、候选池、运行审计与正式文章来源归属          |
 | 009  | `009_add_profile_nickname.sql`                      | 新增可选、可重名且受字符约束的用户展示昵称                    |

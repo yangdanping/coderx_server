@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Example AI</title>
+    <link>https://example.com</link>
+    <description>Example feed</description>
+    <item>
+      <title>AI release</title>
+      <link>https://example.com/post-1?utm_source=feed</link>
+      <guid>post-1</guid>
+      <description><![CDATA[<p>Release <strong>summary</strong></p>]]></description>
+      <pubDate>Fri, 24 Jul 2026 01:00:00 GMT</pubDate>
+      <dc:creator>Example</dc:creator>
+    </item>
+  </channel>
+</rss>
