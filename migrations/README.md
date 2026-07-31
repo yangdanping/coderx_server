@@ -32,3 +32,4 @@ psql "$DATABASE_URL" -f migrations/001_fix_file_size_bigint.sql
 | 007  | `007_create_user_tag_preference.sql`               | 新增用户专栏标签个性化顺序关系表                              |
 | 008  | `008_create_content_ingest_pipeline.sql`           | 新增 AI 内容来源、候选池、运行审计与正式文章来源归属          |
 | 009  | `009_add_profile_nickname.sql`                      | 新增可选、可重名且受字符约束的用户展示昵称                    |
+| 010  | `010_create_media_object.sql`                       | 新增逻辑媒体在本地磁盘或 R2 的物理对象映射与校验约束          |
