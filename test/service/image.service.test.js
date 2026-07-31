@@ -6,10 +6,12 @@ require('module-alias/register');
 
 const servicePath = path.resolve(__dirname, '../../src/service/image.service.js');
 const databasePath = path.resolve(__dirname, '../../src/app/database.js');
+const mediaRuntimePath = path.resolve(__dirname, '../../src/service/mediaRuntime.service.js');
 
-function loadServiceWithConnection(connectionMock) {
+function loadServiceWithConnection(connectionMock, mediaRuntimeMock = null) {
   delete require.cache[servicePath];
   delete require.cache[databasePath];
+  delete require.cache[mediaRuntimePath];
 
   require.cache[databasePath] = {
     id: databasePath,
@@ -17,6 +19,15 @@ function loadServiceWithConnection(connectionMock) {
     loaded: true,
     exports: connectionMock,
   };
+
+  if (mediaRuntimeMock) {
+    require.cache[mediaRuntimePath] = {
+      id: mediaRuntimePath,
+      filename: mediaRuntimePath,
+      loaded: true,
+      exports: mediaRuntimeMock,
+    };
+  }
 
   return require(servicePath);
 }
@@ -182,5 +193,136 @@ test('updateImageArticle: empty imageIds still clears old article image links wi
     assert.equal(bindImagesExecute, undefined);
   } finally {
     console.log = originalConsoleLog;
+  }
+});
+
+test('updateImageArticle: promotes the committed article images only after the association transaction commits', async () => {
+  const calls = [];
+  const imageRows = [
+    {
+      id: 5,
+      filename: 'cover.jpg',
+      mimetype: 'image/jpeg',
+      size: 123,
+      file_type: 'image',
+    },
+  ];
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return {
+          async beginTransaction() {
+            calls.push({ type: 'beginTransaction' });
+          },
+          async execute(statement, params) {
+            calls.push({ type: 'execute', statement, params });
+            if (/SELECT id\s+FROM file/i.test(statement)) return [[], []];
+            if (/SELECT[\s\S]+filename[\s\S]+FROM file/i.test(statement)) return [imageRows, []];
+            return [{ affectedRows: 1 }, []];
+          },
+          async commit() {
+            calls.push({ type: 'commit' });
+          },
+          async rollback() {
+            calls.push({ type: 'rollback' });
+          },
+          release() {
+            calls.push({ type: 'release' });
+          },
+        };
+      },
+    },
+    {
+      async promotePublishedImages(payload) {
+        calls.push({ type: 'promote', payload });
+        return { enabled: true, attempted: 2, ready: 2, failed: 0 };
+      },
+    },
+  );
+
+  const result = await service.updateImageArticle(9, [5], 5);
+
+  assert.deepEqual(result, {
+    success: true,
+    affectedRows: 1,
+    deletedCount: 0,
+    coverSet: true,
+  });
+  const commitIndex = calls.findIndex((call) => call.type === 'commit');
+  const promoteIndex = calls.findIndex((call) => call.type === 'promote');
+  assert.ok(commitIndex >= 0);
+  assert.ok(promoteIndex > commitIndex);
+  assert.deepEqual(calls[promoteIndex].payload, {
+    articleId: 9,
+    images: imageRows,
+  });
+});
+
+test('updateImageArticle: promotion failure keeps the committed local association successful', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return {
+          async beginTransaction() {
+            calls.push({ type: 'beginTransaction' });
+          },
+          async execute(statement) {
+            if (/SELECT id\s+FROM file/i.test(statement)) return [[], []];
+            if (/SELECT[\s\S]+filename[\s\S]+FROM file/i.test(statement)) {
+              return [
+                [
+                  {
+                    id: 5,
+                    filename: 'cover.jpg',
+                    mimetype: 'image/jpeg',
+                    size: 123,
+                    file_type: 'image',
+                  },
+                ],
+                [],
+              ];
+            }
+            return [{ affectedRows: 1 }, []];
+          },
+          async commit() {
+            calls.push({ type: 'commit' });
+          },
+          async rollback() {
+            calls.push({ type: 'rollback' });
+          },
+          release() {
+            calls.push({ type: 'release' });
+          },
+        };
+      },
+    },
+    {
+      async promotePublishedImages() {
+        calls.push({ type: 'promote' });
+        throw new Error('R2 unavailable');
+      },
+    },
+  );
+  const originalConsoleError = console.error;
+  console.error = () => {};
+
+  try {
+    const result = await service.updateImageArticle(9, [5], null);
+    assert.equal(result.success, true);
+    assert.equal(
+      calls.some((call) => call.type === 'commit'),
+      true,
+    );
+    assert.equal(
+      calls.some((call) => call.type === 'promote'),
+      true,
+    );
+    assert.equal(
+      calls.some((call) => call.type === 'rollback'),
+      false,
+    );
+  } finally {
+    console.error = originalConsoleError;
   }
 });

@@ -1,11 +1,9 @@
 const connection = require('@/app/database');
 const { baseURL } = require('@/constants/urls');
+const { MEDIA_VARIANT } = require('@/constants/mediaStorage');
+const mediaRuntime = require('@/service/mediaRuntime.service');
 const BusinessError = require('@/errors/BusinessError');
-const {
-  collectMediaRefs,
-  hydrateStructuredContentMediaSources,
-  resolveStructuredArticleContent,
-} = require('@/utils/articleContent');
+const { collectMediaRefs, hydrateStructuredContentMediaSources, resolveStructuredArticleContent } = require('@/utils/articleContent');
 const { buildPublicAssetUrl } = require('@/utils/publicAssetUrls');
 const {
   buildUpsertDraftSql,
@@ -84,16 +82,24 @@ function normalizeDraftMeta(meta = {}) {
   return normalizedMeta;
 }
 
-function buildImageLookupByRows(rows = []) {
-  return rows.reduce((lookup, row) => {
-    const imageId = normalizePositiveId(row?.id);
-    const filename = typeof row?.filename === 'string' ? row.filename.trim() : '';
-    const fileType = typeof row?.file_type === 'string' ? row.file_type : null;
-    if (imageId && filename && (fileType === 'image' || fileType === null)) {
-      lookup[imageId] = { url: buildPublicAssetUrl(baseURL, `/article/images/${filename}`) };
-    }
-    return lookup;
-  }, {});
+async function buildImageLookupByRows(rows = []) {
+  const lookup = {};
+  await Promise.all(
+    rows.map(async (row) => {
+      const imageId = normalizePositiveId(row?.id);
+      const filename = typeof row?.filename === 'string' ? row.filename.trim() : '';
+      const fileType = typeof row?.file_type === 'string' ? row.file_type : null;
+      if (imageId && filename && (fileType === 'image' || fileType === null)) {
+        const resolvedUrl = await mediaRuntime.resolveImageUrl(imageId, {
+          variant: MEDIA_VARIANT.ORIGINAL,
+        });
+        lookup[imageId] = {
+          url: resolvedUrl || buildPublicAssetUrl(baseURL, `/article/images/${filename}`),
+        };
+      }
+    }),
+  );
+  return lookup;
 }
 
 function buildVideoLookupByRows(fileRows = [], videoMetaRows = []) {
@@ -158,7 +164,7 @@ async function hydrateDraftContentMedia(executor, draft) {
   }
 
   draft.content = hydrateStructuredContentMediaSources(structuredContent, {
-    imagesById: buildImageLookupByRows(fileRows),
+    imagesById: await buildImageLookupByRows(fileRows),
     videosById: buildVideoLookupByRows(fileRows, videoMetaRows),
   });
   return draft;
@@ -216,12 +222,7 @@ class DraftService {
         throw new Error('草稿保存后读取失败');
       }
 
-      const [validRows] = await conn.execute(buildValidateDraftFilesSql(), [
-        userId,
-        fileIds,
-        normalizedArticleId,
-        draft.id,
-      ]);
+      const [validRows] = await conn.execute(buildValidateDraftFilesSql(), [userId, fileIds, normalizedArticleId, draft.id]);
 
       if (validRows.length !== fileIds.length) {
         throw new BusinessError('草稿引用了无效文件', 400);

@@ -7,11 +7,13 @@ require('module-alias/register');
 const servicePath = path.resolve(__dirname, '../../src/service/draft.service.js');
 const databasePath = path.resolve(__dirname, '../../src/app/database.js');
 const urlsPath = path.resolve(__dirname, '../../src/constants/urls.js');
+const mediaRuntimePath = path.resolve(__dirname, '../../src/service/mediaRuntime.service.js');
 
-function loadServiceWithConnection(connectionMock) {
+function loadServiceWithConnection(connectionMock, mediaRuntimeMock = null) {
   delete require.cache[servicePath];
   delete require.cache[databasePath];
   delete require.cache[urlsPath];
+  delete require.cache[mediaRuntimePath];
 
   require.cache[databasePath] = {
     id: databasePath,
@@ -27,6 +29,17 @@ function loadServiceWithConnection(connectionMock) {
     exports: {
       baseURL: 'https://api.example',
       redirectURL: 'https://app.example',
+    },
+  };
+
+  require.cache[mediaRuntimePath] = {
+    id: mediaRuntimePath,
+    filename: mediaRuntimePath,
+    loaded: true,
+    exports: mediaRuntimeMock || {
+      async resolveImageUrl(fileId) {
+        return fileId === 11 ? 'https://api.example/article/images/fresh-image.png' : null;
+      },
     },
   };
 
@@ -103,8 +116,14 @@ test('upsertDraft: new draft inserts row, validates file refs, and binds draft_i
   assert.match(executeCalls[4].statement, /UPDATE file SET draft_id = \$2/i);
   assert.deepEqual(executeCalls[4].params, [9, 41, [11]]);
 
-  assert.equal(calls.some((call) => call.type === 'commit'), true);
-  assert.equal(calls.some((call) => call.type === 'rollback'), false);
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    true,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    false,
+  );
 });
 
 test('upsertDraft: direct service call rejects invalid articleId before starting transaction', async () => {
@@ -130,7 +149,7 @@ test('upsertDraft: direct service call rejects invalid articleId before starting
       assert.equal(error.message, '参数错误: articleId 必须是正整数');
       assert.equal(error.httpStatus, 400);
       return true;
-    }
+    },
   );
 
   assert.equal(getConnectionCalled, false);
@@ -159,7 +178,7 @@ test('upsertDraft: direct service call rejects invalid version before starting t
       assert.equal(error.message, '参数错误: version 必须是非负整数');
       assert.equal(error.httpStatus, 400);
       return true;
-    }
+    },
   );
 
   assert.equal(getConnectionCalled, false);
@@ -261,11 +280,17 @@ test('upsertDraft: zero affected rows becomes 409 conflict and rolls back transa
       assert.equal(error.message, '草稿版本冲突');
       assert.equal(error.httpStatus, 409);
       return true;
-    }
+    },
   );
 
-  assert.equal(calls.some((call) => call.type === 'commit'), false);
-  assert.equal(calls.some((call) => call.type === 'rollback'), true);
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    true,
+  );
 });
 
 test('getDraft: article draft checks ownership first and returns the matching draft', async () => {
@@ -312,56 +337,73 @@ test('getDraft: standalone draft lookup is active-only', async () => {
 
 test('getDraft: hydrates media src and poster from stable file ids for editor backfill', async () => {
   const calls = [];
-  const service = loadServiceWithConnection({
-    async execute(statement, params) {
-      calls.push({ statement, params });
+  const service = loadServiceWithConnection(
+    {
+      async execute(statement, params) {
+        calls.push({ statement, params });
 
-      if (calls.length === 1) {
-        return [[{
-          id: 51,
-          articleId: null,
-          version: 3,
-          content: {
-            type: 'doc',
-            content: [
+        if (calls.length === 1) {
+          return [
+            [
               {
-                type: 'image',
-                attrs: {
-                  imageId: 11,
-                  src: 'http://localhost:8000/article/images/legacy-image.png',
-                },
-              },
-              {
-                type: 'video',
-                attrs: {
-                  videoId: 22,
-                  src: 'http://localhost:8000/article/video/legacy-video.mp4',
-                  poster: 'http://localhost:8000/article/video/legacy-poster.png',
+                id: 51,
+                articleId: null,
+                version: 3,
+                content: {
+                  type: 'doc',
+                  content: [
+                    {
+                      type: 'image',
+                      attrs: {
+                        imageId: 11,
+                        src: 'http://localhost:8000/article/images/legacy-image.png',
+                      },
+                    },
+                    {
+                      type: 'video',
+                      attrs: {
+                        videoId: 22,
+                        src: 'http://localhost:8000/article/video/legacy-video.mp4',
+                        poster: 'http://localhost:8000/article/video/legacy-poster.png',
+                      },
+                    },
+                  ],
                 },
               },
             ],
-          },
-        }], []];
-      }
+            [],
+          ];
+        }
 
-      if (calls.length === 2) {
-        return [[
-          { id: 11, filename: 'fresh-image.png', file_type: 'image' },
-          { id: 22, filename: 'fresh-video.mp4', file_type: 'video' },
-        ], []];
-      }
+        if (calls.length === 2) {
+          return [
+            [
+              { id: 11, filename: 'fresh-image.png', file_type: 'image' },
+              { id: 22, filename: 'fresh-video.mp4', file_type: 'video' },
+            ],
+            [],
+          ];
+        }
 
-      if (calls.length === 3) {
-        return [[{ file_id: 22, poster: 'fresh-poster.png' }], []];
-      }
+        if (calls.length === 3) {
+          return [[{ file_id: 22, poster: 'fresh-poster.png' }], []];
+        }
 
-      return [[], []];
+        return [[], []];
+      },
     },
-  });
+    {
+      async resolveImageUrl(fileId, options) {
+        assert.equal(fileId, 11);
+        assert.deepEqual(options, { variant: 'original' });
+        return 'https://media.example/articles/77/images/11/hash-original.png';
+      },
+    },
+  );
 
   const result = await service.getDraft(9, null);
 
-  assert.equal(result.content.content[0].attrs.src, 'https://api.example/article/images/fresh-image.png');
+  assert.equal(result.content.content[0].attrs.src, 'https://media.example/articles/77/images/11/hash-original.png');
   assert.equal(result.content.content[1].attrs.src, 'https://api.example/article/video/fresh-video.mp4');
   assert.equal(result.content.content[1].attrs.poster, 'https://api.example/article/video/fresh-poster.png');
   assert.deepEqual(calls[1].params, [[11, 22]]);
@@ -406,7 +448,7 @@ test('getDraft: direct service call rejects invalid articleId', async () => {
       assert.equal(error.message, '参数错误: articleId 必须是正整数');
       assert.equal(error.httpStatus, 400);
       return true;
-    }
+    },
   );
 
   assert.equal(executeCalled, false);
@@ -447,7 +489,7 @@ test('getDraft: missing owned article becomes 404 for article draft lookup', asy
       assert.equal(error.message, '文章不存在或无权限');
       assert.equal(error.httpStatus, 404);
       return true;
-    }
+    },
   );
 });
 
@@ -486,8 +528,14 @@ test('deleteDraft: owner discard marks discarded and returns id', async () => {
   assert.deepEqual(executeCalls[0].params, [88, 9]);
   assert.match(executeCalls[1].statement, /UPDATE file SET draft_id = NULL/i);
   assert.deepEqual(executeCalls[1].params, [9, 88, []]);
-  assert.equal(calls.some((call) => call.type === 'commit'), true);
-  assert.equal(calls.some((call) => call.type === 'rollback'), false);
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    true,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    false,
+  );
 });
 
 test('deleteDraft: non-active draft yields 404', async () => {
@@ -522,12 +570,18 @@ test('deleteDraft: non-active draft yields 404', async () => {
       assert.equal(error.message, '草稿不存在');
       assert.equal(error.httpStatus, 404);
       return true;
-    }
+    },
   );
 
   assert.equal(calls.filter((call) => call.type === 'execute').length, 1);
-  assert.equal(calls.some((call) => call.type === 'commit'), false);
-  assert.equal(calls.some((call) => call.type === 'rollback'), true);
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    true,
+  );
 });
 
 test('deleteDraft: file unbind failure rolls back discard transaction', async () => {
@@ -564,8 +618,14 @@ test('deleteDraft: file unbind failure rolls back discard transaction', async ()
   await assert.rejects(() => service.deleteDraft(9, 88), /unbind failed/);
 
   assert.equal(calls.filter((call) => call.type === 'execute').length, 2);
-  assert.equal(calls.some((call) => call.type === 'commit'), false);
-  assert.equal(calls.some((call) => call.type === 'rollback'), true);
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    true,
+  );
 });
 
 test('deleteDraft: direct service call rejects invalid draftId before opening transaction', async () => {
@@ -584,7 +644,7 @@ test('deleteDraft: direct service call rejects invalid draftId before opening tr
       assert.equal(error.message, '参数错误: draftId 必须是正整数');
       assert.equal(error.httpStatus, 400);
       return true;
-    }
+    },
   );
 
   assert.equal(getConnectionCalled, false);

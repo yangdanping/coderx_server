@@ -47,6 +47,20 @@ function normalizeRow(row) {
   };
 }
 
+function normalizeFileIds(fileIds) {
+  if (!Array.isArray(fileIds)) {
+    throw new TypeError('fileIds must be an array');
+  }
+  const normalized = fileIds.map((fileId) => {
+    const value = Number(fileId);
+    if (!Number.isSafeInteger(value) || value <= 0) {
+      throw new TypeError('fileIds must contain only positive safe integers');
+    }
+    return value;
+  });
+  return Array.from(new Set(normalized));
+}
+
 function validateReservation({ fileId, variant, objectKey, sizeBytes, sha256 }) {
   if (!Number.isSafeInteger(Number(fileId)) || Number(fileId) <= 0) {
     throw new TypeError('fileId must be a positive safe integer');
@@ -323,6 +337,55 @@ class MediaObjectService {
       [fileId],
     );
     return rows.map(normalizeRow);
+  }
+
+  async prepareR2Deletion(fileIds) {
+    const normalizedFileIds = normalizeFileIds(fileIds);
+    if (normalizedFileIds.length === 0) return [];
+    const conn = await this.database.getConnection();
+
+    try {
+      await conn.beginTransaction();
+      const [rows] = await conn.execute(
+        `
+          SELECT ${selectFields()}
+          FROM media_object
+          WHERE file_id = ANY(?::bigint[])
+            AND provider = 'r2'
+            AND object_key IS NOT NULL
+          ORDER BY id ASC
+          FOR UPDATE;
+        `,
+        [normalizedFileIds],
+      );
+      const objects = rows.map(normalizeRow);
+      const pendingObjects = objects.filter((object) => object.status === MEDIA_OBJECT_STATUS.PENDING);
+      if (pendingObjects.length > 0) {
+        throw new MediaObjectConflictError(`R2 upload is still pending for media object ${pendingObjects[0].id}; retry deletion later`);
+      }
+      if (objects.length > 0) {
+        const [result] = await conn.execute(
+          `
+            UPDATE media_object
+            SET status = 'deleting',
+                last_error = NULL,
+                updated_at = clock_timestamp()
+            WHERE id = ANY(?::bigint[]);
+          `,
+          [objects.map((object) => object.id)],
+        );
+        if (result?.affectedRows !== objects.length) {
+          throw new MediaObjectStateTransitionError('Not every R2 media object could transition to deleting');
+        }
+      }
+      await conn.commit();
+      return objects;
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
+    }
   }
 }
 

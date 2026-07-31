@@ -1,5 +1,7 @@
 const connection = require('@/app/database');
 const { baseURL, redirectURL } = require('@/constants/urls');
+const { MEDIA_VARIANT } = require('@/constants/mediaStorage');
+const mediaRuntime = require('@/service/mediaRuntime.service');
 const { docToExcerpt, docToHtml, hydrateStructuredContentMediaSources, resolveStructuredArticleContent } = require('@/utils/articleContent');
 const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const BusinessError = require('@/errors/BusinessError');
@@ -102,7 +104,19 @@ async function buildArticleDerivedFields(structuredContent) {
   };
 }
 
-function hydrateArticleDerivedFields(article) {
+async function hydrateArticleDerivedFields(article) {
+  if (Array.isArray(article.images)) {
+    article.images = await Promise.all(
+      article.images.map(async (image) => {
+        const imageId = normalizePositiveId(image?.id);
+        if (!imageId) return image;
+        const resolvedUrl = await mediaRuntime.resolveImageUrl(imageId, {
+          variant: MEDIA_VARIANT.ORIGINAL,
+        });
+        return resolvedUrl ? { ...image, url: resolvedUrl } : image;
+      }),
+    );
+  }
   const structuredContent = resolveStructuredArticleContent(article?.contentJson, null);
   const mediaContext = {
     imagesById: buildImageLookupByRows(article.images),
@@ -119,6 +133,23 @@ function hydrateArticleDerivedFields(article) {
   article.contentHtml = docToHtml(article.contentJson, mediaContext);
   article.excerpt = article.excerpt || docToExcerpt(structuredContent) || '';
   return hydrateAvatarUrls(article, baseURL);
+}
+
+async function hydrateArticleListMedia(articles) {
+  await Promise.all(
+    articles.map(async (article) => {
+      const coverFileId = normalizePositiveId(article?.coverFileId);
+      if (coverFileId) {
+        article.cover = await mediaRuntime.resolveImageUrl(coverFileId, {
+          variant: MEDIA_VARIANT.SMALL,
+        });
+      } else {
+        article.cover = null;
+      }
+      delete article.coverFileId;
+    }),
+  );
+  return articles;
 }
 
 class ArticleService {
@@ -222,6 +253,7 @@ class ArticleService {
     });
     const executeParams = buildArticleListExecuteParams(queryParams, offset, limit);
     const [result] = await connection.execute(statement, executeParams);
+    await hydrateArticleListMedia(result);
     return hydrateAvatarUrls(result, baseURL);
   };
 
@@ -248,6 +280,7 @@ class ArticleService {
     });
     const executeParams = buildArticleListExecuteParams(queryParams, offset, limit);
     const [result] = await connection.execute(statement, executeParams);
+    await hydrateArticleListMedia(result);
     return hydrateAvatarUrls(result, baseURL);
   };
 
@@ -301,7 +334,7 @@ class ArticleService {
       await conn.beginTransaction();
 
       // 1. 先查询需要删除的图片文件列表（用于后续删除磁盘文件）
-      const statement1 = "SELECT filename FROM file WHERE article_id = ? AND (file_type = 'image' OR file_type IS NULL);";
+      const statement1 = "SELECT id, filename FROM file WHERE article_id = ? AND (file_type = 'image' OR file_type IS NULL);";
       const [images] = await conn.execute(statement1, [articleId]);
       imagesToDelete = images;
 
@@ -320,15 +353,18 @@ class ArticleService {
         视频数量: videosToDelete.length,
       });
 
-      // 3. 先删除 file 表中的所有关联记录（包括图片和视频）
+      // 3. 先幂等删除 R2 图片；失败则保留数据库与本地文件供安全重试
+      await mediaRuntime.deleteR2ObjectsForFiles(imagesToDelete.map((image) => image.id));
+
+      // 4. 删除 file 表中的所有关联记录（包括图片和视频）
       const statement3 = 'DELETE FROM file WHERE article_id = ?;';
       await conn.execute(statement3, [articleId]);
 
-      // 4. 删除文章（数据库会自动级联删除其他关联表：article_tag、article_like、article_collect、comment 等）
+      // 5. 删除文章（数据库会自动级联删除其他关联表：article_tag、article_like、article_collect、comment 等）
       const statement4 = 'DELETE FROM article WHERE id = ?;';
       const [result] = await conn.execute(statement4, [articleId]);
 
-      // 5. 提交事务
+      // 6. 提交事务
       await conn.commit();
 
       return { result, imagesToDelete, videosToDelete }; // 返回结果和需要删除的文件列表

@@ -6,11 +6,13 @@ require('module-alias/register');
 
 const taskPath = path.resolve(__dirname, '../../src/tasks/cleanOrphanFiles.js');
 const databasePath = path.resolve(__dirname, '../../src/app/database.js');
+const mediaRuntimePath = path.resolve(__dirname, '../../src/service/mediaRuntime.service.js');
 const cronPath = require.resolve('node-cron');
 
-function loadTaskWithConnection(connectionMock, cronMock = null) {
+function loadTaskWithConnection(connectionMock, cronMock = null, mediaRuntimeMock = null) {
   delete require.cache[taskPath];
   delete require.cache[databasePath];
+  delete require.cache[mediaRuntimePath];
   delete require.cache[cronPath];
 
   require.cache[databasePath] = {
@@ -30,6 +32,17 @@ function loadTaskWithConnection(connectionMock, cronMock = null) {
           start() {},
           stop() {},
         };
+      },
+    },
+  };
+
+  require.cache[mediaRuntimePath] = {
+    id: mediaRuntimePath,
+    filename: mediaRuntimePath,
+    loaded: true,
+    exports: mediaRuntimeMock || {
+      async deleteR2ObjectsForFiles() {
+        return { staged: 0, deleted: 0 };
       },
     },
   };
@@ -121,12 +134,27 @@ test('cleanOrphanFiles: pg uses pg-safe orphan lookup SQL and commits when no or
   assert.match(orphanLookupCall.statement, /f\.draft_id IS NULL/i);
   assert.deepEqual(orphanLookupCall.params, ['image', 7]);
 
-  assert.equal(logs.some((line) => line.includes('已清理 consumed 草稿: 2 条')), true);
-  assert.equal(logs.some((line) => line.includes('已清理 discarded 草稿: 1 条')), true);
-  assert.equal(logs.some((line) => line.includes('已清理 active 草稿: 0 条')), true);
+  assert.equal(
+    logs.some((line) => line.includes('已清理 consumed 草稿: 2 条')),
+    true,
+  );
+  assert.equal(
+    logs.some((line) => line.includes('已清理 discarded 草稿: 1 条')),
+    true,
+  );
+  assert.equal(
+    logs.some((line) => line.includes('已清理 active 草稿: 0 条')),
+    true,
+  );
 
-  assert.equal(calls.some((call) => call.type === 'commit'), true);
-  assert.equal(calls.some((call) => call.type === 'rollback'), false);
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    true,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    false,
+  );
 });
 
 test('task schedule: runs lifecycle draft cleanup once before image and video orphan lookups', async () => {
@@ -207,7 +235,10 @@ test('task schedule: runs lifecycle draft cleanup once before image and video or
   assert.equal(orphanLookupCalls.length, 2);
   assert.deepEqual(orphanLookupCalls[0].params, ['image', 7]);
   assert.deepEqual(orphanLookupCalls[1].params, ['video', 7]);
-  assert.equal(executeCalls.findIndex((call) => /FROM file f/i.test(call.statement)), 3);
+  assert.equal(
+    executeCalls.findIndex((call) => /FROM file f/i.test(call.statement)),
+    3,
+  );
 });
 
 test('task schedule: stops the current cron cycle when lifecycle draft cleanup fails', async () => {
@@ -280,6 +311,97 @@ test('task schedule: stops the current cron cycle when lifecycle draft cleanup f
   const orphanLookupCalls = executeCalls.filter((call) => /FROM file f/i.test(call.statement));
 
   assert.equal(orphanLookupCalls.length, 0);
-  assert.equal(calls.some((call) => call.type === 'rollback'), true);
-  assert.equal(calls.some((call) => call.type === 'commit'), false);
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    true,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    false,
+  );
+});
+
+test('cleanOrphanFiles: R2 deletion failure preserves orphan image rows for retry', async () => {
+  const calls = [];
+  const originalConsoleLog = console.log;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleError = console.error;
+
+  const task = loadTaskWithConnection(
+    {
+      dialect: 'pg',
+      async getConnection() {
+        return {
+          async beginTransaction() {
+            calls.push({ type: 'beginTransaction' });
+          },
+          async execute(statement, params) {
+            calls.push({ type: 'execute', statement, params });
+            if (/FROM file f/i.test(statement)) {
+              return [
+                [
+                  {
+                    id: 71,
+                    filename: 'missing-stage3-test.png',
+                    size: 12,
+                    age_in_units: 8,
+                  },
+                ],
+                [],
+              ];
+            }
+            if (/DELETE FROM file/i.test(statement)) {
+              return [{ affectedRows: 1 }, []];
+            }
+            return [[], []];
+          },
+          async commit() {
+            calls.push({ type: 'commit' });
+          },
+          async rollback() {
+            calls.push({ type: 'rollback' });
+          },
+          release() {
+            calls.push({ type: 'release' });
+          },
+        };
+      },
+    },
+    null,
+    {
+      async deleteR2ObjectsForFiles(fileIds) {
+        calls.push({ type: 'deleteR2', fileIds });
+        throw new Error('R2 unavailable');
+      },
+    },
+  );
+
+  console.log = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+
+  try {
+    await task.cleanOrphanFiles('image', 'manual', { skipDraftCleanup: true });
+  } finally {
+    console.log = originalConsoleLog;
+    console.warn = originalConsoleWarn;
+    console.error = originalConsoleError;
+  }
+
+  assert.deepEqual(
+    calls.find((call) => call.type === 'deleteR2'),
+    { type: 'deleteR2', fileIds: [71] },
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'execute' && /DELETE FROM file/i.test(call.statement)),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    true,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    false,
+  );
 });

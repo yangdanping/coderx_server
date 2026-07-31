@@ -9,12 +9,14 @@ const servicePath = path.resolve(__dirname, '../../src/service/article.service.j
 const databasePath = path.resolve(__dirname, '../../src/app/database.js');
 const urlsPath = path.resolve(__dirname, '../../src/constants/urls.js');
 const utilsPath = path.resolve(__dirname, '../../src/utils/index.js');
+const mediaRuntimePath = path.resolve(__dirname, '../../src/service/mediaRuntime.service.js');
 
-function loadServiceWithConnection(connectionMock) {
+function loadServiceWithConnection(connectionMock, mediaRuntimeMock = null) {
   delete require.cache[servicePath];
   delete require.cache[databasePath];
   delete require.cache[urlsPath];
   delete require.cache[utilsPath];
+  delete require.cache[mediaRuntimePath];
 
   require.cache[databasePath] = {
     id: databasePath,
@@ -38,6 +40,17 @@ function loadServiceWithConnection(connectionMock) {
     filename: utilsPath,
     loaded: true,
     exports: {},
+  };
+
+  require.cache[mediaRuntimePath] = {
+    id: mediaRuntimePath,
+    filename: mediaRuntimePath,
+    loaded: true,
+    exports: mediaRuntimeMock || {
+      async resolveImageUrl(fileId) {
+        return fileId === 11 ? 'https://api.example/article/images/current-image.png' : null;
+      },
+    },
   };
 
   return require(servicePath);
@@ -110,9 +123,7 @@ test('addArticle: pg requests insertId through RETURNING id (transactional path)
 
   assert.equal(result.insertId, 301);
   const insertCall = conn.calls.find(
-    (c) =>
-      c.statement &&
-      /INSERT INTO article \(user_id,title, content, excerpt\) VALUES \(\?,\?,\?::jsonb,\?\) RETURNING id;/i.test(c.statement),
+    (c) => c.statement && /INSERT INTO article \(user_id,title, content, excerpt\) VALUES \(\?,\?,\?::jsonb,\?\) RETURNING id;/i.test(c.statement),
   );
   assert.ok(insertCall, 'expected INSERT article on connection');
   assert.deepEqual(insertCall.params, [9, 'Title', JSON.stringify(contentJson), '结构化正文']);
@@ -141,7 +152,10 @@ test('addArticle with draftId: locks standalone draft, inserts article, consumes
   assert.match(stmts[1], /INSERT INTO article/i);
   assert.match(stmts[2], /UPDATE draft/i);
   assert.match(stmts[2], /consumed_article_id/i);
-  assert.equal(stmts.some((statement) => /UPDATE file/i.test(statement)), false);
+  assert.equal(
+    stmts.some((statement) => /UPDATE file/i.test(statement)),
+    false,
+  );
   const lockCall = conn.calls.find((c) => /FROM draft/i.test(c.statement || ''));
   assert.deepEqual(lockCall.params, [12, 9]);
   const insertCall = conn.calls.find((c) => /INSERT INTO article/i.test(c.statement || ''));
@@ -167,7 +181,7 @@ test('addArticle with invalid draftId: rejects before opening transaction', asyn
       assert.equal(err.httpStatus, 400);
       assert.equal(err.message, '参数错误: draftId 必须是正整数');
       return true;
-    }
+    },
   );
 
   assert.equal(getConnectionCalled, false);
@@ -192,12 +206,15 @@ test('addArticle with draftId: missing draft after lock throws 404 and rolls bac
     },
   });
 
-  await assert.rejects(() => service.addArticle(9, 'Title', 12), (err) => {
-    assert.ok(err instanceof BusinessError);
-    assert.equal(err.httpStatus, 404);
-    assert.equal(err.message, '草稿不存在');
-    return true;
-  });
+  await assert.rejects(
+    () => service.addArticle(9, 'Title', 12),
+    (err) => {
+      assert.ok(err instanceof BusinessError);
+      assert.equal(err.httpStatus, 404);
+      assert.equal(err.message, '草稿不存在');
+      return true;
+    },
+  );
   assert.deepEqual(
     conn.calls.filter((c) => c.op).map((c) => ({ op: c.op })),
     [{ op: 'beginTransaction' }, { op: 'rollback' }, { op: 'release' }],
@@ -226,11 +243,14 @@ test('addArticle with draftId: consume affects no rows rolls back', async () => 
     },
   });
 
-  await assert.rejects(() => service.addArticle(9, 'Title', 12), (err) => {
-    assert.ok(err instanceof BusinessError);
-    assert.equal(err.message, '草稿不存在');
-    return true;
-  });
+  await assert.rejects(
+    () => service.addArticle(9, 'Title', 12),
+    (err) => {
+      assert.ok(err instanceof BusinessError);
+      assert.equal(err.message, '草稿不存在');
+      return true;
+    },
+  );
   assert.deepEqual(
     conn.calls.filter((c) => c.op).map((c) => ({ op: c.op })),
     [{ op: 'beginTransaction' }, { op: 'rollback' }, { op: 'release' }],
@@ -310,7 +330,10 @@ test('update with draftId: locks article-linked draft then updates then consumes
   const consumeCall = conn.calls.find((c) => /UPDATE draft/i.test(c.statement || '') && /consumed/i.test(c.statement));
   assert.deepEqual(consumeCall.params, [44, 7, 100]);
   const stmts = conn.calls.filter((c) => c.statement).map((c) => c.statement);
-  assert.equal(stmts.some((statement) => /UPDATE file/i.test(statement)), false);
+  assert.equal(
+    stmts.some((statement) => /UPDATE file/i.test(statement)),
+    false,
+  );
 });
 
 test('update with invalid draftId: rejects before opening transaction', async () => {
@@ -330,7 +353,7 @@ test('update with invalid draftId: rejects before opening transaction', async ()
       assert.equal(err.httpStatus, 400);
       assert.equal(err.message, '参数错误: draftId 必须是正整数');
       return true;
-    }
+    },
   );
 
   assert.equal(getConnectionCalled, false);
@@ -365,7 +388,7 @@ test('update with draftId: article update affects no rows and rolls back without
       assert.equal(err.httpStatus, 404);
       assert.equal(err.message, '文章不存在');
       return true;
-    }
+    },
   );
 
   const executeCalls = conn.calls.filter((c) => c.statement);
@@ -405,7 +428,7 @@ test('update with draftId: consume affects no rows and rolls back', async () => 
       assert.equal(err.httpStatus, 404);
       assert.equal(err.message, '草稿不存在');
       return true;
-    }
+    },
   );
 
   assert.deepEqual(
@@ -464,12 +487,15 @@ test('update with draftId: missing draft throws 404 and rolls back', async () =>
     },
   });
 
-  await assert.rejects(() => service.update(7, 'T', 100, 44), (err) => {
-    assert.ok(err instanceof BusinessError);
-    assert.equal(err.httpStatus, 404);
-    assert.equal(err.message, '草稿不存在');
-    return true;
-  });
+  await assert.rejects(
+    () => service.update(7, 'T', 100, 44),
+    (err) => {
+      assert.ok(err instanceof BusinessError);
+      assert.equal(err.httpStatus, 404);
+      assert.equal(err.message, '草稿不存在');
+      return true;
+    },
+  );
   assert.deepEqual(
     conn.calls.filter((c) => c.op).map((c) => ({ op: c.op })),
     [{ op: 'beginTransaction' }, { op: 'rollback' }, { op: 'release' }],
@@ -481,16 +507,21 @@ test('getArticleById: derives detail html from structured content without readin
   const service = loadServiceWithConnection({
     async execute(statement, params) {
       executeCalls.push({ statement, params });
-      return [[{
-        id: 9,
-        title: 'derived detail',
-        contentJson: { type: 'doc', content: [] },
-        contentHtml: '<p>stale html from column</p>',
-        excerpt: '摘要',
-        images: [],
-        videos: [],
-        status: 0,
-      }], []];
+      return [
+        [
+          {
+            id: 9,
+            title: 'derived detail',
+            contentJson: { type: 'doc', content: [] },
+            contentHtml: '<p>stale html from column</p>',
+            excerpt: '摘要',
+            images: [],
+            videos: [],
+            status: 0,
+          },
+        ],
+        [],
+      ];
     },
   });
 
@@ -502,59 +533,247 @@ test('getArticleById: derives detail html from structured content without readin
 });
 
 test('getArticleById: hydrates legacy avatar and media src from stable ids', async () => {
-  const service = loadServiceWithConnection({
-    async execute() {
-      return [[{
-        id: 62,
-        title: 'legacy media article',
-        excerpt: '',
-        status: 0,
-        author: {
-          id: 3,
-          avatarUrl: 'http://localhost:8000/user/3/avatar',
-        },
-        contentJson: {
-          type: 'doc',
-          content: [
+  const service = loadServiceWithConnection(
+    {
+      async execute() {
+        return [
+          [
             {
-              type: 'image',
-              attrs: {
-                imageId: 11,
-                src: 'http://localhost:8000/article/images/legacy-image.png',
-                alt: 'demo',
+              id: 62,
+              title: 'legacy media article',
+              excerpt: '',
+              status: 0,
+              author: {
+                id: 3,
+                avatarUrl: 'http://localhost:8000/user/3/avatar',
               },
-            },
-            {
-              type: 'video',
-              attrs: {
-                videoId: 22,
-                src: 'http://localhost:8000/article/video/legacy-video.mp4',
-                poster: 'http://localhost:8000/article/video/legacy-poster.png',
+              contentJson: {
+                type: 'doc',
+                content: [
+                  {
+                    type: 'image',
+                    attrs: {
+                      imageId: 11,
+                      src: 'http://localhost:8000/article/images/legacy-image.png',
+                      alt: 'demo',
+                    },
+                  },
+                  {
+                    type: 'video',
+                    attrs: {
+                      videoId: 22,
+                      src: 'http://localhost:8000/article/video/legacy-video.mp4',
+                      poster: 'http://localhost:8000/article/video/legacy-poster.png',
+                    },
+                  },
+                ],
               },
+              contentHtml: '<p>stale html from column</p>',
+              images: [{ id: 11, url: 'https://api.example/article/images/current-image.png' }],
+              videos: [
+                {
+                  id: 22,
+                  url: 'https://api.example/article/video/current-video.mp4',
+                  poster: 'https://api.example/article/video/current-poster.png',
+                },
+              ],
             },
           ],
-        },
-        contentHtml: '<p>stale html from column</p>',
-        images: [
-          { id: 11, url: 'https://api.example/article/images/current-image.png' },
-        ],
-        videos: [
-          {
-            id: 22,
-            url: 'https://api.example/article/video/current-video.mp4',
-            poster: 'https://api.example/article/video/current-poster.png',
-          },
-        ],
-      }], []];
+          [],
+        ];
+      },
     },
-  });
+    {
+      async resolveImageUrl(fileId, options) {
+        assert.equal(fileId, 11);
+        assert.deepEqual(options, { variant: 'original' });
+        return 'https://media.example/articles/62/images/11/hash-original.png';
+      },
+    },
+  );
 
   const result = await service.getArticleById(62);
 
   assert.equal(result.author.avatarUrl, 'https://api.example/user/3/avatar');
-  assert.equal(result.contentJson.content[0].attrs.src, 'https://api.example/article/images/current-image.png');
+  assert.equal(result.contentJson.content[0].attrs.src, 'https://media.example/articles/62/images/11/hash-original.png');
   assert.equal(result.contentJson.content[1].attrs.src, 'https://api.example/article/video/current-video.mp4');
   assert.equal(result.contentJson.content[1].attrs.poster, 'https://api.example/article/video/current-poster.png');
-  assert.match(result.contentHtml, /current-image\.png/);
+  assert.match(result.contentHtml, /hash-original\.png/);
   assert.match(result.contentHtml, /current-video\.mp4/);
+});
+
+test('getArticleList: resolves the selected cover through the shared small-image URL resolver', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection(
+    {
+      async execute(statement, params) {
+        calls.push({ statement, params });
+        if (/COUNT\(DISTINCT a\.id\)/i.test(statement)) {
+          return [[{ total: 1 }], []];
+        }
+        return [
+          [
+            {
+              id: 62,
+              title: 'stage 3',
+              excerpt: 'summary',
+              status: 0,
+              coverFileId: 11,
+            },
+          ],
+          [],
+        ];
+      },
+    },
+    {
+      async resolveImageUrl(fileId, options) {
+        assert.equal(fileId, 11);
+        assert.deepEqual(options, { variant: 'small' });
+        return 'https://media.example/articles/62/images/11/hash-small.png';
+      },
+    },
+  );
+
+  const result = await service.getArticleList(0, 10);
+
+  assert.equal(result[0].cover, 'https://media.example/articles/62/images/11/hash-small.png');
+  assert.equal(Object.prototype.hasOwnProperty.call(result[0], 'coverFileId'), false);
+});
+
+test('getArticleList: preserves a null cover when the article has no cover image', async () => {
+  const service = loadServiceWithConnection(
+    {
+      async execute(statement) {
+        if (/COUNT\(DISTINCT a\.id\)/i.test(statement)) {
+          return [[{ total: 1 }], []];
+        }
+        return [
+          [
+            {
+              id: 63,
+              title: 'without cover',
+              excerpt: 'summary',
+              status: 0,
+              coverFileId: null,
+            },
+          ],
+          [],
+        ];
+      },
+    },
+    {
+      async resolveImageUrl() {
+        throw new Error('resolver must not run without a cover file id');
+      },
+    },
+  );
+
+  const result = await service.getArticleList(0, 10);
+
+  assert.equal(result[0].cover, null);
+  assert.equal(Object.prototype.hasOwnProperty.call(result[0], 'coverFileId'), false);
+});
+
+test('delete: removes staged image objects from R2 before deleting file and article rows', async () => {
+  const calls = [];
+  const conn = {
+    async beginTransaction() {
+      calls.push({ type: 'begin' });
+    },
+    async execute(statement, params) {
+      calls.push({ type: 'execute', statement, params });
+      if (/SELECT\s+f?\.?id[\s\S]+filename[\s\S]+FROM file/i.test(statement)) {
+        return [[{ id: 41, filename: 'cover.jpg' }], []];
+      }
+      if (/SELECT\s+f\.filename,\s*vm\.poster/i.test(statement)) return [[], []];
+      if (/DELETE FROM article/i.test(statement)) return [{ affectedRows: 1 }, []];
+      return [{ affectedRows: 1 }, []];
+    },
+    async commit() {
+      calls.push({ type: 'commit' });
+    },
+    async rollback() {
+      calls.push({ type: 'rollback' });
+    },
+    release() {
+      calls.push({ type: 'release' });
+    },
+  };
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      async deleteR2ObjectsForFiles(fileIds) {
+        calls.push({ type: 'deleteR2', fileIds });
+        return { staged: 2, deleted: 2 };
+      },
+    },
+  );
+
+  const result = await service.delete(9);
+
+  assert.deepEqual(result.imagesToDelete, [{ id: 41, filename: 'cover.jpg' }]);
+  const r2Index = calls.findIndex((call) => call.type === 'deleteR2');
+  const deleteFileIndex = calls.findIndex((call) => call.type === 'execute' && /DELETE FROM file/i.test(call.statement));
+  assert.ok(r2Index >= 0);
+  assert.ok(deleteFileIndex > r2Index);
+  assert.deepEqual(calls[r2Index].fileIds, [41]);
+});
+
+test('delete: R2 failure rolls back and preserves file rows for a safe retry', async () => {
+  const calls = [];
+  const conn = {
+    async beginTransaction() {
+      calls.push({ type: 'begin' });
+    },
+    async execute(statement) {
+      calls.push({ type: 'execute', statement });
+      if (/SELECT\s+f?\.?id[\s\S]+filename[\s\S]+FROM file/i.test(statement)) {
+        return [[{ id: 41, filename: 'cover.jpg' }], []];
+      }
+      if (/SELECT\s+f\.filename,\s*vm\.poster/i.test(statement)) return [[], []];
+      return [{ affectedRows: 1 }, []];
+    },
+    async commit() {
+      calls.push({ type: 'commit' });
+    },
+    async rollback() {
+      calls.push({ type: 'rollback' });
+    },
+    release() {
+      calls.push({ type: 'release' });
+    },
+  };
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      async deleteR2ObjectsForFiles() {
+        throw new Error('R2 unavailable');
+      },
+    },
+  );
+  const originalConsoleError = console.error;
+  console.error = () => {};
+
+  try {
+    await assert.rejects(service.delete(9), /R2 unavailable/);
+  } finally {
+    console.error = originalConsoleError;
+  }
+
+  assert.equal(
+    calls.some((call) => call.type === 'execute' && /DELETE FROM file/i.test(call.statement)),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    true,
+  );
 });

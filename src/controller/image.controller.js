@@ -2,6 +2,7 @@ const imageService = require('@/service/image.service');
 const Result = require('@/app/Result');
 const { baseURL } = require('@/constants/urls');
 const deleteFile = require('@/utils/deleteFile');
+const mediaRuntime = require('@/service/mediaRuntime.service');
 
 /**
  * 图片控制器
@@ -134,13 +135,16 @@ class ImageController {
     // 查询图片信息
     const files = await imageService.findImagesByIds(uploadedId);
 
-    // 删除物理文件
-    if (files.length) {
-      deleteFile(files);
-    }
+    // 先把所有 R2 对象置为 deleting 并幂等删除，失败时保留数据库与本地文件供重试
+    await mediaRuntime.deleteR2ObjectsForFiles(uploadedId);
 
     // 删除数据库记录（会自动删除 image_meta 记录，因为有外键级联）
     await imageService.deleteImages(uploadedId);
+
+    // 数据库删除成功后再幂等删除本地原图与 small
+    if (files.length) {
+      deleteFile(files);
+    }
 
     ctx.body = Result.success(`已删除${files.length}张图片成功`);
   };

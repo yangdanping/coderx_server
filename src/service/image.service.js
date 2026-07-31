@@ -1,5 +1,6 @@
 const connection = require('@/app/database');
 const SqlUtils = require('@/utils/SqlUtils');
+const mediaRuntime = require('@/service/mediaRuntime.service');
 const { buildAddImageFileSql, buildClearImageCoverSql, buildSetImageCoverSql } = require('./sql/image.sql');
 
 /**
@@ -77,6 +78,8 @@ class ImageService {
    */
   updateImageArticle = async (articleId, imageIds, coverImageId = null) => {
     const conn = await connection.getConnection();
+    let associatedImages = [];
+    let response;
     try {
       await conn.beginTransaction();
       console.log('🔄 开始事务 - 更新文章图片关联');
@@ -129,10 +132,25 @@ class ImageService {
         console.log(`🗑️ 步骤6 - 检测到被删除的图片ID:`, deletedImageIds);
       }
 
+      if (imageIds.length > 0) {
+        const [rows] = await conn.execute(
+          `
+            SELECT id, filename, mimetype, size, file_type
+            FROM file
+            WHERE article_id = ?
+              AND id = ANY(?::bigint[])
+              AND file_type = 'image'
+            ORDER BY id ASC;
+          `,
+          [articleId, imageIds],
+        );
+        associatedImages = rows;
+      }
+
       await conn.commit();
       console.log('✅ 事务提交成功 - 图片关联更新完成');
 
-      return {
+      response = {
         success: true,
         affectedRows: imageIds.length,
         deletedCount: deletedImageIds.length,
@@ -145,6 +163,26 @@ class ImageService {
     } finally {
       conn.release();
     }
+
+    if (associatedImages.length > 0) {
+      try {
+        const promotion = await mediaRuntime.promotePublishedImages({
+          articleId,
+          images: associatedImages,
+        });
+        console.log('☁️ 发布图片存储晋升结果:', {
+          attempted: promotion.attempted,
+          ready: promotion.ready,
+          inProgress: promotion.inProgress,
+          failed: promotion.failed,
+          reason: promotion.reason,
+        });
+      } catch (error) {
+        console.error('❌ 发布图片存储晋升失败，继续保留本地关联:', error.message);
+      }
+    }
+
+    return response;
   };
 
   /**

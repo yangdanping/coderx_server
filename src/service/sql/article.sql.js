@@ -86,7 +86,7 @@ function buildPgArticleListSql(baseURL, redirectURL, { tagId, userId, idList, ke
           COALESCE(likes_agg.likes, 0) likes,
           COALESCE(comment_agg.commentCount, 0) AS "commentCount",
           tags_agg.tags,
-          cover_agg.cover,
+          cover_agg."coverFileId" AS "coverFileId",
           CONCAT('${redirectURL}/article/', a.id) AS "articleUrl"
       FROM article a
       LEFT JOIN ${userTableExpr()} u ON a.user_id = u.id
@@ -108,7 +108,7 @@ function buildPgArticleListSql(baseURL, redirectURL, { tagId, userId, idList, ke
           GROUP BY ag.article_id
       ) tags_agg ON a.id = tags_agg.article_id
       LEFT JOIN LATERAL (
-          SELECT CONCAT('${baseURL}/article/images/', f.filename, '?type=small') cover
+          SELECT f.id AS "coverFileId"
           FROM file f
           LEFT JOIN image_meta im ON f.id = im.file_id
           WHERE f.article_id = a.id AND f.file_type = 'image' AND im.is_cover = TRUE

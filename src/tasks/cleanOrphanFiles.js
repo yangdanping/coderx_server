@@ -12,15 +12,11 @@
 
 const cron = require('node-cron');
 const connection = require('@/app/database');
+const mediaRuntime = require('@/service/mediaRuntime.service');
 const fs = require('fs');
 const path = require('path');
 const SqlUtils = require('@/utils/SqlUtils');
-const {
-  buildDeleteConsumedDraftsSql,
-  buildDeleteDiscardedDraftsSql,
-  buildDeleteExpiredActiveDraftsSql,
-  buildFindOrphanFilesSql,
-} = require('./cleanOrphanFiles.sql');
+const { buildDeleteConsumedDraftsSql, buildDeleteDiscardedDraftsSql, buildDeleteExpiredActiveDraftsSql, buildFindOrphanFilesSql } = require('./cleanOrphanFiles.sql');
 
 // 配置：通过环境变量控制执行频率
 // 测试模式：export CLEAN_CRON_MODE=test
@@ -216,17 +212,11 @@ const cleanOrphanFiles = async (fileType, method = 'cron', options = {}) => {
     if (fileType === 'image') {
       // 图片孤儿：未关联文章 且 未被视频封面引用
       const statement = buildFindOrphanFilesSql('image', fileThreshold.unit);
-      [orphanFiles] = await conn.execute(
-        statement,
-        [fileType, fileThreshold.interval],
-      );
+      [orphanFiles] = await conn.execute(statement, [fileType, fileThreshold.interval]);
     } else if (fileType === 'video') {
       // 视频孤儿：未关联文章
       const statement = buildFindOrphanFilesSql('video', fileThreshold.unit);
-      [orphanFiles] = await conn.execute(
-        statement,
-        [fileType, fileThreshold.interval],
-      );
+      [orphanFiles] = await conn.execute(statement, [fileType, fileThreshold.interval]);
     } else {
       throw new Error(`不支持的文件类型: ${fileType}`);
     }
@@ -245,16 +235,13 @@ const cleanOrphanFiles = async (fileType, method = 'cron', options = {}) => {
       console.log(`   ${index + 1}. ID: ${file.id}, 文件: ${file.filename}, 创建于: ${file.age_in_units} ${unitText}前`);
     });
 
-    // 3. 删除物理文件（视频类型会从 SQL JOIN 出的 vm.poster 传入真实封面文件名）
-    let deletedFilesCount = 0;
-    for (const file of orphanFiles) {
-      if (deletePhysicalFile(file.filename, config.uploadDir, file.poster)) {
-        deletedFilesCount++;
-      }
+    // 3. 图片可能已经晋升到 R2；先幂等删除远端对象，失败则保留记录和本地文件供重试
+    const fileIds = orphanFiles.map((file) => file.id);
+    if (fileType === 'image') {
+      await mediaRuntime.deleteR2ObjectsForFiles(fileIds);
     }
 
     // 4. 删除数据库记录（使用参数化查询防止 SQL 注入）
-    const fileIds = orphanFiles.map((file) => file.id);
     const [deleteResult] = await conn.execute(`DELETE FROM file WHERE ${SqlUtils.queryIn('id', fileIds)}`, fileIds);
 
     // 5. 记录清理日志（可选，需要先创建 cleanup_log 表）
@@ -271,6 +258,14 @@ const cleanOrphanFiles = async (fileType, method = 'cron', options = {}) => {
     // }
 
     await conn.commit();
+
+    // 5. 数据库提交成功后再幂等删除本地文件
+    let deletedFilesCount = 0;
+    for (const file of orphanFiles) {
+      if (deletePhysicalFile(file.filename, config.uploadDir, file.poster)) {
+        deletedFilesCount++;
+      }
+    }
 
     console.log(`✅ 清理完成! 删除了 ${deletedFilesCount} 个物理文件，${deleteResult.affectedRows} 条数据库记录`);
 

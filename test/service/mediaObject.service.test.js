@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 
 require('module-alias/register');
 
-const { MediaCapacityExceededError, MediaObjectStateTransitionError, createMediaObjectService } = require('@/service/mediaObject.service');
+const { MediaCapacityExceededError, MediaObjectConflictError, MediaObjectStateTransitionError, createMediaObjectService } = require('@/service/mediaObject.service');
 const { MEDIA_CAPACITY_ADVISORY_LOCK_KEY } = require('@/constants/mediaStorage');
 
 const SHA256 = crypto.createHash('sha256').update('capacity fixture').digest('hex');
@@ -223,4 +223,90 @@ test('mediaObjectService: rejects stale or duplicate state transitions that affe
   await assert.rejects(service.markReady(mediaObject), MediaObjectStateTransitionError);
   await assert.rejects(service.markFailed(mediaObject, new Error('late failure')), MediaObjectStateTransitionError);
   await assert.rejects(service.markVerificationFailed(mediaObject, new Error('late verification failure')), MediaObjectStateTransitionError);
+});
+
+test('mediaObjectService: stages every R2 row for idempotent deletion in one locked transaction', async () => {
+  const rows = [
+    {
+      id: 71,
+      fileId: 512,
+      provider: 'r2',
+      variant: 'original',
+      objectKey: 'articles/88/images/512/hash-original.jpg',
+      localPath: null,
+      sizeBytes: 123,
+      sha256: SHA256,
+      status: 'ready',
+    },
+    {
+      id: 72,
+      fileId: 512,
+      provider: 'r2',
+      variant: 'small',
+      objectKey: 'articles/88/images/512/hash-small.jpg',
+      localPath: null,
+      sizeBytes: 45,
+      sha256: SHA256,
+      status: 'failed',
+    },
+  ];
+  const { calls, database } = createDatabaseMock((statement) => {
+    if (/SELECT[\s\S]+FROM media_object[\s\S]+FOR UPDATE/i.test(statement)) {
+      return [rows, []];
+    }
+    if (/UPDATE media_object[\s\S]+status\s*=\s*'deleting'/i.test(statement)) {
+      return [{ affectedRows: 2 }, []];
+    }
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = createMediaObjectService({ database });
+
+  const result = await service.prepareR2Deletion([512, 512]);
+
+  assert.deepEqual(result, rows);
+  const executeCalls = calls.filter((call) => call.type === 'execute');
+  assert.match(executeCalls[0].statement, /provider\s*=\s*'r2'[\s\S]+object_key\s+IS NOT NULL[\s\S]+FOR UPDATE/i);
+  assert.deepEqual(executeCalls[0].params, [[512]]);
+  assert.match(executeCalls[1].statement, /status\s*=\s*'deleting'/i);
+  assert.deepEqual(executeCalls[1].params, [[71, 72]]);
+  assert.deepEqual(
+    calls.filter((call) => call.type !== 'execute'),
+    [{ type: 'begin' }, { type: 'commit' }, { type: 'release' }],
+  );
+});
+
+test('mediaObjectService: refuses deletion while an upload reservation is still pending', async () => {
+  const { calls, database } = createDatabaseMock((statement) => {
+    if (/SELECT[\s\S]+FROM media_object[\s\S]+FOR UPDATE/i.test(statement)) {
+      return [
+        [
+          {
+            id: 73,
+            fileId: 513,
+            provider: 'r2',
+            variant: 'original',
+            objectKey: 'articles/88/images/513/hash-original.jpg',
+            localPath: null,
+            sizeBytes: 123,
+            sha256: SHA256,
+            status: 'pending',
+          },
+        ],
+        [],
+      ];
+    }
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = createMediaObjectService({ database });
+
+  await assert.rejects(() => service.prepareR2Deletion([513]), MediaObjectConflictError);
+
+  assert.equal(
+    calls.some((call) => call.type === 'execute' && /UPDATE media_object[\s\S]+status\s*=\s*'deleting'/i.test(call.statement)),
+    false,
+  );
+  assert.deepEqual(
+    calls.filter((call) => call.type !== 'execute'),
+    [{ type: 'begin' }, { type: 'rollback' }, { type: 'release' }],
+  );
 });
