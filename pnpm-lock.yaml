@@ -14,6 +14,9 @@ importers:
       '@ai-sdk/openai-compatible':
         specifier: ^3.0.14
         version: 3.0.14(zod@4.4.3)
+      '@aws-sdk/client-s3':
+        specifier: ^3.1098.0
+        version: 3.1098.0
       '@koa/cors':
         specifier: ^5.0.0
         version: 5.0.0
@@ -22,13 +25,13 @@ importers:
         version: 4.0.0(koa@3.2.1)(multer@2.2.0)
       '@koa/router':
         specifier: ^15.7.0
-        version: 15.7.0(koa@3.2.1)
+        version: 15.7.0(koa@3.2.1)(supports-color@10.2.2)
       '@mozilla/readability':
         specifier: ^0.6.0
         version: 0.6.0
       '@socket.io/redis-adapter':
         specifier: ^8.3.0
-        version: 8.3.0(socket.io-adapter@2.5.6)
+        version: 8.3.0(socket.io-adapter@2.5.6(supports-color@10.2.2))(supports-color@10.2.2)
       '@tiptap/core':
         specifier: ^3.28.0
         version: 3.28.0(@tiptap/pm@3.28.0)
@@ -61,13 +64,13 @@ importers:
         version: 17.4.2
       google-auth-library:
         specifier: ^10.9.1
-        version: 10.9.1
+        version: 10.9.1(supports-color@10.2.2)
       happy-dom:
         specifier: ^20.11.1
         version: 20.11.1
       jimp:
         specifier: ^1.6.1
-        version: 1.6.1
+        version: 1.6.1(supports-color@10.2.2)
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
@@ -79,7 +82,7 @@ importers:
         version: 4.4.1
       log4js:
         specifier: ^6.9.1
-        version: 6.9.1
+        version: 6.9.1(supports-color@10.2.2)
       markdown-it:
         specifier: ^14.3.0
         version: 14.3.0
@@ -100,10 +103,10 @@ importers:
         version: 6.1.0(@opentelemetry/api@1.9.1)
       sharp:
         specifier: 0.35.3
-        version: 0.35.3
+        version: 0.35.3(@types/node@26.1.1)
       socket.io:
         specifier: ^4.8.3
-        version: 4.8.3
+        version: 4.8.3(supports-color@10.2.2)
       validator:
         specifier: ^13.15.35
         version: 13.15.35
@@ -150,6 +153,78 @@ packages:
   '@ai-sdk/provider@4.0.3':
     resolution: {integrity: sha512-e0CpNWJUY7OxAFAnCZkw+ri9QOHWwTs1tXP42782KFGCU07qt8NiXCrCVowyCB5dP2r5/Uls+g2oPd8kOJn9dw==}
     engines: {node: '>=22'}
+
+  '@aws-sdk/checksums@3.1000.23':
+    resolution: {integrity: sha512-Hv4VX5+IdDYmAbOdiwZguz8fLh3WnE4VtyJwVNEHLulA+OYy7Z5L0ETGUlX2T4g8DLO8XxCV8CyWrtVL4uwqkg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/client-s3@3.1098.0':
+    resolution: {integrity: sha512-6Z53QG2jdujsCt3eHO2cjCpdfvz2Pgs+hP/NINuGONZUJmdrHLLDvWM9F114Yq0NPIGtk+yA/GCjG3XiUhw+gA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/core@3.977.3':
+    resolution: {integrity: sha512-6YZTpF5Zzl0KdSrztM0l6ErKdnXrnnodIDYfayHE9SFfZU8Ubxls7H2XnfWT121jgwiG+WP1z5kyfVDsH5V4qA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-env@3.972.64':
+    resolution: {integrity: sha512-14kkR5aj1c7D+cYCrEcG2W3xw87wMYAEUeB/tMiQ2j0RVKzzdewd4mJw1+Q0JVLr4IFU1JHGDCyj0WqLrtIixg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-http@3.972.66':
+    resolution: {integrity: sha512-BrZxoXScBZ+nTOYy388zHkz1n5cS8C+uGFMozD4w9OKEWMq39Cu/9l/k385Hb54dtv0VIeh12f8h67o3xDNH9g==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-ini@3.973.9':
+    resolution: {integrity: sha512-d/mMvS+sQjSWNA6+JCldK1YB/jQmtoWM8Izj10mrOZdRCeWNVb8IYQuuyHHKKKXcpGo5Pd0LIK6onHbLvlhuVQ==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-login@3.972.71':
+    resolution: {integrity: sha512-l93922lXnTs5RjM3QrMCXSmXiEgLFLaQ0Lco9F3tJ08o0mzGdAj6m2nAXDuTMHoUuL0u7RKmrhm+Z8/7GCilyg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-node@3.972.75':
+    resolution: {integrity: sha512-sdFhR4E3HWZefGL6OsBhxqXdqtFvxGOh8VLfiu9yttPgVNcpEozEDPmrTYmXA3CIf6npUETVLveQPGQ7GBzVhg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-process@3.972.64':
+    resolution: {integrity: sha512-Q5noG5vfFo++bUaLGcjj8OHX5tmwa1O/5nDVMeaSSZgjzgvWbW6tgu/gSa+aENwcJXjoXDQh+8TRZR2zHds/aw==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-sso@3.973.8':
+    resolution: {integrity: sha512-37okeZyRdVkGrU6nyKBPGqQvyl/7CEiMpUVOb0+BCNCIR0VAuBxNgjMb0mnsR1EXm8dqQFfQZOJ5YW/0sBfa1w==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/credential-provider-web-identity@3.972.70':
+    resolution: {integrity: sha512-Ps/f9USafScb6CSQTRPNMzdKL5x5XRwDIRgFvnuFWfClGZe7/fI7iCFqXdxKjc9LBxP28E7iUgNloGgfgw406w==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/middleware-sdk-s3@3.972.69':
+    resolution: {integrity: sha512-ziSQA8AkB+u4K/5t/SStFbeoiNTG04reUeddCLNCAgmdRJGQ3+MJcpZOXXLdD6uyfCqSK1/R6004gRdXvHbYQA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/nested-clients@3.997.38':
+    resolution: {integrity: sha512-jQDs+nxnmgo4+WPOmY373HIC8jx4KyYYMYDI74FWrzX3Ba9fYsV0dSA+7PNYNkhRbbRCRLre83tQ31F1ACCHkA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/signature-v4-multi-region@3.996.43':
+    resolution: {integrity: sha512-lKekx8bLBXSv4O+cslk9Zfnw2XKSkWBs3uWL5QGhH2ZAQfNS7FE0vcSSN2vD/AhxX54ZTywWxR4STThoeOXlBA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/token-providers@3.1098.0':
+    resolution: {integrity: sha512-6cFAviffeqYGjrXn4FqGbWcTxB3nbpBpQXUm6MvnrWZThJaVBTHHnespHgSUh4yVLfzhipSh9H/XjzkHQd9P4g==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/types@3.974.2':
+    resolution: {integrity: sha512-3W6IUtSxFbH6X7Wb7DzGCV5QiFQsd0g8bOfntpmDxQlzBoKWUMBu/JPQR0DwkE+Hpnxd6db1tXbOwdeHddG6cA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/xml-builder@3.972.37':
+    resolution: {integrity: sha512-zKq4HQum8JwDyEuyfuI4bbiAcU0KxP6qy+9PR/IsR92IyE/DaBAikzAS50tjxip4bqIIANpCcG+Yyj6CVhXupg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws/lambda-invoke-store@0.3.0':
+    resolution: {integrity: sha512-sl4Bm6yiMNYrZKkqqDFWN0UfnWhlS8ivKxrYl+6t0gCLrqr8y3B2IqZZbFRkfaVVp7C/baApyh71P+LeE1A2sQ==}
+    engines: {node: '>=18.0.0'}
 
   '@borewit/text-codec@0.2.2':
     resolution: {integrity: sha512-DDaRehssg1aNrH4+2hnj1B7vnUGEjU6OIlyRdkMd0aUdIUvKXrJfXsy8LVtXAy7DRvYVluWbMspsRhz2lcW0mQ==}
@@ -495,6 +570,30 @@ packages:
     peerDependencies:
       '@redis/client': ^6.1.0
 
+  '@smithy/core@3.31.1':
+    resolution: {integrity: sha512-CyogUINxvi7C7LDsh8Syo6hVJOT9ckz4rG8dRZfTJ8r91HkMY59PnNooaj7WcHyxEkxPfBAmbgztZU+xTo76lg==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/credential-provider-imds@4.4.16':
+    resolution: {integrity: sha512-QfuLWAkLzptffFW980AFeHZFdqds2B64rpEd3uJ6lgs3xVn9QegGMUgUcj+4d7dRrAsya3r58ZKpku97WcFb4w==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/fetch-http-handler@5.6.13':
+    resolution: {integrity: sha512-4fW86pEUOMbrD5nkbyl/tTvPHHWJFbuB2odl6ps9lWfHoXf9HWh3Q/Smh59qH1g7+c/BSZghX6bbUk4gsiMs8A==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/node-http-handler@4.9.13':
+    resolution: {integrity: sha512-Nmd/Nl35zfYrd+a6OO2cDJb3GPh9bgTjIUhcM+JFfjpp8/osCgboDV5nCT1I01Pv6R13eSKDKLSoVa5ZB6Zsfw==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/signature-v4@5.6.12':
+    resolution: {integrity: sha512-I6KLtq3H0qqSuV9vLglfi8puHqzygzWHOnI4z/Rdoo+q50vvo18vBRdPAvvEtcaKROz7Zn6qnPa14kRfPH6PcQ==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/types@4.16.1':
+    resolution: {integrity: sha512-0JFs3V2y2M9tKW5na/qxe69Zv+uxLMO7QBbhxF/FHu/Gp2NFZAAL9tWl9PU02xxo07pb3G9FTyjNc6D5uZrJIg==}
+    engines: {node: '>=18.0.0'}
+
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
 
@@ -732,6 +831,9 @@ packages:
 
   bmp-ts@1.0.9:
     resolution: {integrity: sha512-cTEHk2jLrPyi+12M3dhpEbnnPOsaZuq7C45ylbbQIiWgDFZq4UVYPEY5mlqjvsj/6gJv9qX5sa+ebDzLXT28Vw==}
+
+  bowser@2.14.1:
+    resolution: {integrity: sha512-tzPjzCxygAKWFOJP011oxFHs57HzIhOEracIgAePE4pqB3LikALKnSzUyU4MGs9/iCEUuHlAJTjTc5M+u7YEGg==}
 
   buffer-equal-constant-time@1.0.1:
     resolution: {integrity: sha512-zRpUiDwd/xk6ADqPMATG8vc9VPrkck7T07OIx0gnjmJAnHnTVXNQG3vfvWNuiZIkwu9KrKdA1iJKfsfTVxE6NA==}
@@ -1643,6 +1745,171 @@ snapshots:
     dependencies:
       json-schema: 0.4.0
 
+  '@aws-sdk/checksums@3.1000.23':
+    dependencies:
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/client-s3@3.1098.0':
+    dependencies:
+      '@aws-sdk/checksums': 3.1000.23
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/credential-provider-node': 3.972.75
+      '@aws-sdk/middleware-sdk-s3': 3.972.69
+      '@aws-sdk/signature-v4-multi-region': 3.996.43
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/fetch-http-handler': 5.6.13
+      '@smithy/node-http-handler': 4.9.13
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/core@3.977.3':
+    dependencies:
+      '@aws-sdk/types': 3.974.2
+      '@aws-sdk/xml-builder': 3.972.37
+      '@aws/lambda-invoke-store': 0.3.0
+      '@smithy/core': 3.31.1
+      '@smithy/signature-v4': 5.6.12
+      '@smithy/types': 4.16.1
+      bowser: 2.14.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-env@3.972.64':
+    dependencies:
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-http@3.972.66':
+    dependencies:
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/fetch-http-handler': 5.6.13
+      '@smithy/node-http-handler': 4.9.13
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-ini@3.973.9':
+    dependencies:
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/credential-provider-env': 3.972.64
+      '@aws-sdk/credential-provider-http': 3.972.66
+      '@aws-sdk/credential-provider-login': 3.972.71
+      '@aws-sdk/credential-provider-process': 3.972.64
+      '@aws-sdk/credential-provider-sso': 3.973.8
+      '@aws-sdk/credential-provider-web-identity': 3.972.70
+      '@aws-sdk/nested-clients': 3.997.38
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/credential-provider-imds': 4.4.16
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-login@3.972.71':
+    dependencies:
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/nested-clients': 3.997.38
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-node@3.972.75':
+    dependencies:
+      '@aws-sdk/credential-provider-env': 3.972.64
+      '@aws-sdk/credential-provider-http': 3.972.66
+      '@aws-sdk/credential-provider-ini': 3.973.9
+      '@aws-sdk/credential-provider-process': 3.972.64
+      '@aws-sdk/credential-provider-sso': 3.973.8
+      '@aws-sdk/credential-provider-web-identity': 3.972.70
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/credential-provider-imds': 4.4.16
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-process@3.972.64':
+    dependencies:
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-sso@3.973.8':
+    dependencies:
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/nested-clients': 3.997.38
+      '@aws-sdk/token-providers': 3.1098.0
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/credential-provider-web-identity@3.972.70':
+    dependencies:
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/nested-clients': 3.997.38
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/middleware-sdk-s3@3.972.69':
+    dependencies:
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/signature-v4-multi-region': 3.996.43
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/nested-clients@3.997.38':
+    dependencies:
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/signature-v4-multi-region': 3.996.43
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/fetch-http-handler': 5.6.13
+      '@smithy/node-http-handler': 4.9.13
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/signature-v4-multi-region@3.996.43':
+    dependencies:
+      '@aws-sdk/types': 3.974.2
+      '@smithy/signature-v4': 5.6.12
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/token-providers@3.1098.0':
+    dependencies:
+      '@aws-sdk/core': 3.977.3
+      '@aws-sdk/nested-clients': 3.997.38
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/types@3.974.2':
+    dependencies:
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/xml-builder@3.972.37':
+    dependencies:
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws/lambda-invoke-store@0.3.0': {}
+
   '@borewit/text-codec@0.2.2': {}
 
   '@emnapi/runtime@1.11.2':
@@ -1758,21 +2025,21 @@ snapshots:
   '@img/sharp-win32-x64@0.35.3':
     optional: true
 
-  '@jimp/core@1.6.1':
+  '@jimp/core@1.6.1(supports-color@10.2.2)':
     dependencies:
       '@jimp/file-ops': 1.6.1
       '@jimp/types': 1.6.1
       '@jimp/utils': 1.6.1
       await-to-js: 3.0.0
       exif-parser: 0.1.12
-      file-type: 21.3.4
+      file-type: 21.3.4(supports-color@10.2.2)
       mime: 3.0.0
     transitivePeerDependencies:
       - supports-color
 
-  '@jimp/diff@1.6.1':
+  '@jimp/diff@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/plugin-resize': 1.6.1
+      '@jimp/plugin-resize': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       '@jimp/utils': 1.6.1
       pixelmatch: 5.3.0
@@ -1781,43 +2048,43 @@ snapshots:
 
   '@jimp/file-ops@1.6.1': {}
 
-  '@jimp/js-bmp@1.6.1':
+  '@jimp/js-bmp@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       '@jimp/utils': 1.6.1
       bmp-ts: 1.0.9
     transitivePeerDependencies:
       - supports-color
 
-  '@jimp/js-gif@1.6.1':
+  '@jimp/js-gif@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       gifwrap: 0.10.1
       omggif: 1.0.10
     transitivePeerDependencies:
       - supports-color
 
-  '@jimp/js-jpeg@1.6.1':
+  '@jimp/js-jpeg@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       jpeg-js: 0.4.4
     transitivePeerDependencies:
       - supports-color
 
-  '@jimp/js-png@1.6.1':
+  '@jimp/js-png@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       pngjs: 7.0.0
     transitivePeerDependencies:
       - supports-color
 
-  '@jimp/js-tiff@1.6.1':
+  '@jimp/js-tiff@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       utif2: 4.1.0
     transitivePeerDependencies:
@@ -1829,9 +2096,9 @@ snapshots:
       '@jimp/utils': 1.6.1
       zod: 3.25.76
 
-  '@jimp/plugin-blur@1.6.1':
+  '@jimp/plugin-blur@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
       '@jimp/utils': 1.6.1
     transitivePeerDependencies:
       - supports-color
@@ -1841,9 +2108,9 @@ snapshots:
       '@jimp/types': 1.6.1
       zod: 3.25.76
 
-  '@jimp/plugin-color@1.6.1':
+  '@jimp/plugin-color@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       '@jimp/utils': 1.6.1
       tinycolor2: 1.6.0
@@ -1851,30 +2118,30 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@jimp/plugin-contain@1.6.1':
+  '@jimp/plugin-contain@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
       '@jimp/plugin-blit': 1.6.1
-      '@jimp/plugin-resize': 1.6.1
+      '@jimp/plugin-resize': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       '@jimp/utils': 1.6.1
       zod: 3.25.76
     transitivePeerDependencies:
       - supports-color
 
-  '@jimp/plugin-cover@1.6.1':
+  '@jimp/plugin-cover@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
-      '@jimp/plugin-crop': 1.6.1
-      '@jimp/plugin-resize': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-crop': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-resize': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       zod: 3.25.76
     transitivePeerDependencies:
       - supports-color
 
-  '@jimp/plugin-crop@1.6.1':
+  '@jimp/plugin-crop@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       '@jimp/utils': 1.6.1
       zod: 3.25.76
@@ -1902,15 +2169,15 @@ snapshots:
       '@jimp/types': 1.6.1
       zod: 3.25.76
 
-  '@jimp/plugin-hash@1.6.1':
+  '@jimp/plugin-hash@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
-      '@jimp/js-bmp': 1.6.1
-      '@jimp/js-jpeg': 1.6.1
-      '@jimp/js-png': 1.6.1
-      '@jimp/js-tiff': 1.6.1
-      '@jimp/plugin-color': 1.6.1
-      '@jimp/plugin-resize': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
+      '@jimp/js-bmp': 1.6.1(supports-color@10.2.2)
+      '@jimp/js-jpeg': 1.6.1(supports-color@10.2.2)
+      '@jimp/js-png': 1.6.1(supports-color@10.2.2)
+      '@jimp/js-tiff': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-color': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-resize': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       '@jimp/utils': 1.6.1
       any-base: 1.1.0
@@ -1922,11 +2189,11 @@ snapshots:
       '@jimp/types': 1.6.1
       zod: 3.25.76
 
-  '@jimp/plugin-print@1.6.1':
+  '@jimp/plugin-print@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
-      '@jimp/js-jpeg': 1.6.1
-      '@jimp/js-png': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
+      '@jimp/js-jpeg': 1.6.1(supports-color@10.2.2)
+      '@jimp/js-png': 1.6.1(supports-color@10.2.2)
       '@jimp/plugin-blit': 1.6.1
       '@jimp/types': 1.6.1
       parse-bmfont-ascii: 1.0.6
@@ -1942,30 +2209,30 @@ snapshots:
       image-q: 4.0.0
       zod: 3.25.76
 
-  '@jimp/plugin-resize@1.6.1':
+  '@jimp/plugin-resize@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       zod: 3.25.76
     transitivePeerDependencies:
       - supports-color
 
-  '@jimp/plugin-rotate@1.6.1':
+  '@jimp/plugin-rotate@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
-      '@jimp/plugin-crop': 1.6.1
-      '@jimp/plugin-resize': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-crop': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-resize': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       '@jimp/utils': 1.6.1
       zod: 3.25.76
     transitivePeerDependencies:
       - supports-color
 
-  '@jimp/plugin-threshold@1.6.1':
+  '@jimp/plugin-threshold@1.6.1(supports-color@10.2.2)':
     dependencies:
-      '@jimp/core': 1.6.1
-      '@jimp/plugin-color': 1.6.1
-      '@jimp/plugin-hash': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-color': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-hash': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       '@jimp/utils': 1.6.1
       zod: 3.25.76
@@ -1990,9 +2257,9 @@ snapshots:
       koa: 3.2.1
       multer: 2.2.0
 
-  '@koa/router@15.7.0(koa@3.2.1)':
+  '@koa/router@15.7.0(koa@3.2.1)(supports-color@10.2.2)':
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       http-errors: 2.0.1
       koa: 3.2.1
       koa-compose: 4.1.0
@@ -2027,13 +2294,46 @@ snapshots:
     dependencies:
       '@redis/client': 6.1.0(@opentelemetry/api@1.9.1)
 
+  '@smithy/core@3.31.1':
+    dependencies:
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@smithy/credential-provider-imds@4.4.16':
+    dependencies:
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@smithy/fetch-http-handler@5.6.13':
+    dependencies:
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@smithy/node-http-handler@4.9.13':
+    dependencies:
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@smithy/signature-v4@5.6.12':
+    dependencies:
+      '@smithy/core': 3.31.1
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@smithy/types@4.16.1':
+    dependencies:
+      tslib: 2.8.1
+
   '@socket.io/component-emitter@3.1.2': {}
 
-  '@socket.io/redis-adapter@8.3.0(socket.io-adapter@2.5.6)':
+  '@socket.io/redis-adapter@8.3.0(socket.io-adapter@2.5.6(supports-color@10.2.2))(supports-color@10.2.2)':
     dependencies:
-      debug: 4.3.7
+      debug: 4.3.7(supports-color@10.2.2)
       notepack.io: 3.0.1
-      socket.io-adapter: 2.5.6
+      socket.io-adapter: 2.5.6(supports-color@10.2.2)
       uid2: 1.0.0
     transitivePeerDependencies:
       - supports-color
@@ -2192,9 +2492,9 @@ snapshots:
       '@tiptap/extensions': 3.28.0(@tiptap/core@3.28.0(@tiptap/pm@3.28.0))(@tiptap/pm@3.28.0)
       '@tiptap/pm': 3.28.0
 
-  '@tokenizer/inflate@0.4.1':
+  '@tokenizer/inflate@0.4.1(supports-color@10.2.2)':
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       token-types: 6.1.2
     transitivePeerDependencies:
       - supports-color
@@ -2264,6 +2564,8 @@ snapshots:
   bignumber.js@9.3.1: {}
 
   bmp-ts@1.0.9: {}
+
+  bowser@2.14.1: {}
 
   buffer-equal-constant-time@1.0.1: {}
 
@@ -2349,13 +2651,17 @@ snapshots:
 
   dayjs@1.11.21: {}
 
-  debug@4.3.7:
+  debug@4.3.7(supports-color@10.2.2):
     dependencies:
       ms: 2.1.3
+    optionalDependencies:
+      supports-color: 10.2.2
 
-  debug@4.4.3:
+  debug@4.4.3(supports-color@10.2.2):
     dependencies:
       ms: 2.1.3
+    optionalDependencies:
+      supports-color: 10.2.2
 
   deep-equal@1.0.1: {}
 
@@ -2389,7 +2695,7 @@ snapshots:
 
   engine.io-parser@5.2.3: {}
 
-  engine.io@6.6.5:
+  engine.io@6.6.5(supports-color@10.2.2):
     dependencies:
       '@types/cors': 2.8.19
       '@types/node': 25.0.3
@@ -2397,7 +2703,7 @@ snapshots:
       base64id: 2.0.0
       cookie: 0.7.2
       cors: 2.8.5
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       engine.io-parser: 5.2.3
       ws: 8.18.3
     transitivePeerDependencies:
@@ -2432,9 +2738,9 @@ snapshots:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
 
-  file-type@21.3.4:
+  file-type@21.3.4(supports-color@10.2.2):
     dependencies:
-      '@tokenizer/inflate': 0.4.1
+      '@tokenizer/inflate': 0.4.1(supports-color@10.2.2)
       strtok3: 10.3.5
       token-types: 6.1.2
       uint8array-extras: 1.5.0
@@ -2457,17 +2763,17 @@ snapshots:
 
   function-bind@1.1.2: {}
 
-  gaxios@7.3.0:
+  gaxios@7.3.0(supports-color@10.2.2):
     dependencies:
       extend: 3.0.2
-      https-proxy-agent: 7.0.6
+      https-proxy-agent: 7.0.6(supports-color@10.2.2)
       node-fetch: 3.3.2
     transitivePeerDependencies:
       - supports-color
 
-  gcp-metadata@8.1.2:
+  gcp-metadata@8.1.2(supports-color@10.2.2):
     dependencies:
-      gaxios: 7.3.0
+      gaxios: 7.3.0(supports-color@10.2.2)
       google-logging-utils: 1.1.4
       json-bigint: 1.0.0
     transitivePeerDependencies:
@@ -2500,12 +2806,12 @@ snapshots:
       image-q: 4.0.0
       omggif: 1.0.10
 
-  google-auth-library@10.9.1:
+  google-auth-library@10.9.1(supports-color@10.2.2):
     dependencies:
       base64-js: 1.5.1
       ecdsa-sig-formatter: 1.0.11
-      gaxios: 7.3.0
-      gcp-metadata: 8.1.2
+      gaxios: 7.3.0(supports-color@10.2.2)
+      gcp-metadata: 8.1.2(supports-color@10.2.2)
       google-logging-utils: 1.1.3
       jws: 4.0.1
     transitivePeerDependencies:
@@ -2559,10 +2865,10 @@ snapshots:
       statuses: 2.0.2
       toidentifier: 1.0.1
 
-  https-proxy-agent@7.0.6:
+  https-proxy-agent@7.0.6(supports-color@10.2.2):
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -2580,33 +2886,33 @@ snapshots:
 
   inherits@2.0.4: {}
 
-  jimp@1.6.1:
+  jimp@1.6.1(supports-color@10.2.2):
     dependencies:
-      '@jimp/core': 1.6.1
-      '@jimp/diff': 1.6.1
-      '@jimp/js-bmp': 1.6.1
-      '@jimp/js-gif': 1.6.1
-      '@jimp/js-jpeg': 1.6.1
-      '@jimp/js-png': 1.6.1
-      '@jimp/js-tiff': 1.6.1
+      '@jimp/core': 1.6.1(supports-color@10.2.2)
+      '@jimp/diff': 1.6.1(supports-color@10.2.2)
+      '@jimp/js-bmp': 1.6.1(supports-color@10.2.2)
+      '@jimp/js-gif': 1.6.1(supports-color@10.2.2)
+      '@jimp/js-jpeg': 1.6.1(supports-color@10.2.2)
+      '@jimp/js-png': 1.6.1(supports-color@10.2.2)
+      '@jimp/js-tiff': 1.6.1(supports-color@10.2.2)
       '@jimp/plugin-blit': 1.6.1
-      '@jimp/plugin-blur': 1.6.1
+      '@jimp/plugin-blur': 1.6.1(supports-color@10.2.2)
       '@jimp/plugin-circle': 1.6.1
-      '@jimp/plugin-color': 1.6.1
-      '@jimp/plugin-contain': 1.6.1
-      '@jimp/plugin-cover': 1.6.1
-      '@jimp/plugin-crop': 1.6.1
+      '@jimp/plugin-color': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-contain': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-cover': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-crop': 1.6.1(supports-color@10.2.2)
       '@jimp/plugin-displace': 1.6.1
       '@jimp/plugin-dither': 1.6.1
       '@jimp/plugin-fisheye': 1.6.1
       '@jimp/plugin-flip': 1.6.1
-      '@jimp/plugin-hash': 1.6.1
+      '@jimp/plugin-hash': 1.6.1(supports-color@10.2.2)
       '@jimp/plugin-mask': 1.6.1
-      '@jimp/plugin-print': 1.6.1
+      '@jimp/plugin-print': 1.6.1(supports-color@10.2.2)
       '@jimp/plugin-quantize': 1.6.1
-      '@jimp/plugin-resize': 1.6.1
-      '@jimp/plugin-rotate': 1.6.1
-      '@jimp/plugin-threshold': 1.6.1
+      '@jimp/plugin-resize': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-rotate': 1.6.1(supports-color@10.2.2)
+      '@jimp/plugin-threshold': 1.6.1(supports-color@10.2.2)
       '@jimp/types': 1.6.1
       '@jimp/utils': 1.6.1
     transitivePeerDependencies:
@@ -2701,13 +3007,13 @@ snapshots:
 
   lodash.once@4.1.1: {}
 
-  log4js@6.9.1:
+  log4js@6.9.1(supports-color@10.2.2):
     dependencies:
       date-format: 4.0.14
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       flatted: 3.3.3
       rfdc: 1.4.1
-      streamroller: 3.1.5
+      streamroller: 3.1.5(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -2973,7 +3279,7 @@ snapshots:
 
   setprototypeof@1.2.0: {}
 
-  sharp@0.35.3:
+  sharp@0.35.3(@types/node@26.1.1):
     dependencies:
       '@img/colour': 1.1.0
       detect-libc: 2.1.2
@@ -3004,6 +3310,7 @@ snapshots:
       '@img/sharp-win32-arm64': 0.35.3
       '@img/sharp-win32-ia32': 0.35.3
       '@img/sharp-win32-x64': 0.35.3
+      '@types/node': 26.1.1
 
   shell-quote@1.8.4: {}
 
@@ -3037,31 +3344,31 @@ snapshots:
 
   simple-xml-to-json@1.2.7: {}
 
-  socket.io-adapter@2.5.6:
+  socket.io-adapter@2.5.6(supports-color@10.2.2):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       ws: 8.18.3
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  socket.io-parser@4.2.5:
+  socket.io-parser@4.2.5(supports-color@10.2.2):
     dependencies:
       '@socket.io/component-emitter': 3.1.2
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  socket.io@4.8.3:
+  socket.io@4.8.3(supports-color@10.2.2):
     dependencies:
       accepts: 1.3.8
       base64id: 2.0.0
       cors: 2.8.5
-      debug: 4.4.3
-      engine.io: 6.6.5
-      socket.io-adapter: 2.5.6
-      socket.io-parser: 4.2.5
+      debug: 4.4.3(supports-color@10.2.2)
+      engine.io: 6.6.5(supports-color@10.2.2)
+      socket.io-adapter: 2.5.6(supports-color@10.2.2)
+      socket.io-parser: 4.2.5(supports-color@10.2.2)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -3073,10 +3380,10 @@ snapshots:
 
   statuses@2.0.2: {}
 
-  streamroller@3.1.5:
+  streamroller@3.1.5(supports-color@10.2.2):
     dependencies:
       date-format: 4.0.14
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       fs-extra: 8.1.0
     transitivePeerDependencies:
       - supports-color
