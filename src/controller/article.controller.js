@@ -7,7 +7,6 @@ const historyService = require('@/service/history.service.js');
 const { IMG_PATH, VIDEO_PATH } = require('@/constants/filePaths');
 const Utils = require('@/utils');
 const Result = require('@/app/Result');
-const deleteFile = require('@/utils/deleteFile');
 
 function isPlainObject(value) {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -193,34 +192,12 @@ class ArticleController {
    */
   delete = async (ctx, next) => {
     const { articleId } = ctx.params;
-    const { result, imagesToDelete, videosToDelete } = await articleService.delete(articleId);
+    const { result, localCleanup } = await articleService.delete(articleId, ctx.user.id);
 
     ctx.body = Result.success(result);
-
-    // 事务成功后，异步删除磁盘文件（不阻塞响应）
-    Promise.resolve().then(() => {
-      try {
-        let deletedCount = 0;
-
-        if (imagesToDelete && imagesToDelete.length > 0) {
-          deleteFile(imagesToDelete, 'img');
-          deletedCount += imagesToDelete.length;
-          console.log(`✅ 成功删除文章 ${articleId} 的 ${imagesToDelete.length} 个图片文件`);
-        }
-
-        if (videosToDelete && videosToDelete.length > 0) {
-          deleteFile(videosToDelete, 'video');
-          deletedCount += videosToDelete.length;
-          console.log(`✅ 成功删除文章 ${articleId} 的 ${videosToDelete.length} 个视频文件（含封面）`);
-        }
-
-        if (deletedCount > 0) {
-          console.log(`📁 文章 ${articleId} 共删除 ${deletedCount} 个文件`);
-        }
-      } catch (fileError) {
-        console.error('❌ 删除磁盘文件失败（不影响业务）:', fileError);
-      }
-    });
+    if (localCleanup?.pendingIds?.length) {
+      console.warn(`文章 ${articleId} 的 ${localCleanup.pendingIds.length} 个本地文件已进入持久化重试队列`);
+    }
   };
   changeTag = async (ctx, next) => {
     const { tags } = ctx;
@@ -275,12 +252,22 @@ class ArticleController {
     const { filename } = ctx.params;
 
     try {
-      // 拼接视频文件的完整路径
-      const videoPath = path.join(VIDEO_PATH, filename);
+      const videoRoot = path.resolve(VIDEO_PATH);
+      // Router 会先解码 %2F；只接受单个 basename，并拒绝符号链接，防止公开回退路由越出视频目录。
+      if (typeof filename !== 'string' || !filename || filename !== path.basename(filename)) {
+        ctx.status = 404;
+        ctx.body = Result.fail('视频文件不存在');
+        return;
+      }
+      const videoPath = path.resolve(videoRoot, filename);
+      if (path.dirname(videoPath) !== videoRoot) {
+        ctx.status = 404;
+        ctx.body = Result.fail('视频文件不存在');
+        return;
+      }
 
-      // 检查文件是否存在
-      if (!fs.existsSync(videoPath)) {
-        console.log('视频文件不存在:', videoPath);
+      // lstat 拒绝目录和可能指向根目录外的符号链接，只允许普通文件。
+      if (!fs.existsSync(videoPath) || !fs.lstatSync(videoPath).isFile()) {
         ctx.status = 404;
         ctx.body = Result.fail('视频文件不存在');
         return;
@@ -308,10 +295,15 @@ class ArticleController {
       // 支持视频流式传输(支持拖动进度条)
       const range = ctx.headers.range;
       if (range) {
-        // 解析 Range 头
-        const parts = range.replace(/bytes=/, '').split('-');
-        const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : stats.size - 1;
+        const match = /^bytes=(\d+)-(\d*)$/.exec(range);
+        const start = match ? Number(match[1]) : Number.NaN;
+        const end = match && match[2] ? Number(match[2]) : stats.size - 1;
+        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= stats.size || end < start || end >= stats.size) {
+          ctx.status = 416;
+          ctx.response.set('content-range', `bytes */${stats.size}`);
+          ctx.body = Result.fail('Range 请求无效');
+          return;
+        }
         const chunksize = end - start + 1;
 
         ctx.status = 206; // Partial Content

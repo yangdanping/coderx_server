@@ -1,4 +1,5 @@
 const videoService = require('@/service/video.service');
+const mediaRuntime = require('@/service/mediaRuntime.service');
 const Result = require('@/app/Result');
 const BusinessError = require('@/errors/BusinessError');
 const { baseURL } = require('@/constants/urls');
@@ -84,16 +85,30 @@ class VideoController {
       // 即使将来有别的入口（比如补跑脚本）直接调用 processVideoAsset，也能正确标记
       await videoService.updateTranscodeStatus(videoId, 'processing');
 
-      const [metadata] = await Promise.all([
-        this.probeVideo(videoPath),
-        this.runFfmpegScreenshot(videoPath, posterFilename, outputFolder, videoId),
-      ]);
+      const [metadata] = await Promise.all([this.probeVideo(videoPath), this.runFfmpegScreenshot(videoPath, posterFilename, outputFolder, videoId)]);
 
       await videoService.updateVideoMetadata(videoId, metadata);
       await videoService.updateVideoPoster(videoId, posterFilename);
       await videoService.updateTranscodeStatus(videoId, 'completed');
 
       console.log(`✅ [视频 ${videoId}] 流水线完成: metadata + poster 已写库`, metadata);
+
+      try {
+        // 服务层在同一事务内重读 article_id/completed 并持有 file 行锁直至上传结束，
+        // 因此解绑或删除无法在这里用陈旧 article key 发布对象。
+        const promotion = await videoService.promotePublishedVideoIds([videoId]);
+        console.log(`☁️ [视频 ${videoId}] 转码后存储晋升结果:`, {
+          attempted: promotion.attempted,
+          ready: promotion.ready,
+          inProgress: promotion.inProgress,
+          failed: promotion.failed,
+          skippedMissingAssets: promotion.skippedMissingAssets,
+          completed: promotion.completed,
+          reason: promotion.reason,
+        });
+      } catch (promotionError) {
+        console.error(`❌ [视频 ${videoId}] 转码已完成但存储晋升失败，继续保留本地副本:`, promotionError.message);
+      }
     } catch (err) {
       console.error(`❌ [视频 ${videoId}] 流水线失败:`, err.message);
       // 状态兜底：哪怕 update 失败也只记日志，不再外抛（流水线本身就是 fire-and-forget）
@@ -217,6 +232,7 @@ class VideoController {
    * 用于发布文章时，将上传的视频与文章ID关联
    */
   updateVideoArticle = async (ctx, next) => {
+    const userId = ctx.user.id;
     const { articleId } = ctx.params;
     const { videoIds } = ctx.request.body;
 
@@ -226,7 +242,7 @@ class VideoController {
     }
 
     if (videoIds.length === 0) {
-      const result = await videoService.updateVideoArticle(articleId, []);
+      const result = await videoService.updateVideoArticle(articleId, [], userId);
       console.log(`清空文章 ${articleId} 的视频关联`, result);
       ctx.body = Result.success(result);
       return;
@@ -243,14 +259,13 @@ class VideoController {
       return;
     }
 
-    const validVideoIds = await videoService.filterValidVideoIds(normalizedVideoIds);
-    if (validVideoIds.length !== normalizedVideoIds.length) {
+    if (normalizedVideoIds.length !== videoIds.length) {
       ctx.body = Result.fail('参数错误: videoIds 中包含无效视频ID');
       return;
     }
 
-    const result = await videoService.updateVideoArticle(articleId, validVideoIds);
-    console.log(`关联 ${validVideoIds.length} 个视频到文章 ${articleId}`, result);
+    const result = await videoService.updateVideoArticle(articleId, normalizedVideoIds, userId);
+    console.log(`关联 ${result.affectedRows} 个视频到文章 ${articleId}`, result);
     ctx.body = Result.success(result);
   };
 
@@ -259,10 +274,9 @@ class VideoController {
    *
    * 鉴权策略（防越权）：
    * 1. 先把 videoIds 归一化成正整数集合（去重、过滤非法值）
-   * 2. 通过 findVideosByIds(ids, userId) 查询——SQL 内已带 user_id 过滤，
-   *    若返回条数 < 请求条数，说明 ID 不存在或不属于当前用户，整批拒绝
-   *    （全有或全无，避免「能删几个就删几个」的部分成功语义）
-   * 3. deleteVideos(ids, userId) 再次在 DELETE 语句里校验 user_id，双重兜底
+   * 2. deleteVideos(ids, userId) 在同一事务内锁定归属行，整批校验后先删除 R2，
+   *    再删除数据库记录；pending promotion 或 R2 失败都会回滚并保留本地文件。
+   * 3. 数据库事务提交后才幂等删除 EC2 的视频与封面副本。
    */
   deleteVideo = async (ctx, next) => {
     const userId = ctx.user.id;
@@ -279,40 +293,13 @@ class VideoController {
       return;
     }
 
-    // 1. 查询归属当前用户的视频信息
-    const videos = await videoService.findVideosByIds(normalizedIds, userId);
-
-    // 2. 归属校验：条数不匹配即认为存在越权或无效 ID，整批拒绝
-    if (videos.length !== normalizedIds.length) {
-      console.warn(`⚠️ 用户 ${userId} 尝试删除非归属或不存在的视频:`, {
-        requested: normalizedIds,
-        matched: videos.map((v) => v.id),
-      });
-      ctx.body = Result.fail('无权删除部分视频，或视频不存在');
-      return;
+    // 1. 先锁行并删除 R2/数据库；服务层会整批校验归属并阻止 pending 上传竞态
+    const { videosToDelete, localCleanup } = await videoService.deleteVideos(normalizedIds, userId);
+    if (localCleanup?.pendingIds?.length) {
+      console.warn(`${localCleanup.pendingIds.length} 个本地视频文件已进入持久化重试队列`);
     }
 
-    // 3. 删除物理文件（包括视频和封面）
-    videos.forEach((video) => {
-      const videoPath = path.join('./public/video', video.filename);
-      if (fs.existsSync(videoPath)) {
-        fs.unlinkSync(videoPath);
-        console.log(`🗑️ 已删除视频文件: ${video.filename}`);
-      }
-
-      if (video.poster) {
-        const posterPath = path.join('./public/video', video.poster);
-        if (fs.existsSync(posterPath)) {
-          fs.unlinkSync(posterPath);
-          console.log(`🗑️ 已删除视频封面: ${video.poster}`);
-        }
-      }
-    });
-
-    // 4. 删除数据库记录（DELETE 里再次带 user_id 作第二道防线）
-    await videoService.deleteVideos(normalizedIds, userId);
-
-    ctx.body = Result.success(`已删除${videos.length}个视频`);
+    ctx.body = Result.success(`已删除${videosToDelete.length}个视频`);
   };
 
   /**
@@ -328,9 +315,12 @@ class VideoController {
     }
 
     const posterFilename = typeof video.poster === 'string' ? video.poster.trim() : '';
+    const normalizedVideoId = Number(video.id ?? videoId);
+    const [resolvedUrl, resolvedPoster] = await Promise.all([mediaRuntime.resolveVideoUrl(normalizedVideoId), mediaRuntime.resolveVideoPosterUrl(normalizedVideoId)]);
     ctx.body = Result.success({
       ...video,
-      poster: posterFilename ? `${baseURL}/article/video/${posterFilename}` : null,
+      url: resolvedUrl || `${baseURL}/article/video/${video.filename}`,
+      poster: resolvedPoster || (posterFilename ? `${baseURL}/article/video/${posterFilename}` : null),
     });
   };
 }

@@ -75,3 +75,29 @@ test('mediaUrlService: ignores non-ready R2 rows and falls back to local URLs', 
   assert.equal(await service.resolveVideoUrl(640), 'https://api.example/local/640/video');
   assert.equal(await service.resolveVideoPosterUrl(640), 'https://api.example/local/640/poster');
 });
+
+test('mediaUrlService: ready video and poster variants resolve independently through the CDN', async () => {
+  const { service } = createService({
+    readMode: 'r2_preferred',
+    objects: [
+      { status: 'ready', variant: 'video', objectKey: 'articles/88/videos/640/hash-video.mp4' },
+      { status: 'ready', variant: 'poster', objectKey: 'articles/88/videos/640/hash-poster.jpg' },
+    ],
+  });
+
+  assert.equal(await service.resolveVideoUrl(640), 'https://media.example/articles/88/videos/640/hash-video.mp4');
+  assert.equal(await service.resolveVideoPosterUrl(640), 'https://media.example/articles/88/videos/640/hash-poster.jpg');
+});
+
+test('mediaUrlService: switching reads to local bypasses ready video and poster objects', async () => {
+  const { service } = createService({
+    readMode: 'local',
+    objects: [
+      { status: 'ready', variant: 'video', objectKey: 'video-key' },
+      { status: 'ready', variant: 'poster', objectKey: 'poster-key' },
+    ],
+  });
+
+  assert.equal(await service.resolveVideoUrl(640), 'https://api.example/local/640/video');
+  assert.equal(await service.resolveVideoPosterUrl(640), 'https://api.example/local/640/poster');
+});

@@ -2,6 +2,7 @@ const connection = require('@/app/database');
 const { baseURL, redirectURL } = require('@/constants/urls');
 const { MEDIA_VARIANT } = require('@/constants/mediaStorage');
 const mediaRuntime = require('@/service/mediaRuntime.service');
+const localMediaCleanup = require('@/service/localMediaCleanup.service');
 const { docToExcerpt, docToHtml, hydrateStructuredContentMediaSources, resolveStructuredArticleContent } = require('@/utils/articleContent');
 const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
 const BusinessError = require('@/errors/BusinessError');
@@ -114,6 +115,20 @@ async function hydrateArticleDerivedFields(article) {
           variant: MEDIA_VARIANT.ORIGINAL,
         });
         return resolvedUrl ? { ...image, url: resolvedUrl } : image;
+      }),
+    );
+  }
+  if (Array.isArray(article.videos)) {
+    article.videos = await Promise.all(
+      article.videos.map(async (video) => {
+        const videoId = normalizePositiveId(video?.id);
+        if (!videoId) return video;
+        const [resolvedUrl, resolvedPoster] = await Promise.all([mediaRuntime.resolveVideoUrl(videoId), mediaRuntime.resolveVideoPosterUrl(videoId)]);
+        return {
+          ...video,
+          ...(resolvedUrl ? { url: resolvedUrl } : {}),
+          poster: resolvedPoster || null,
+        };
       }),
     );
   }
@@ -323,51 +338,72 @@ class ArticleService {
       conn.release();
     }
   };
-  delete = async (articleId) => {
+  delete = async (articleId, userId) => {
+    const normalizedArticleId = normalizePositiveId(articleId);
+    const normalizedUserId = normalizePositiveId(userId);
+    if (normalizedArticleId === null || normalizedUserId === null) {
+      throw new BusinessError('参数错误: articleId 和 userId 必须是正整数', 400);
+    }
     // 获取独立连接以支持事务
     const conn = await connection.getConnection();
     let imagesToDelete = [];
     let videosToDelete = [];
+    let cleanupIds = [];
+    let result;
 
     try {
       // 开始事务
       await conn.beginTransaction();
 
-      // 1. 先查询需要删除的图片文件列表（用于后续删除磁盘文件）
-      const statement1 = "SELECT id, filename FROM file WHERE article_id = ? AND (file_type = 'image' OR file_type IS NULL);";
-      const [images] = await conn.execute(statement1, [articleId]);
-      imagesToDelete = images;
+      // 所有会同时触碰 article/file 的事务统一按 article -> file 顺序取锁，
+      // 避免与视频关联更新形成锁顺序反转；服务层同时兜底校验文章归属。
+      const [ownedArticles] = await conn.execute('SELECT id FROM article WHERE id = ? AND user_id = ? FOR UPDATE;', [normalizedArticleId, normalizedUserId]);
+      if (!ownedArticles[0]) {
+        throw new BusinessError('文章不存在或无权删除', 403);
+      }
 
-      // 2. 查询需要删除的视频文件列表（包括封面）
-      const statement2 = `
-        SELECT f.filename, vm.poster
+      // 1. 锁定文章的全部逻辑媒体，阻止 promotion 在删除检查之后再创建 pending 行
+      const statement1 = `
+        SELECT f.id, f.filename, f.file_type, vm.poster, vm.transcode_status
         FROM file f
         LEFT JOIN video_meta vm ON f.id = vm.file_id
-        WHERE f.article_id = ? AND f.file_type = 'video';
+        WHERE f.article_id = ?
+          AND (f.file_type IN ('image', 'video') OR f.file_type IS NULL)
+        ORDER BY f.id ASC
+        FOR UPDATE OF f;
       `;
-      const [videos] = await conn.execute(statement2, [articleId]);
-      videosToDelete = videos;
+      const [mediaRows] = await conn.execute(statement1, [normalizedArticleId]);
+      const processingVideo = mediaRows.find((file) => file.file_type === 'video' && ['pending', 'processing'].includes(file.transcode_status));
+      if (processingVideo) {
+        throw new BusinessError(`视频仍在处理中，请稍后重试删除文章（视频 ID: ${processingVideo.id}）`, 409);
+      }
+      imagesToDelete = mediaRows.filter((file) => file.file_type !== 'video').map((file) => ({ id: file.id, filename: file.filename }));
+      videosToDelete = mediaRows.filter((file) => file.file_type === 'video').map((file) => ({ id: file.id, filename: file.filename, poster: file.poster }));
 
       console.log(`删除文章 ${articleId}:`, {
         图片数量: imagesToDelete.length,
         视频数量: videosToDelete.length,
       });
 
-      // 3. 先幂等删除 R2 图片；失败则保留数据库与本地文件供安全重试
-      await mediaRuntime.deleteR2ObjectsForFiles(imagesToDelete.map((image) => image.id));
+      // 2. 先幂等删除 R2 图片、视频和封面；失败则保留数据库与本地文件供安全重试
+      await mediaRuntime.deleteR2ObjectsForFiles(mediaRows.map((file) => file.id));
 
-      // 4. 删除 file 表中的所有关联记录（包括图片和视频）
-      const statement3 = 'DELETE FROM file WHERE article_id = ?;';
-      await conn.execute(statement3, [articleId]);
+      // 与业务删除同事务保存精确文件名；后续 unlink 失败/崩溃仍能从 outbox 重试。
+      cleanupIds = await localMediaCleanup.enqueueInTransaction(conn, localMediaCleanup.buildLocalCleanupEntries(mediaRows));
 
-      // 5. 删除文章（数据库会自动级联删除其他关联表：article_tag、article_like、article_collect、comment 等）
-      const statement4 = 'DELETE FROM article WHERE id = ?;';
-      const [result] = await conn.execute(statement4, [articleId]);
+      // 3. 删除 file 表中的所有关联记录（包括图片和视频）
+      const statement2 = 'DELETE FROM file WHERE article_id = ?;';
+      await conn.execute(statement2, [normalizedArticleId]);
 
-      // 6. 提交事务
+      // 4. 删除文章（数据库会自动级联删除其他关联表：article_tag、article_like、article_collect、comment 等）
+      const statement3 = 'DELETE FROM article WHERE id = ? AND user_id = ?;';
+      [result] = await conn.execute(statement3, [normalizedArticleId, normalizedUserId]);
+      if (result.affectedRows !== 1) {
+        throw new Error('delete article: locked article row was not deleted');
+      }
+
+      // 5. 提交事务
       await conn.commit();
-
-      return { result, imagesToDelete, videosToDelete }; // 返回结果和需要删除的文件列表
     } catch (error) {
       // 回滚事务
       await conn.rollback();
@@ -377,6 +413,15 @@ class ArticleService {
       // 释放连接
       conn.release();
     }
+
+    let localCleanup;
+    try {
+      localCleanup = await localMediaCleanup.processPending({ ids: cleanupIds });
+    } catch (error) {
+      console.error('article delete local cleanup deferred for retry:', error.message);
+      localCleanup = { examined: 0, deleted: 0, missing: 0, failed: cleanupIds.length, pendingIds: cleanupIds };
+    }
+    return { result, imagesToDelete, videosToDelete, localCleanup };
   };
   hasTag = async (articleId, tagId) => {
     const statement = `SELECT * FROM article_tag WHERE article_id = ? AND tag_id = ?;`;

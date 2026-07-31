@@ -1,14 +1,16 @@
 const path = require('node:path');
 const config = require('@/app/config');
 const database = require('@/app/database');
-const { IMG_PATH } = require('@/constants/filePaths');
+const { IMG_PATH, VIDEO_PATH } = require('@/constants/filePaths');
 const { baseURL } = require('@/constants/urls');
 const { createLocalImageUrlResolver } = require('@/service/localImageUrlResolver.service');
+const { createLocalVideoUrlResolver } = require('@/service/localVideoUrlResolver.service');
 const { createMediaDeletionService } = require('@/service/mediaDeletion.service');
 const { createMediaObjectService } = require('@/service/mediaObject.service');
 const { createMediaPromotionService } = require('@/service/mediaPromotion.service');
 const { createMediaUrlService } = require('@/service/mediaUrl.service');
 const { createPublishedImagePromotionService } = require('@/service/publishedImagePromotion.service');
+const { createPublishedVideoPromotionService } = require('@/service/publishedVideoPromotion.service');
 const { createR2Client, createR2MediaStore } = require('@/storage/r2MediaStore');
 
 let r2PromotionService;
@@ -77,14 +79,24 @@ function getMediaUrlService() {
       bucket: config.R2_BUCKET,
       publicBaseUrl: config.MEDIA_CDN_BASE_URL,
     });
+    const localImageUrlResolver = createLocalImageUrlResolver({
+      database,
+      imageRoot: path.resolve(IMG_PATH),
+      publicApiOrigin: baseURL,
+    });
+    const localVideoUrlResolver = createLocalVideoUrlResolver({
+      database,
+      publicApiOrigin: baseURL,
+    });
     mediaUrlService = createMediaUrlService({
       mediaObjectService: getMediaObjectService(),
       r2Store: r2PublicUrlStore,
-      localUrlResolver: createLocalImageUrlResolver({
-        database,
-        imageRoot: path.resolve(IMG_PATH),
-        publicApiOrigin: baseURL,
-      }),
+      localUrlResolver(fileId, variant) {
+        if (variant === 'video' || variant === 'poster') {
+          return localVideoUrlResolver(fileId, variant);
+        }
+        return localImageUrlResolver(fileId, variant);
+      },
       readMode: config.MEDIA_READ_MODE,
     });
   }
@@ -102,12 +114,32 @@ const publishedImagePromotionService = createPublishedImagePromotionService({
   },
 });
 
+const publishedVideoPromotionService = createPublishedVideoPromotionService({
+  videoRoot: path.resolve(VIDEO_PATH),
+  writeMode: config.MEDIA_WRITE_MODE,
+  writePaused: config.MEDIA_R2_WRITE_PAUSED,
+  mediaPromotionService: {
+    promote(payload) {
+      return getR2PromotionService().promote(payload);
+    },
+  },
+});
+
 module.exports = {
   promotePublishedImages(payload) {
     return publishedImagePromotionService.promotePublishedImages(payload);
   },
+  promotePublishedVideos(payload) {
+    return publishedVideoPromotionService.promotePublishedVideos(payload);
+  },
   resolveImageUrl(fileId, options) {
     return getMediaUrlService().resolveImageUrl(fileId, options);
+  },
+  resolveVideoUrl(fileId) {
+    return getMediaUrlService().resolveVideoUrl(fileId);
+  },
+  resolveVideoPosterUrl(fileId) {
+    return getMediaUrlService().resolveVideoPosterUrl(fileId);
   },
   deleteR2ObjectsForFiles(fileIds) {
     return getMediaDeletionService().deleteR2ObjectsForFiles(fileIds);

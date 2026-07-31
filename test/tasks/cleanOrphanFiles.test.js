@@ -7,12 +7,14 @@ require('module-alias/register');
 const taskPath = path.resolve(__dirname, '../../src/tasks/cleanOrphanFiles.js');
 const databasePath = path.resolve(__dirname, '../../src/app/database.js');
 const mediaRuntimePath = path.resolve(__dirname, '../../src/service/mediaRuntime.service.js');
+const localMediaCleanupPath = path.resolve(__dirname, '../../src/service/localMediaCleanup.service.js');
 const cronPath = require.resolve('node-cron');
 
-function loadTaskWithConnection(connectionMock, cronMock = null, mediaRuntimeMock = null) {
+function loadTaskWithConnection(connectionMock, cronMock = null, mediaRuntimeMock = null, localMediaCleanupMock = null) {
   delete require.cache[taskPath];
   delete require.cache[databasePath];
   delete require.cache[mediaRuntimePath];
+  delete require.cache[localMediaCleanupPath];
   delete require.cache[cronPath];
 
   require.cache[databasePath] = {
@@ -43,6 +45,23 @@ function loadTaskWithConnection(connectionMock, cronMock = null, mediaRuntimeMoc
     exports: mediaRuntimeMock || {
       async deleteR2ObjectsForFiles() {
         return { staged: 0, deleted: 0 };
+      },
+    },
+  };
+
+  require.cache[localMediaCleanupPath] = {
+    id: localMediaCleanupPath,
+    filename: localMediaCleanupPath,
+    loaded: true,
+    exports: localMediaCleanupMock || {
+      buildLocalCleanupEntries() {
+        return [];
+      },
+      async enqueueInTransaction() {
+        return [];
+      },
+      async processPending() {
+        return { examined: 0, deleted: 0, missing: 0, failed: 0, pendingIds: [] };
       },
     },
   };
@@ -404,4 +423,219 @@ test('cleanOrphanFiles: R2 deletion failure preserves orphan image rows for retr
     calls.some((call) => call.type === 'commit'),
     false,
   );
+});
+
+test('cleanOrphanFiles: pending video promotion preserves database, video and poster for retry', async () => {
+  const calls = [];
+  const originalConsoleLog = console.log;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleError = console.error;
+
+  const task = loadTaskWithConnection(
+    {
+      async getConnection() {
+        return {
+          async beginTransaction() {},
+          async execute(statement, params) {
+            calls.push({ type: 'execute', statement, params });
+            if (/FROM file f/i.test(statement)) {
+              return [
+                [
+                  {
+                    id: 81,
+                    filename: 'orphan.mp4',
+                    poster: 'orphan-poster.jpg',
+                    size: 12,
+                    age_in_units: 8,
+                  },
+                ],
+                [],
+              ];
+            }
+            if (/DELETE FROM file/i.test(statement)) return [{ affectedRows: 1 }, []];
+            return [[], []];
+          },
+          async commit() {
+            calls.push({ type: 'commit' });
+          },
+          async rollback() {
+            calls.push({ type: 'rollback' });
+          },
+          release() {},
+        };
+      },
+    },
+    null,
+    {
+      async deleteR2ObjectsForFiles(fileIds) {
+        calls.push({ type: 'deleteR2', fileIds });
+        throw new Error('R2 upload is still pending');
+      },
+    },
+  );
+
+  console.log = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+  try {
+    await task.cleanOrphanFiles('video', 'manual', { skipDraftCleanup: true });
+  } finally {
+    console.log = originalConsoleLog;
+    console.warn = originalConsoleWarn;
+    console.error = originalConsoleError;
+  }
+
+  assert.deepEqual(
+    calls.find((call) => call.type === 'deleteR2'),
+    { type: 'deleteR2', fileIds: [81] },
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'execute' && /DELETE FROM file/i.test(call.statement)),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    true,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    false,
+  );
+});
+
+test('cleanOrphanFiles: active FFmpeg video is rejected before R2 or database deletion', async () => {
+  const calls = [];
+  const originalConsoleLog = console.log;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleError = console.error;
+  const task = loadTaskWithConnection(
+    {
+      async getConnection() {
+        return {
+          async beginTransaction() {},
+          async execute(statement, params) {
+            calls.push({ type: 'execute', statement, params });
+            if (/FROM file f/i.test(statement)) {
+              return [[{ id: 91, filename: 'active.mp4', poster: null, transcode_status: 'processing', size: 12, age_in_units: 8 }], []];
+            }
+            if (/DELETE FROM file/i.test(statement)) return [{ affectedRows: 1 }, []];
+            return [[], []];
+          },
+          async commit() {
+            calls.push({ type: 'commit' });
+          },
+          async rollback() {
+            calls.push({ type: 'rollback' });
+          },
+          release() {},
+        };
+      },
+    },
+    null,
+    {
+      async deleteR2ObjectsForFiles(fileIds) {
+        calls.push({ type: 'deleteR2', fileIds });
+      },
+    },
+  );
+
+  console.log = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+  try {
+    await task.cleanOrphanFiles('video', 'manual', { skipDraftCleanup: true });
+  } finally {
+    console.log = originalConsoleLog;
+    console.warn = originalConsoleWarn;
+    console.error = originalConsoleError;
+  }
+
+  assert.equal(
+    calls.some((call) => call.type === 'deleteR2'),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'execute' && /DELETE FROM file/i.test(call.statement)),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    true,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    false,
+  );
+});
+
+test('cleanOrphanFiles: commits a local cleanup tombstone before deleting an orphan video row', async () => {
+  const calls = [];
+  const originalConsoleLog = console.log;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleError = console.error;
+  const task = loadTaskWithConnection(
+    {
+      async getConnection() {
+        return {
+          async beginTransaction() {},
+          async execute(statement, params) {
+            calls.push({ type: 'execute', statement, params });
+            if (/FROM file f/i.test(statement)) {
+              return [[{ id: 92, file_type: 'video', filename: 'done.mp4', poster: 'done-poster.jpg', transcode_status: 'completed', size: 12, age_in_units: 8 }], []];
+            }
+            if (/DELETE FROM file/i.test(statement)) return [{ affectedRows: 1 }, []];
+            return [[], []];
+          },
+          async commit() {
+            calls.push({ type: 'commit' });
+          },
+          async rollback() {
+            calls.push({ type: 'rollback' });
+          },
+          release() {},
+        };
+      },
+    },
+    null,
+    {
+      async deleteR2ObjectsForFiles(fileIds) {
+        calls.push({ type: 'deleteR2', fileIds });
+      },
+    },
+    {
+      buildLocalCleanupEntries(rows) {
+        return [
+          { storageArea: 'video', filename: rows[0].filename },
+          { storageArea: 'video', filename: rows[0].poster },
+        ];
+      },
+      async enqueueInTransaction(conn, entries) {
+        calls.push({ type: 'enqueueLocal', entries });
+        return [901, 902];
+      },
+      async processPending(options) {
+        calls.push({ type: 'processLocal', options });
+        return { examined: 2, deleted: 2, missing: 0, failed: 0, pendingIds: [] };
+      },
+    },
+  );
+
+  console.log = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+  try {
+    await task.cleanOrphanFiles('video', 'manual', { skipDraftCleanup: true });
+  } finally {
+    console.log = originalConsoleLog;
+    console.warn = originalConsoleWarn;
+    console.error = originalConsoleError;
+  }
+
+  const enqueueIndex = calls.findIndex((call) => call.type === 'enqueueLocal');
+  const deleteIndex = calls.findIndex((call) => call.type === 'execute' && /DELETE FROM file/i.test(call.statement));
+  const commitIndex = calls.findIndex((call) => call.type === 'commit');
+  const processIndex = calls.findIndex((call) => call.type === 'processLocal');
+  assert.ok(enqueueIndex >= 0 && deleteIndex > enqueueIndex);
+  assert.ok(processIndex > commitIndex);
+  assert.deepEqual(calls[processIndex].options, { ids: [901, 902] });
 });

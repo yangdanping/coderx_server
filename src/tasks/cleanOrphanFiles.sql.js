@@ -48,6 +48,7 @@ function buildFindOrphanFilesSql(fileType, unit) {
         SELECT
           f.id,
           f.filename,
+          f.file_type,
           f.mimetype,
           f.size,
           f.create_at as createTime,
@@ -60,6 +61,7 @@ function buildFindOrphanFilesSql(fileType, unit) {
           AND f.file_type = ?
           AND f.create_at < ${cutoffExpression}
         ORDER BY f.create_at ASC
+        FOR UPDATE OF f SKIP LOCKED
         `;
   }
 
@@ -70,18 +72,22 @@ function buildFindOrphanFilesSql(fileType, unit) {
         SELECT
           f.id,
           f.filename,
+          f.file_type,
           f.mimetype,
           f.size,
           f.create_at as createTime,
           vm.poster,
+          vm.transcode_status,
           ${ageExpression}
         FROM file f
         LEFT JOIN video_meta vm ON f.id = vm.file_id
         WHERE f.article_id IS NULL
           AND f.draft_id IS NULL
           AND f.file_type = ?
+          AND vm.transcode_status NOT IN ('pending', 'processing')
           AND f.create_at < ${cutoffExpression}
         ORDER BY f.create_at ASC
+        FOR UPDATE OF f SKIP LOCKED
         `;
   }
 

@@ -13,8 +13,7 @@
 const cron = require('node-cron');
 const connection = require('@/app/database');
 const mediaRuntime = require('@/service/mediaRuntime.service');
-const fs = require('fs');
-const path = require('path');
+const localMediaCleanup = require('@/service/localMediaCleanup.service');
 const SqlUtils = require('@/utils/SqlUtils');
 const { buildDeleteConsumedDraftsSql, buildDeleteDiscardedDraftsSql, buildDeleteExpiredActiveDraftsSql, buildFindOrphanFilesSql } = require('./cleanOrphanFiles.sql');
 
@@ -68,55 +67,6 @@ const FILE_TYPE_CONFIG = {
 };
 
 const unitTextMap = { SECOND: '秒', HOUR: '小时', DAY: '天' };
-
-/**
- * 删除物理文件（通用）
- * @param {string} filename - 主文件名
- * @param {string} uploadDir - 上传目录（相对于项目根目录）
- * @param {string} [posterFilename] - 视频封面文件名；image 调用方传 undefined 即可
- */
-const deletePhysicalFile = (filename, uploadDir = 'public/img', posterFilename) => {
-  try {
-    let deletedCount = 0;
-
-    const filePath = path.resolve(process.cwd(), uploadDir, filename);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      console.log(`✅ 已删除物理文件: ${filename}`);
-      deletedCount++;
-    } else {
-      console.warn(`⚠️ 物理文件不存在: ${filePath}`);
-    }
-
-    // 图片缩略图（-small）目前仍按命名约定推断，等图片链路同样改造后再挪到 DB 字段
-    const extname = path.extname(filename);
-    const smallFilename = filename.replace(extname, `-small${extname}`);
-    const smallFilePath = path.resolve(process.cwd(), uploadDir, smallFilename);
-
-    if (fs.existsSync(smallFilePath)) {
-      fs.unlinkSync(smallFilePath);
-      console.log(`✅ 已删除缩略图: ${smallFilename}`);
-      deletedCount++;
-    }
-
-    // 视频封面：由调用方从 video_meta.poster 传入真实文件名，不再靠命名约定拼接
-    if (posterFilename) {
-      const posterFilePath = path.resolve(process.cwd(), uploadDir, posterFilename);
-      if (fs.existsSync(posterFilePath)) {
-        fs.unlinkSync(posterFilePath);
-        console.log(`✅ 已删除视频封面: ${posterFilename}`);
-        deletedCount++;
-      } else {
-        console.warn(`⚠️ 视频封面不存在: ${posterFilePath}`);
-      }
-    }
-
-    return deletedCount > 0;
-  } catch (error) {
-    console.error(`❌ 删除物理文件失败: ${filename}`, error);
-    return false;
-  }
-};
 
 const getMutationCount = (result) => {
   if (Array.isArray(result)) {
@@ -227,6 +177,11 @@ const cleanOrphanFiles = async (fileType, method = 'cron', options = {}) => {
       return;
     }
 
+    const activeVideo = fileType === 'video' && orphanFiles.find((file) => ['pending', 'processing'].includes(file.transcode_status));
+    if (activeVideo) {
+      throw new Error(`拒绝清理仍在转码中的视频（ID: ${activeVideo.id}）`);
+    }
+
     console.log(`📊 找到 ${orphanFiles.length} 个孤儿${config.name}需要清理:`);
 
     // 2. 打印详细信息
@@ -235,13 +190,15 @@ const cleanOrphanFiles = async (fileType, method = 'cron', options = {}) => {
       console.log(`   ${index + 1}. ID: ${file.id}, 文件: ${file.filename}, 创建于: ${file.age_in_units} ${unitText}前`);
     });
 
-    // 3. 图片可能已经晋升到 R2；先幂等删除远端对象，失败则保留记录和本地文件供重试
+    // 3. 图片、视频和 poster 都可能已经晋升到 R2；先幂等删除远端对象，
+    //    pending promotion 或删除失败时保留记录与本地文件供安全重试
     const fileIds = orphanFiles.map((file) => file.id);
-    if (fileType === 'image') {
-      await mediaRuntime.deleteR2ObjectsForFiles(fileIds);
-    }
+    await mediaRuntime.deleteR2ObjectsForFiles(fileIds);
 
-    // 4. 删除数据库记录（使用参数化查询防止 SQL 注入）
+    // 4. 先在同一事务写入本地清理 outbox，再删除数据库记录。
+    const cleanupIds = await localMediaCleanup.enqueueInTransaction(conn, localMediaCleanup.buildLocalCleanupEntries(orphanFiles));
+
+    // 5. 删除数据库记录（使用参数化查询防止 SQL 注入）
     const [deleteResult] = await conn.execute(`DELETE FROM file WHERE ${SqlUtils.queryIn('id', fileIds)}`, fileIds);
 
     // 5. 记录清理日志（可选，需要先创建 cleanup_log 表）
@@ -259,15 +216,10 @@ const cleanOrphanFiles = async (fileType, method = 'cron', options = {}) => {
 
     await conn.commit();
 
-    // 5. 数据库提交成功后再幂等删除本地文件
-    let deletedFilesCount = 0;
-    for (const file of orphanFiles) {
-      if (deletePhysicalFile(file.filename, config.uploadDir, file.poster)) {
-        deletedFilesCount++;
-      }
-    }
+    // 6. 数据库提交成功后消费精确文件名；失败记录留在 outbox 供重启/下次 cron 重试。
+    const localCleanup = await localMediaCleanup.processPending({ ids: cleanupIds });
 
-    console.log(`✅ 清理完成! 删除了 ${deletedFilesCount} 个物理文件，${deleteResult.affectedRows} 条数据库记录`);
+    console.log(`✅ 清理完成! 删除了 ${localCleanup.deleted + localCleanup.missing} 个本地文件，${deleteResult.affectedRows} 条数据库记录`);
 
     // 6. 统计信息
     const totalSize = orphanFiles.reduce((sum, file) => sum + file.size, 0);
@@ -304,6 +256,7 @@ const cronExpression = CRON_EXPRESSIONS[CRON_MODE];
 const task = cron.schedule(
   cronExpression,
   async () => {
+    await localMediaCleanup.processPending();
     // 整次任务只清一次 draft lifecycle，再依次清理各类孤儿文件
     await cleanLifecycleDraftsOnce();
     await cleanOrphanFiles('image', 'cron', { skipDraftCleanup: true });
@@ -331,6 +284,9 @@ module.exports = {
     const modeText = CRON_MODE === 'test' ? '测试模式：自定义时间执行' : '生产模式：每天凌晨 2 点执行';
     console.log(`⏰ 孤儿文件清理任务已启动（${modeText}）`);
     console.log(`📅 Cron 表达式: ${cronExpression}`);
+    localMediaCleanup.processPending().catch((error) => {
+      console.error('❌ 启动时重试本地媒体清理失败:', error.message);
+    });
     task.start();
   },
   stop: () => {

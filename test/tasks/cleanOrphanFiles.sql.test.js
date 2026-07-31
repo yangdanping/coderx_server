@@ -43,17 +43,16 @@ test('buildFindOrphanFilesSql(video): joins video_meta and selects vm.poster', (
   const sql = buildFindOrphanFilesSql('video', 'DAY');
   assert.match(sql, /LEFT JOIN video_meta vm ON f\.id = vm\.file_id/i);
   assert.match(sql, /vm\.poster/i);
+  assert.match(sql, /vm\.transcode_status/i);
+  assert.match(sql, /vm\.transcode_status\s+NOT IN\s*\('pending',\s*'processing'\)/i);
   assert.match(sql, /f\.article_id IS NULL/i);
   assert.match(sql, /f\.draft_id IS NULL/i);
   assert.match(sql, /f\.file_type\s*=\s*\?/i);
+  assert.match(sql, /FOR UPDATE OF f SKIP LOCKED/i);
 });
 
 test('draft lifecycle cleanup SQL: splits consumed discarded and active retention rules', () => {
-  const {
-    buildDeleteConsumedDraftsSql,
-    buildDeleteDiscardedDraftsSql,
-    buildDeleteExpiredActiveDraftsSql,
-  } = loadHelper();
+  const { buildDeleteConsumedDraftsSql, buildDeleteDiscardedDraftsSql, buildDeleteExpiredActiveDraftsSql } = loadHelper();
 
   const consumedSql = buildDeleteConsumedDraftsSql();
   const discardedSql = buildDeleteDiscardedDraftsSql();

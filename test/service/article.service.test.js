@@ -10,13 +10,15 @@ const databasePath = path.resolve(__dirname, '../../src/app/database.js');
 const urlsPath = path.resolve(__dirname, '../../src/constants/urls.js');
 const utilsPath = path.resolve(__dirname, '../../src/utils/index.js');
 const mediaRuntimePath = path.resolve(__dirname, '../../src/service/mediaRuntime.service.js');
+const localMediaCleanupPath = path.resolve(__dirname, '../../src/service/localMediaCleanup.service.js');
 
-function loadServiceWithConnection(connectionMock, mediaRuntimeMock = null) {
+function loadServiceWithConnection(connectionMock, mediaRuntimeMock = null, localMediaCleanupMock = null) {
   delete require.cache[servicePath];
   delete require.cache[databasePath];
   delete require.cache[urlsPath];
   delete require.cache[utilsPath];
   delete require.cache[mediaRuntimePath];
+  delete require.cache[localMediaCleanupPath];
 
   require.cache[databasePath] = {
     id: databasePath,
@@ -49,6 +51,23 @@ function loadServiceWithConnection(connectionMock, mediaRuntimeMock = null) {
     exports: mediaRuntimeMock || {
       async resolveImageUrl(fileId) {
         return fileId === 11 ? 'https://api.example/article/images/current-image.png' : null;
+      },
+    },
+  };
+
+  require.cache[localMediaCleanupPath] = {
+    id: localMediaCleanupPath,
+    filename: localMediaCleanupPath,
+    loaded: true,
+    exports: localMediaCleanupMock || {
+      buildLocalCleanupEntries() {
+        return [];
+      },
+      async enqueueInTransaction() {
+        return [];
+      },
+      async processPending() {
+        return { examined: 0, deleted: 0, missing: 0, failed: 0, pendingIds: [] };
       },
     },
   };
@@ -589,6 +608,14 @@ test('getArticleById: hydrates legacy avatar and media src from stable ids', asy
         assert.deepEqual(options, { variant: 'original' });
         return 'https://media.example/articles/62/images/11/hash-original.png';
       },
+      async resolveVideoUrl(fileId) {
+        assert.equal(fileId, 22);
+        return 'https://media.example/articles/62/videos/22/hash-video.mp4';
+      },
+      async resolveVideoPosterUrl(fileId) {
+        assert.equal(fileId, 22);
+        return 'https://media.example/articles/62/videos/22/hash-poster.jpg';
+      },
     },
   );
 
@@ -596,10 +623,11 @@ test('getArticleById: hydrates legacy avatar and media src from stable ids', asy
 
   assert.equal(result.author.avatarUrl, 'https://api.example/user/3/avatar');
   assert.equal(result.contentJson.content[0].attrs.src, 'https://media.example/articles/62/images/11/hash-original.png');
-  assert.equal(result.contentJson.content[1].attrs.src, 'https://api.example/article/video/current-video.mp4');
-  assert.equal(result.contentJson.content[1].attrs.poster, 'https://api.example/article/video/current-poster.png');
+  assert.equal(result.contentJson.content[1].attrs.src, 'https://media.example/articles/62/videos/22/hash-video.mp4');
+  assert.equal(result.contentJson.content[1].attrs.poster, 'https://media.example/articles/62/videos/22/hash-poster.jpg');
   assert.match(result.contentHtml, /hash-original\.png/);
-  assert.match(result.contentHtml, /current-video\.mp4/);
+  assert.match(result.contentHtml, /hash-video\.mp4/);
+  assert.match(result.contentHtml, /hash-poster\.jpg/);
 });
 
 test('getArticleList: resolves the selected cover through the shared small-image URL resolver', async () => {
@@ -682,10 +710,12 @@ test('delete: removes staged image objects from R2 before deleting file and arti
     },
     async execute(statement, params) {
       calls.push({ type: 'execute', statement, params });
-      if (/SELECT\s+f?\.?id[\s\S]+filename[\s\S]+FROM file/i.test(statement)) {
-        return [[{ id: 41, filename: 'cover.jpg' }], []];
+      if (/FROM article/i.test(statement) && /FOR UPDATE/i.test(statement)) {
+        return [[{ id: 9 }], []];
       }
-      if (/SELECT\s+f\.filename,\s*vm\.poster/i.test(statement)) return [[], []];
+      if (/FOR UPDATE OF f/i.test(statement)) {
+        return [[{ id: 41, filename: 'cover.jpg', file_type: 'image', poster: null }], []];
+      }
       if (/DELETE FROM article/i.test(statement)) return [{ affectedRows: 1 }, []];
       return [{ affectedRows: 1 }, []];
     },
@@ -713,7 +743,7 @@ test('delete: removes staged image objects from R2 before deleting file and arti
     },
   );
 
-  const result = await service.delete(9);
+  const result = await service.delete(9, 5);
 
   assert.deepEqual(result.imagesToDelete, [{ id: 41, filename: 'cover.jpg' }]);
   const r2Index = calls.findIndex((call) => call.type === 'deleteR2');
@@ -729,12 +759,12 @@ test('delete: R2 failure rolls back and preserves file rows for a safe retry', a
     async beginTransaction() {
       calls.push({ type: 'begin' });
     },
-    async execute(statement) {
-      calls.push({ type: 'execute', statement });
-      if (/SELECT\s+f?\.?id[\s\S]+filename[\s\S]+FROM file/i.test(statement)) {
-        return [[{ id: 41, filename: 'cover.jpg' }], []];
+    async execute(statement, params) {
+      calls.push({ type: 'execute', statement, params });
+      if (/FROM article/i.test(statement) && /FOR UPDATE/i.test(statement)) return [[{ id: 9 }], []];
+      if (/FOR UPDATE OF f/i.test(statement)) {
+        return [[{ id: 41, filename: 'cover.jpg', file_type: 'image', poster: null }], []];
       }
-      if (/SELECT\s+f\.filename,\s*vm\.poster/i.test(statement)) return [[], []];
       return [{ affectedRows: 1 }, []];
     },
     async commit() {
@@ -763,11 +793,159 @@ test('delete: R2 failure rolls back and preserves file rows for a safe retry', a
   console.error = () => {};
 
   try {
-    await assert.rejects(service.delete(9), /R2 unavailable/);
+    await assert.rejects(service.delete(9, 5), /R2 unavailable/);
   } finally {
     console.error = originalConsoleError;
   }
 
+  assert.equal(
+    calls.some((call) => call.type === 'execute' && /DELETE FROM file/i.test(call.statement)),
+    false,
+  );
+  assert.equal(
+    calls.some((call) => call.type === 'rollback'),
+    true,
+  );
+});
+
+test('delete: locks all article media and stages image, video and poster objects before row deletion', async () => {
+  const calls = [];
+  const conn = {
+    async beginTransaction() {
+      calls.push({ type: 'begin' });
+    },
+    async execute(statement, params) {
+      calls.push({ type: 'execute', statement, params });
+      if (/FROM article/i.test(statement) && /FOR UPDATE/i.test(statement)) return [[{ id: 9 }], []];
+      if (/FOR UPDATE OF f/i.test(statement)) {
+        return [
+          [
+            { id: 41, filename: 'cover.jpg', file_type: 'image', poster: null },
+            { id: 51, filename: 'clip.mp4', file_type: 'video', poster: 'clip-poster.jpg' },
+          ],
+          [],
+        ];
+      }
+      if (/DELETE FROM article/i.test(statement)) return [{ affectedRows: 1 }, []];
+      return [{ affectedRows: 2 }, []];
+    },
+    async commit() {
+      calls.push({ type: 'commit' });
+    },
+    async rollback() {
+      calls.push({ type: 'rollback' });
+    },
+    release() {},
+  };
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      async deleteR2ObjectsForFiles(fileIds) {
+        calls.push({ type: 'deleteR2', fileIds });
+        return { staged: 4, deleted: 4 };
+      },
+    },
+    {
+      buildLocalCleanupEntries(rows) {
+        calls.push({ type: 'buildLocal', rows });
+        return [
+          { storageArea: 'image', filename: 'cover.jpg' },
+          { storageArea: 'image', filename: 'cover-small.jpg' },
+          { storageArea: 'video', filename: 'clip.mp4' },
+          { storageArea: 'video', filename: 'clip-poster.jpg' },
+        ];
+      },
+      async enqueueInTransaction(conn, entries) {
+        calls.push({ type: 'enqueueLocal', entries });
+        return [701, 702, 703, 704];
+      },
+      async processPending(options) {
+        calls.push({ type: 'processLocal', options });
+        return { examined: 4, deleted: 4, missing: 0, failed: 0, pendingIds: [] };
+      },
+    },
+  );
+
+  const result = await service.delete(9, 5);
+
+  assert.deepEqual(result.imagesToDelete, [{ id: 41, filename: 'cover.jpg' }]);
+  assert.deepEqual(result.videosToDelete, [{ id: 51, filename: 'clip.mp4', poster: 'clip-poster.jpg' }]);
+  const articleLockIndex = calls.findIndex((call) => call.type === 'execute' && /FROM article/i.test(call.statement) && /FOR UPDATE/i.test(call.statement));
+  const lockIndex = calls.findIndex((call) => call.type === 'execute' && /FOR UPDATE OF f/i.test(call.statement));
+  const r2Index = calls.findIndex((call) => call.type === 'deleteR2');
+  const deleteFileIndex = calls.findIndex((call) => call.type === 'execute' && /DELETE FROM file/i.test(call.statement));
+  assert.ok(articleLockIndex >= 0 && lockIndex > articleLockIndex);
+  assert.deepEqual(calls[articleLockIndex].params, [9, 5]);
+  assert.ok(r2Index > lockIndex);
+  assert.ok(deleteFileIndex > r2Index);
+  assert.deepEqual(calls[r2Index].fileIds, [41, 51]);
+  const enqueueIndex = calls.findIndex((call) => call.type === 'enqueueLocal');
+  const commitIndex = calls.findIndex((call) => call.type === 'commit');
+  const processIndex = calls.findIndex((call) => call.type === 'processLocal');
+  assert.ok(enqueueIndex > r2Index && deleteFileIndex > enqueueIndex);
+  assert.ok(processIndex > commitIndex);
+  assert.deepEqual(calls[processIndex].options, { ids: [701, 702, 703, 704] });
+});
+
+test('delete: active FFmpeg processing blocks article deletion before R2 or database mutation', async () => {
+  const calls = [];
+  const conn = {
+    async beginTransaction() {},
+    async execute(statement, params) {
+      calls.push({ type: 'execute', statement, params });
+      if (/FROM article/i.test(statement) && /FOR UPDATE/i.test(statement)) return [[{ id: 9 }], []];
+      if (/FOR UPDATE OF f/i.test(statement)) {
+        return [
+          [
+            {
+              id: 51,
+              filename: 'clip.mp4',
+              file_type: 'video',
+              poster: null,
+              transcode_status: 'processing',
+            },
+          ],
+          [],
+        ];
+      }
+      return [{ affectedRows: 1 }, []];
+    },
+    async commit() {
+      calls.push({ type: 'commit' });
+    },
+    async rollback() {
+      calls.push({ type: 'rollback' });
+    },
+    release() {},
+  };
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      async deleteR2ObjectsForFiles() {
+        calls.push({ type: 'deleteR2' });
+      },
+    },
+  );
+  const originalConsoleError = console.error;
+  console.error = () => {};
+  try {
+    await assert.rejects(service.delete(9, 5), /视频仍在处理/);
+  } finally {
+    console.error = originalConsoleError;
+  }
+
+  assert.equal(
+    calls.some((call) => call.type === 'deleteR2'),
+    false,
+  );
   assert.equal(
     calls.some((call) => call.type === 'execute' && /DELETE FROM file/i.test(call.statement)),
     false,

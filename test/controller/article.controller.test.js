@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
 const path = require('node:path');
 
 require('module-alias/register');
@@ -65,6 +66,87 @@ function renderHtmlWithoutLogs(content) {
 
 const noopNext = async () => {};
 
+test('getVideoInfo: local fallback serves byte ranges for seek and resume', async (t) => {
+  const filename = `phase4-range-${process.pid}.mp4`;
+  const filePath = path.resolve(__dirname, '../../public/video', filename);
+  await fs.writeFile(filePath, Buffer.from('0123456789'));
+  t.after(() => fs.rm(filePath, { force: true }));
+
+  const controller = loadControllerWithServiceMocks({ articleService: {}, historyService: {} });
+  const headers = {};
+  const ctx = {
+    params: { filename },
+    headers: { range: 'bytes=2-5' },
+    response: {
+      set(name, value) {
+        headers[name.toLowerCase()] = String(value);
+      },
+    },
+  };
+
+  await controller.getVideoInfo(ctx, noopNext);
+  const chunks = [];
+  for await (const chunk of ctx.body) chunks.push(chunk);
+
+  assert.equal(ctx.status, 206);
+  assert.equal(headers['content-type'], 'video/mp4');
+  assert.equal(headers['content-range'], 'bytes 2-5/10');
+  assert.equal(headers['accept-ranges'], 'bytes');
+  assert.equal(headers['content-length'], '4');
+  assert.equal(Buffer.concat(chunks).toString(), '2345');
+});
+
+test('getVideoInfo: rejects decoded path traversal before touching files outside the video root', async () => {
+  const controller = loadControllerWithServiceMocks({ articleService: {}, historyService: {} });
+  const ctx = {
+    // @koa/router decodes %2F before the controller, so this is the value the
+    // public route receives for /article/video/..%2F..%2Fpackage.json.
+    params: { filename: '../../package.json' },
+    headers: {},
+    response: { set() {} },
+  };
+
+  await controller.getVideoInfo(ctx, noopNext);
+
+  assert.equal(ctx.status, 404);
+  assert.deepEqual(ctx.body, Result.fail('视频文件不存在'));
+  assert.equal(ctx.body?.pipe, undefined);
+});
+
+test('getVideoInfo: local fallback refuses directories and only streams regular files', async () => {
+  const controller = loadControllerWithServiceMocks({ articleService: {}, historyService: {} });
+  const ctx = {
+    params: { filename: '.' },
+    headers: {},
+    response: { set() {} },
+  };
+
+  await controller.getVideoInfo(ctx, noopNext);
+
+  assert.equal(ctx.status, 404);
+  assert.deepEqual(ctx.body, Result.fail('视频文件不存在'));
+});
+
+test('delete: forwards the authenticated user to the transaction-level ownership lock', async () => {
+  const calls = [];
+  const articleService = {
+    async delete(articleId, userId) {
+      calls.push({ articleId, userId });
+      return {
+        result: { affectedRows: 1 },
+        localCleanup: { examined: 0, deleted: 0, missing: 0, failed: 0, pendingIds: [] },
+      };
+    },
+  };
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const ctx = { params: { articleId: '9' }, user: { id: 5 } };
+
+  await controller.delete(ctx, noopNext);
+
+  assert.deepEqual(calls, [{ articleId: '9', userId: 5 }]);
+  assert.deepEqual(ctx.body, Result.success({ affectedRows: 1 }));
+});
+
 test('getDetail: logged-in user gets rendered article detail and history is written', async () => {
   const calls = [];
   const serviceArticle = {
@@ -99,10 +181,7 @@ test('getDetail: logged-in user gets rendered article detail and history is writ
     { method: 'getArticleById', articleId: '99' },
     { method: 'addHistory', userId: 7, articleId: '99' },
   ]);
-  assert.deepEqual(
-    ctx.body,
-    Result.success(serviceArticle),
-  );
+  assert.deepEqual(ctx.body, Result.success(serviceArticle));
 });
 
 test('getDetail: anonymous user gets rendered detail without writing history', async () => {
@@ -172,10 +251,7 @@ test('getDetail: history write failure does not block a successful detail respon
     { method: 'getArticleById', articleId: '88' },
     { method: 'addHistory', userId: 12, articleId: '88' },
   ]);
-  assert.deepEqual(
-    ctx.body,
-    Result.success(serviceArticle),
-  );
+  assert.deepEqual(ctx.body, Result.success(serviceArticle));
 });
 
 test('getDetail: masks title and content when article status is truthy', async () => {
