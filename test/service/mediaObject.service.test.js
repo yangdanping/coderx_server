@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 
 require('module-alias/register');
 
-const { MediaCapacityExceededError, createMediaObjectService } = require('@/service/mediaObject.service');
+const { MediaCapacityExceededError, MediaObjectStateTransitionError, createMediaObjectService } = require('@/service/mediaObject.service');
 const { MEDIA_CAPACITY_ADVISORY_LOCK_KEY } = require('@/constants/mediaStorage');
 
 const SHA256 = crypto.createHash('sha256').update('capacity fixture').digest('hex');
@@ -185,13 +185,42 @@ test('mediaObjectService: capacity summary counts only R2 pending and ready rows
 test('mediaObjectService: marks verified objects ready and failures failed with a bounded error', async () => {
   const { calls, database } = createDatabaseMock(() => [{ affectedRows: 1 }, []]);
   const service = createMediaObjectService({ database });
+  const readyObject = {
+    id: 71,
+    objectKey: `articles/88/images/512/${SHA256.slice(0, 12)}-original.jpg`,
+    sizeBytes: 123,
+    sha256: SHA256,
+  };
+  const failedObject = {
+    ...readyObject,
+    id: 72,
+  };
 
-  await service.markReady(71);
-  await service.markFailed(72, new Error('upload unavailable'));
+  await service.markReady(readyObject);
+  await service.markFailed(failedObject, new Error('upload unavailable'));
+  await service.markVerificationFailed(readyObject, new Error('R2 HEAD mismatch'));
 
-  const [readyCall, failedCall] = calls.filter((call) => call.type === 'rootExecute');
+  const [readyCall, failedCall, verificationCall] = calls.filter((call) => call.type === 'rootExecute');
   assert.match(readyCall.statement, /status\s*=\s*'ready'[\s\S]*verified_at\s*=\s*clock_timestamp/i);
-  assert.deepEqual(readyCall.params, [71]);
+  assert.match(readyCall.statement, /object_key\s*=\s*\?[\s\S]*size_bytes\s*=\s*\?[\s\S]*sha256\s*=\s*\?/i);
+  assert.deepEqual(readyCall.params, [71, readyObject.objectKey, 123, SHA256]);
   assert.match(failedCall.statement, /status\s*=\s*'failed'/i);
-  assert.deepEqual(failedCall.params, ['upload unavailable', 72]);
+  assert.deepEqual(failedCall.params, ['upload unavailable', 72, failedObject.objectKey, 123, SHA256]);
+  assert.match(verificationCall.statement, /status\s*=\s*'failed'[\s\S]*status\s*=\s*'ready'/i);
+  assert.deepEqual(verificationCall.params, ['R2 HEAD mismatch', 71, readyObject.objectKey, 123, SHA256]);
+});
+
+test('mediaObjectService: rejects stale or duplicate state transitions that affect no row', async () => {
+  const { database } = createDatabaseMock(() => [{ affectedRows: 0 }, []]);
+  const service = createMediaObjectService({ database });
+  const mediaObject = {
+    id: 71,
+    objectKey: `articles/88/images/512/${SHA256.slice(0, 12)}-original.jpg`,
+    sizeBytes: 123,
+    sha256: SHA256,
+  };
+
+  await assert.rejects(service.markReady(mediaObject), MediaObjectStateTransitionError);
+  await assert.rejects(service.markFailed(mediaObject, new Error('late failure')), MediaObjectStateTransitionError);
+  await assert.rejects(service.markVerificationFailed(mediaObject, new Error('late verification failure')), MediaObjectStateTransitionError);
 });

@@ -10,7 +10,8 @@
     "start": "NODE_ENV=production node ./src/main.js",
     "start:ingest": "NODE_ENV=production node ./src/ingest/worker.js",
     "start:socket": "NODE_ENV=production node ./src/socket_server.js",
-    "test": "node --test \"test/service/*.test.js\" \"test/tasks/*.test.js\" \"test/controller/*.test.js\"",
+    "test": "node --test --test-concurrency=1 \"test/service/*.test.js\" \"test/tasks/*.test.js\" \"test/controller/*.test.js\"",
+    "test:media-db": "node --test test/integration/mediaObject.postgres.test.js",
     "prettier": "prettier --write .",
     "update:prettier": "git fetch https://github.com/yangdanping/prettier_config_repo.git main && git checkout FETCH_HEAD -- .prettierrc .prettierignore"
   },

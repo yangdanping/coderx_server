@@ -22,6 +22,14 @@ class MediaObjectConflictError extends Error {
   }
 }
 
+class MediaObjectStateTransitionError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'MediaObjectStateTransitionError';
+    this.code = 'MEDIA_OBJECT_STATE_TRANSITION_FAILED';
+  }
+}
+
 function normalizeRow(row) {
   if (!row) return null;
   return {
@@ -55,6 +63,36 @@ function validateReservation({ fileId, variant, objectKey, sizeBytes, sha256 }) 
   if (typeof sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(sha256)) {
     throw new TypeError('sha256 must contain 64 lowercase hexadecimal characters');
   }
+}
+
+function normalizeTransitionIdentity(mediaObject) {
+  const id = Number(mediaObject?.id);
+  const sizeBytes = Number(mediaObject?.sizeBytes);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new TypeError('mediaObject.id must be a positive safe integer');
+  }
+  if (typeof mediaObject?.objectKey !== 'string' || !mediaObject.objectKey) {
+    throw new TypeError('mediaObject.objectKey is required');
+  }
+  if (!Number.isSafeInteger(sizeBytes) || sizeBytes < 0) {
+    throw new TypeError('mediaObject.sizeBytes must be a non-negative safe integer');
+  }
+  if (typeof mediaObject?.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(mediaObject.sha256)) {
+    throw new TypeError('mediaObject.sha256 must contain 64 lowercase hexadecimal characters');
+  }
+  return {
+    id,
+    objectKey: mediaObject.objectKey,
+    sizeBytes,
+    sha256: mediaObject.sha256,
+  };
+}
+
+function assertTransitionApplied(result, transition, mediaObjectId) {
+  if (result?.affectedRows !== 1) {
+    throw new MediaObjectStateTransitionError(`Media object ${mediaObjectId} could not transition to ${transition}; its state or immutable identity changed`);
+  }
+  return result;
 }
 
 function selectFields() {
@@ -211,7 +249,8 @@ class MediaObjectService {
     }
   }
 
-  async markReady(mediaObjectId) {
+  async markReady(mediaObject) {
+    const identity = normalizeTransitionIdentity(mediaObject);
     const [result] = await this.database.execute(
       `
         UPDATE media_object
@@ -220,14 +259,18 @@ class MediaObjectService {
             verified_at = clock_timestamp(),
             updated_at = clock_timestamp()
         WHERE id = ?
-          AND status IN ('pending', 'ready');
+          AND object_key = ?
+          AND size_bytes = ?
+          AND sha256 = ?
+          AND status = 'pending';
       `,
-      [mediaObjectId],
+      [identity.id, identity.objectKey, identity.sizeBytes, identity.sha256],
     );
-    return result;
+    return assertTransitionApplied(result, MEDIA_OBJECT_STATUS.READY, identity.id);
   }
 
-  async markFailed(mediaObjectId, error) {
+  async markFailed(mediaObject, error) {
+    const identity = normalizeTransitionIdentity(mediaObject);
     const message = String(error?.message || error || 'Unknown media promotion error').slice(0, 2000);
     const [result] = await this.database.execute(
       `
@@ -237,11 +280,35 @@ class MediaObjectService {
             verified_at = NULL,
             updated_at = clock_timestamp()
         WHERE id = ?
+          AND object_key = ?
+          AND size_bytes = ?
+          AND sha256 = ?
           AND status = 'pending';
       `,
-      [message, mediaObjectId],
+      [message, identity.id, identity.objectKey, identity.sizeBytes, identity.sha256],
     );
-    return result;
+    return assertTransitionApplied(result, MEDIA_OBJECT_STATUS.FAILED, identity.id);
+  }
+
+  async markVerificationFailed(mediaObject, error) {
+    const identity = normalizeTransitionIdentity(mediaObject);
+    const message = String(error?.message || error || 'R2 object verification failed').slice(0, 2000);
+    const [result] = await this.database.execute(
+      `
+        UPDATE media_object
+        SET status = 'failed',
+            last_error = ?,
+            verified_at = NULL,
+            updated_at = clock_timestamp()
+        WHERE id = ?
+          AND object_key = ?
+          AND size_bytes = ?
+          AND sha256 = ?
+          AND status = 'ready';
+      `,
+      [message, identity.id, identity.objectKey, identity.sizeBytes, identity.sha256],
+    );
+    return assertTransitionApplied(result, MEDIA_OBJECT_STATUS.FAILED, identity.id);
   }
 
   async findReadyR2Objects(fileId) {
@@ -266,6 +333,7 @@ function createMediaObjectService(options) {
 module.exports = {
   MediaCapacityExceededError,
   MediaObjectConflictError,
+  MediaObjectStateTransitionError,
   MediaObjectService,
   createMediaObjectService,
 };

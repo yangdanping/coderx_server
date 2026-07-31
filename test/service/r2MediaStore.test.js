@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const { Readable } = require('node:stream');
 
 require('module-alias/register');
 
@@ -44,6 +45,7 @@ test('R2MediaStore: put writes immutable cache-control and sha256 metadata, then
     publicBaseUrl: 'https://media.ydp321.asia',
   });
   const body = Buffer.from('image bytes');
+  const contentMd5 = crypto.createHash('md5').update(body).digest('base64');
 
   const result = await store.put({
     key,
@@ -51,6 +53,7 @@ test('R2MediaStore: put writes immutable cache-control and sha256 metadata, then
     contentType: 'image/jpeg',
     sizeBytes: body.length,
     sha256,
+    contentMd5,
   });
 
   assert.equal(commandName(client.calls[0]), 'HeadObjectCommand');
@@ -62,6 +65,8 @@ test('R2MediaStore: put writes immutable cache-control and sha256 metadata, then
     ContentType: 'image/jpeg',
     ContentLength: body.length,
     CacheControl: IMMUTABLE_CACHE_CONTROL,
+    ContentMD5: contentMd5,
+    IfNoneMatch: '*',
     Metadata: { sha256 },
   });
   assert.deepEqual(result, {
@@ -108,14 +113,19 @@ test('R2MediaStore: identical existing object is skipped without overwrite', asy
   }));
   const store = createR2MediaStore({ client, bucket: 'bucket', publicBaseUrl: 'https://media.example' });
 
+  let bodyFactoryCalls = 0;
   const result = await store.put({
     key,
-    body: Buffer.from('not consumed'),
+    bodyFactory() {
+      bodyFactoryCalls += 1;
+      return Buffer.from('not consumed');
+    },
     contentType: 'image/jpeg',
     sizeBytes: 123,
     sha256,
   });
 
+  assert.equal(bodyFactoryCalls, 0);
   assert.equal(client.calls.length, 1);
   assert.equal(commandName(client.calls[0]), 'HeadObjectCommand');
   assert.deepEqual(result, {
@@ -148,6 +158,52 @@ test('R2MediaStore: conflicting existing key rejects and never issues PutObject'
   assert.deepEqual(client.calls.map(commandName), ['HeadObjectCommand']);
 });
 
+test('R2MediaStore: a conditional-put race accepts only an identical winner', async () => {
+  let headCalls = 0;
+  const client = createClient((command) => {
+    if (commandName(command) === 'HeadObjectCommand') {
+      headCalls += 1;
+      if (headCalls === 1) {
+        const error = new Error('missing');
+        error.name = 'NotFound';
+        error.$metadata = { httpStatusCode: 404 };
+        throw error;
+      }
+      return {
+        ContentLength: 123,
+        Metadata: { sha256 },
+        ETag: '"race-winner"',
+      };
+    }
+    if (commandName(command) === 'PutObjectCommand') {
+      assert.equal(command.input.IfNoneMatch, '*');
+      const error = new Error('precondition failed');
+      error.name = 'PreconditionFailed';
+      error.$metadata = { httpStatusCode: 412 };
+      throw error;
+    }
+    throw new Error(`Unexpected command: ${commandName(command)}`);
+  });
+  const store = createR2MediaStore({ client, bucket: 'bucket', publicBaseUrl: 'https://media.example' });
+
+  const result = await store.put({
+    key,
+    bodyFactory: () => Buffer.from('candidate'),
+    contentType: 'image/jpeg',
+    sizeBytes: 123,
+    sha256,
+  });
+
+  assert.deepEqual(client.calls.map(commandName), ['HeadObjectCommand', 'PutObjectCommand', 'HeadObjectCommand']);
+  assert.deepEqual(result, {
+    key,
+    sizeBytes: 123,
+    sha256,
+    etag: '"race-winner"',
+    skipped: true,
+  });
+});
+
 test('R2MediaStore: delete is idempotent and publicUrl encodes path segments', async () => {
   const client = createClient((command) => {
     assert.equal(commandName(command), 'DeleteObjectCommand');
@@ -159,4 +215,55 @@ test('R2MediaStore: delete is idempotent and publicUrl encodes path segments', a
 
   assert.deepEqual(client.calls[0].input, { Bucket: 'bucket', Key: key });
   assert.equal(store.publicUrl('articles/88/images/512/hash small.jpg'), 'https://media.example/articles/88/images/512/hash%20small.jpg');
+});
+
+test('R2MediaStore: put, head and delete all reject unsafe object keys', async () => {
+  const client = createClient(() => {
+    throw new Error('S3 client must not receive unsafe keys');
+  });
+  const store = createR2MediaStore({ client, bucket: 'bucket', publicBaseUrl: 'https://media.example' });
+
+  await assert.rejects(
+    store.put({
+      key: '../escaped.jpg',
+      body: Buffer.from('unsafe'),
+      contentType: 'image/jpeg',
+      sizeBytes: 6,
+      sha256,
+    }),
+    /unsafe|relative|key/i,
+  );
+  await assert.rejects(store.head('../escaped.jpg'), /unsafe|relative|key/i);
+  await assert.rejects(store.delete('../escaped.jpg'), /unsafe|relative|key/i);
+  assert.equal(client.calls.length, 0);
+});
+
+test('R2MediaStore: a generic PUT failure destroys the opened snapshot stream', async () => {
+  let uploadStream;
+  const client = createClient((command) => {
+    if (commandName(command) === 'HeadObjectCommand') {
+      const error = new Error('missing');
+      error.name = 'NotFound';
+      error.$metadata = { httpStatusCode: 404 };
+      throw error;
+    }
+    throw new Error('R2 unavailable');
+  });
+  const store = createR2MediaStore({ client, bucket: 'bucket', publicBaseUrl: 'https://media.example' });
+
+  await assert.rejects(
+    store.put({
+      key,
+      bodyFactory() {
+        uploadStream = Readable.from(Buffer.from('snapshot'));
+        return uploadStream;
+      },
+      contentType: 'image/jpeg',
+      sizeBytes: 8,
+      sha256,
+    }),
+    /unavailable/i,
+  );
+
+  assert.equal(uploadStream.destroyed, true);
 });

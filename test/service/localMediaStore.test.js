@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { Readable } = require('node:stream');
 
 require('module-alias/register');
 
@@ -100,4 +101,64 @@ test('LocalMediaStore: rejects a symlinked parent that escapes the configured ro
     /symlink|symbolic|root|escape/i,
   );
   await assert.rejects(fs.access(path.join(outsideDirectory, 'escaped.jpg')));
+});
+
+test('LocalMediaStore: concurrent writers cannot overwrite the immutable destination', async (t) => {
+  const { rootPath, store } = await makeStore(t);
+  const key = 'articles/88/images/512/concurrent-original.jpg';
+  const firstBody = Buffer.from('first immutable payload');
+  const secondBody = Buffer.from('second immutable value');
+  let releaseStreams;
+  const streamGate = new Promise((resolve) => {
+    releaseStreams = resolve;
+  });
+  const gatedStream = (body) =>
+    Readable.from(
+      (async function* generate() {
+        await streamGate;
+        yield body;
+      })(),
+    );
+
+  const firstPut = store.put({
+    key,
+    body: gatedStream(firstBody),
+    sizeBytes: firstBody.length,
+    sha256: crypto.createHash('sha256').update(firstBody).digest('hex'),
+  });
+  const secondPut = store.put({
+    key,
+    body: gatedStream(secondBody),
+    sizeBytes: secondBody.length,
+    sha256: crypto.createHash('sha256').update(secondBody).digest('hex'),
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  releaseStreams();
+
+  const results = await Promise.allSettled([firstPut, secondPut]);
+  assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
+  assert.equal(results.filter((result) => result.status === 'rejected').length, 1);
+  assert.match(results.find((result) => result.status === 'rejected').reason.message, /conflict|overwrite|exists/i);
+
+  const storedBody = await fs.readFile(path.join(rootPath, key));
+  assert.equal(storedBody.equals(firstBody) || storedBody.equals(secondBody), true);
+});
+
+test('LocalMediaStore: rejects group/world-writable parents outside the trusted service boundary', async (t) => {
+  const { rootPath, store } = await makeStore(t);
+  const unsafeParent = path.join(rootPath, 'unsafe');
+  await fs.mkdir(unsafeParent);
+  await fs.chmod(unsafeParent, 0o777);
+  t.after(() => fs.chmod(unsafeParent, 0o700).catch(() => {}));
+
+  const body = Buffer.from('trusted-root-only');
+  await assert.rejects(
+    store.put({
+      key: 'unsafe/object.jpg',
+      body,
+      sizeBytes: body.length,
+      sha256: crypto.createHash('sha256').update(body).digest('hex'),
+    }),
+    /permission|writable|trusted|owner/i,
+  );
 });
