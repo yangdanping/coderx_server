@@ -1,5 +1,7 @@
 const log4js = require('log4js');
 const path = require('path');
+const configQuiet = process.env.CONFIG_QUIET === 'true';
+const sqlConsoleAppenders = configQuiet ? ['sql'] : ['sql', 'console'];
 
 // 配置 log4js
 log4js.configure({
@@ -44,7 +46,7 @@ log4js.configure({
   },
   categories: {
     sql: {
-      appenders: ['sql', 'console'], // 同时输出到文件和控制台
+      appenders: sqlConsoleAppenders,
       level: 'debug',
     },
     request: {

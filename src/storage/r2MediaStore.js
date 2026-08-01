@@ -1,4 +1,4 @@
-const { DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
+const { DeleteObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } = require('@aws-sdk/client-s3');
 const { IMMUTABLE_CACHE_CONTROL } = require('@/constants/mediaStorage');
 
 function isNotFound(error) {
@@ -136,6 +136,35 @@ class R2MediaStore {
     } catch (error) {
       if (!isNotFound(error)) throw error;
     }
+  }
+
+  async list({ continuationToken, prefix = '', maxKeys = 1_000 } = {}) {
+    if (typeof prefix !== 'string' || prefix.includes('\\') || prefix.startsWith('/')) {
+      throw new TypeError('R2 list prefix must be a relative object-key prefix');
+    }
+    const normalizedMaxKeys = Number(maxKeys);
+    if (!Number.isSafeInteger(normalizedMaxKeys) || normalizedMaxKeys <= 0 || normalizedMaxKeys > 1_000) {
+      throw new TypeError('R2 list maxKeys must be an integer between 1 and 1000');
+    }
+    const result = await this.client.send(
+      new ListObjectsV2Command({
+        Bucket: this.bucket,
+        ...(continuationToken ? { ContinuationToken: continuationToken } : {}),
+        ...(prefix ? { Prefix: prefix } : {}),
+        MaxKeys: normalizedMaxKeys,
+      }),
+    );
+    return {
+      objects: (result.Contents || [])
+        .filter((object) => typeof object.Key === 'string' && object.Key.length > 0)
+        .map((object) => ({
+          key: object.Key,
+          sizeBytes: Number(object.Size || 0),
+          etag: object.ETag ?? null,
+          lastModified: object.LastModified ?? null,
+        })),
+      continuationToken: result.IsTruncated ? result.NextContinuationToken || null : null,
+    };
   }
 
   publicUrl(key) {

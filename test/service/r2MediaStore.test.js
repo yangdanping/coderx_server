@@ -217,6 +217,31 @@ test('R2MediaStore: delete is idempotent and publicUrl encodes path segments', a
   assert.equal(store.publicUrl('articles/88/images/512/hash small.jpg'), 'https://media.example/articles/88/images/512/hash%20small.jpg');
 });
 
+test('R2MediaStore: list uses ListObjectsV2 pagination inputs and normalizes object summaries', async () => {
+  const client = createClient((command) => {
+    assert.equal(commandName(command), 'ListObjectsV2Command');
+    return {
+      Contents: [{ Key: key, Size: 123, ETag: '"listed"', LastModified: new Date('2026-08-01T00:00:00Z') }],
+      IsTruncated: true,
+      NextContinuationToken: 'next-page',
+    };
+  });
+  const store = createR2MediaStore({ client, bucket: 'bucket', publicBaseUrl: 'https://media.example' });
+
+  const result = await store.list({ continuationToken: 'current-page', prefix: 'articles/', maxKeys: 25 });
+
+  assert.deepEqual(client.calls[0].input, {
+    Bucket: 'bucket',
+    ContinuationToken: 'current-page',
+    Prefix: 'articles/',
+    MaxKeys: 25,
+  });
+  assert.deepEqual(result, {
+    objects: [{ key, sizeBytes: 123, etag: '"listed"', lastModified: new Date('2026-08-01T00:00:00Z') }],
+    continuationToken: 'next-page',
+  });
+});
+
 test('R2MediaStore: put, head and delete all reject unsafe object keys', async () => {
   const client = createClient(() => {
     throw new Error('S3 client must not receive unsafe keys');

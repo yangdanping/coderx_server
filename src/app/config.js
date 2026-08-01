@@ -4,9 +4,12 @@ const path = require('path');
 
 // 根据 NODE_ENV 环境变量，动态选择加载 .env.production 或 .env.development 配置文件
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
-dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+dotenv.config({
+  path: path.resolve(process.cwd(), envFile),
+  quiet: process.env.CONFIG_QUIET === 'true',
+});
 
-console.log(`正在加载环境变量: ${envFile}`);
+if (process.env.CONFIG_QUIET !== 'true') console.log(`正在加载环境变量: ${envFile}`);
 
 const PRIVATE_KEY = fs.readFileSync(path.resolve(__dirname, './keys/private.key'));
 const PUBLIC_KEY = fs.readFileSync(path.resolve(__dirname, './keys/public.key'));

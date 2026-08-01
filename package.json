@@ -10,6 +10,7 @@
     "start": "NODE_ENV=production node ./src/main.js",
     "start:ingest": "NODE_ENV=production node ./src/ingest/worker.js",
     "start:socket": "NODE_ENV=production node ./src/socket_server.js",
+    "media:migrate": "node ./src/tasks/mediaMigration.cli.js",
     "test": "node --test --test-concurrency=1 \"test/service/*.test.js\" \"test/tasks/*.test.js\" \"test/controller/*.test.js\"",
     "test:media-db": "node --test \"test/integration/*.postgres.test.js\"",
     "prettier": "prettier --write .",
