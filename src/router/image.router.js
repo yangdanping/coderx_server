@@ -2,6 +2,7 @@ const Router = require('@koa/router');
 const imageRouter = new Router({ prefix: '/img' });
 const { verifyAuth } = require('@/middleware/auth.middleware');
 const { imgHandler, imgResize } = require('@/middleware/file.middleware');
+const mediaMutationMaintenance = require('@/middleware/mediaMaintenance.middleware');
 const imageController = require('@/controller/image.controller');
 
 /**
@@ -12,15 +13,15 @@ const imageController = require('@/controller/image.controller');
 // ★上传图片接口
 // POST /img
 // 支持批量上传（当前接口最多 20 张）
-imageRouter.post('/', verifyAuth, imgHandler, imgResize, imageController.saveImgInfo);
+imageRouter.post('/', mediaMutationMaintenance, verifyAuth, imgHandler, imgResize, imageController.saveImgInfo);
 
 // ★关联图片到文章接口
 // POST /img/:articleId
 // 用于发布/编辑文章时，将上传的图片与文章关联；仅显式标记时才设置封面
-imageRouter.post('/:articleId', verifyAuth, imageController.updateFile);
+imageRouter.post('/:articleId', mediaMutationMaintenance, verifyAuth, imageController.updateFile);
 
 // ★删除图片接口
 // DELETE /img
-imageRouter.delete('/', verifyAuth, imageController.deleteFile);
+imageRouter.delete('/', mediaMutationMaintenance, verifyAuth, imageController.deleteFile);
 
 module.exports = imageRouter;

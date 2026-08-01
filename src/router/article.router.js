@@ -2,6 +2,7 @@ const Router = require('@koa/router');
 const articleRouter = new Router({ prefix: '/article' });
 const articleController = require('@/controller/article.controller');
 const { verifyAuth, verifyStatus, verifyPermission } = require('@/middleware/auth.middleware');
+const mediaMutationMaintenance = require('@/middleware/mediaMaintenance.middleware');
 const { verifyTagExists } = require('@/middleware/tag.middleware.js');
 
 /* ★获取文章列表接口---------------------------------- */
@@ -32,7 +33,7 @@ articleRouter.get('/:articleId/like', articleController.getArticleLikedById);
 
 /* ★发布文章接口----------------------------------------------
 用户发布文章必须先验证其是否登陆(授权) */
-articleRouter.post('/', verifyAuth, verifyStatus, articleController.addArticle);
+articleRouter.post('/', mediaMutationMaintenance, verifyAuth, verifyStatus, articleController.addArticle);
 
 /* ★点赞文章接口---------------------------------- */
 articleRouter.post('/:articleId/like', verifyAuth, verifyStatus, articleController.likeArticle);
@@ -44,9 +45,9 @@ articleRouter.post('/:articleId/tag', verifyAuth, verifyPermission, verifyTagExi
 articleRouter.put('/:articleId/view', articleController.viewArticle);
 
 /* ★修改文章接口---------------------------------- */
-articleRouter.put('/:articleId', verifyAuth, verifyPermission, articleController.update);
+articleRouter.put('/:articleId', mediaMutationMaintenance, verifyAuth, verifyPermission, articleController.update);
 
 /* ★删除文章接口---------------------------------- */
-articleRouter.delete('/:articleId', verifyAuth, verifyPermission, articleController.delete);
+articleRouter.delete('/:articleId', mediaMutationMaintenance, verifyAuth, verifyPermission, articleController.delete);
 
 module.exports = articleRouter;

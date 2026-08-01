@@ -10,6 +10,7 @@ const mediaVariableNames = [
   'MEDIA_READ_MODE',
   'MEDIA_KEEP_LOCAL_AFTER_PROMOTE',
   'MEDIA_R2_WRITE_PAUSED',
+  'MEDIA_MUTATIONS_PAUSED',
   'MEDIA_CDN_BASE_URL',
   'R2_ACCOUNT_ID',
   'R2_BUCKET',
@@ -38,6 +39,7 @@ test('media storage config: exposes safe local defaults without credentials', (t
   assert.equal(config.MEDIA_READ_MODE, 'local');
   assert.equal(config.MEDIA_KEEP_LOCAL_AFTER_PROMOTE, 'true');
   assert.equal(config.MEDIA_R2_WRITE_PAUSED, 'false');
+  assert.equal(config.MEDIA_MUTATIONS_PAUSED, 'false');
   assert.equal(config.MEDIA_CDN_BASE_URL, 'https://media.ydp321.asia');
   assert.equal(config.R2_ACCOUNT_ID, '');
   assert.equal(config.R2_BUCKET, 'coderx-media-public');
@@ -54,6 +56,7 @@ test('.env.example: documents media switches with local/local safe defaults and 
   assert.match(env, /^MEDIA_READ_MODE=local$/m);
   assert.match(env, /^MEDIA_KEEP_LOCAL_AFTER_PROMOTE=true$/m);
   assert.match(env, /^MEDIA_R2_WRITE_PAUSED=false$/m);
+  assert.match(env, /^MEDIA_MUTATIONS_PAUSED=false$/m);
   assert.match(env, /^MEDIA_CDN_BASE_URL=https:\/\/media\.ydp321\.asia$/m);
   assert.match(env, /^R2_BUCKET=coderx-media-public$/m);
   assert.match(env, /^R2_ACCESS_KEY_ID=$/m);

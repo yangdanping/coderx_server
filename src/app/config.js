@@ -35,6 +35,7 @@ module.exports.MEDIA_WRITE_MODE = process.env.MEDIA_WRITE_MODE || 'local';
 module.exports.MEDIA_READ_MODE = process.env.MEDIA_READ_MODE || 'local';
 module.exports.MEDIA_KEEP_LOCAL_AFTER_PROMOTE = process.env.MEDIA_KEEP_LOCAL_AFTER_PROMOTE || 'true';
 module.exports.MEDIA_R2_WRITE_PAUSED = process.env.MEDIA_R2_WRITE_PAUSED || 'false';
+module.exports.MEDIA_MUTATIONS_PAUSED = process.env.MEDIA_MUTATIONS_PAUSED || 'false';
 module.exports.MEDIA_CDN_BASE_URL = process.env.MEDIA_CDN_BASE_URL || 'https://media.ydp321.asia';
 module.exports.R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '';
 module.exports.R2_BUCKET = process.env.R2_BUCKET || 'coderx-media-public';
