@@ -18,6 +18,7 @@ const {
   buildGetArticlesByKeyWordsSql,
   buildGetRecommendArticleListExecuteParams,
   buildGetRecommendArticleListSql,
+  buildGetRandomTocArticleSql,
 } = require('./sql/article.sql');
 const { buildFindDraftForConsumeSql, buildConsumeDraftSql } = require('./sql/draft.sql');
 
@@ -496,6 +497,15 @@ class ArticleService {
     const params = buildGetRecommendArticleListExecuteParams(offset, limit);
     const [result] = await connection.execute(statement, params);
     return result;
+  };
+
+  getRandomTocArticle = async () => {
+    const statement = buildGetRandomTocArticleSql();
+    const [result] = await connection.execute(statement, []);
+    if (!result[0]) {
+      throw new BusinessError('暂无可体验目录的文章', 404);
+    }
+    return result[0];
   };
 }
 

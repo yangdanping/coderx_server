@@ -448,6 +448,23 @@ test('getList: prefers excerpt for preview output when structured preview is ava
   );
 });
 
+test('getRandomTocArticle: returns the service-selected article id', async () => {
+  const calls = [];
+  const articleService = {
+    async getRandomTocArticle() {
+      calls.push('getRandomTocArticle');
+      return { id: 77 };
+    },
+  };
+  const controller = loadControllerWithServiceMocks({ articleService, historyService: {} });
+  const ctx = {};
+
+  await controller.getRandomTocArticle(ctx, noopNext);
+
+  assert.deepEqual(calls, ['getRandomTocArticle']);
+  assert.deepEqual(ctx.body, Result.success({ id: 77 }));
+});
+
 test('addArticle: forwards optional draftId to service (strict positive int)', async () => {
   const calls = [];
   const contentJson = {

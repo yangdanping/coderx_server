@@ -172,6 +172,22 @@ function buildGetRecommendArticleListExecuteParams(offset, limit) {
   return [limit, offset];
 }
 
+function buildGetRandomTocArticleSql() {
+  return `
+    SELECT a.id
+    FROM article a
+    WHERE COALESCE(a.status, 0) = 0
+      AND jsonb_array_length(
+        jsonb_path_query_array(
+          a.content,
+          '$.content[*] ? (@.type == "heading" && (@.attrs.level == 1 || @.attrs.level == 2))'
+        )
+      ) >= 2
+    ORDER BY random()
+    LIMIT 1;
+  `;
+}
+
 module.exports = {
   buildAddArticleSql,
   buildArticleListExecuteParams,
@@ -184,4 +200,5 @@ module.exports = {
   buildGetArticlesByKeyWordsSql,
   buildGetRecommendArticleListExecuteParams,
   buildGetRecommendArticleListSql,
+  buildGetRandomTocArticleSql,
 };

@@ -163,6 +163,12 @@ class ArticleController {
     const result = await articleService.getRecommendArticleList(offset, limit);
     ctx.body = Result.success(result);
   };
+
+  getRandomTocArticle = async (ctx, next) => {
+    const result = await articleService.getRandomTocArticle();
+    ctx.body = Result.success(result);
+  };
+
   update = async (ctx, next) => {
     const userId = ctx.user.id;
     const { title, contentJson = null, draftId: rawDraftId } = ctx.request.body;

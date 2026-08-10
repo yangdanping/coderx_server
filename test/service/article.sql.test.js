@@ -146,6 +146,22 @@ test('buildGetRecommendArticleListExecuteParams: orders limit before offset', ()
   assert.deepEqual(buildGetRecommendArticleListExecuteParams(5, 15), [15, 5]);
 });
 
+test('buildGetRandomTocArticleSql: filters public JSONB documents with at least two H1/H2 headings', () => {
+  const { buildGetRandomTocArticleSql } = loadHelper();
+
+  const sql = buildGetRandomTocArticleSql();
+
+  assert.match(sql, /SELECT\s+a\.id\s+FROM\s+article\s+a/i);
+  assert.match(sql, /COALESCE\s*\(\s*a\.status\s*,\s*0\s*\)\s*=\s*0/i);
+  assert.match(sql, /jsonb_path_query_array/i);
+  assert.match(sql, /@\.type\s*==\s*"heading"/i);
+  assert.match(sql, /@\.attrs\.level\s*==\s*1/i);
+  assert.match(sql, /@\.attrs\.level\s*==\s*2/i);
+  assert.match(sql, /jsonb_array_length\s*\([\s\S]*?\)\s*>=\s*2/i);
+  assert.match(sql, /ORDER\s+BY\s+random\s*\(\s*\)/i);
+  assert.match(sql, /LIMIT\s+1/i);
+});
+
 test('buildGetArticleByIdSql: does not coerce empty tags/images to jsonb []', () => {
   const { buildGetArticleByIdSql } = loadHelper();
   const sql = buildGetArticleByIdSql('https://api.example', 'https://app.example');

@@ -702,6 +702,41 @@ test('getArticleList: preserves a null cover when the article has no cover image
   assert.equal(Object.prototype.hasOwnProperty.call(result[0], 'coverFileId'), false);
 });
 
+test('getRandomTocArticle: returns one qualifying article id from the JSONB query', async () => {
+  const executeCalls = [];
+  const service = loadServiceWithConnection({
+    async execute(statement, params) {
+      executeCalls.push({ statement, params });
+      return [[{ id: 77 }], []];
+    },
+  });
+
+  const result = await service.getRandomTocArticle();
+
+  assert.deepEqual(result, { id: 77 });
+  assert.equal(executeCalls.length, 1);
+  assert.match(executeCalls[0].statement, /jsonb_path_query_array/i);
+  assert.deepEqual(executeCalls[0].params, []);
+});
+
+test('getRandomTocArticle: reports 404 when no article can demonstrate a table of contents', async () => {
+  const service = loadServiceWithConnection({
+    async execute() {
+      return [[], []];
+    },
+  });
+
+  await assert.rejects(
+    () => service.getRandomTocArticle(),
+    (error) => {
+      assert.ok(error instanceof BusinessError);
+      assert.equal(error.httpStatus, 404);
+      assert.equal(error.message, '暂无可体验目录的文章');
+      return true;
+    },
+  );
+});
+
 test('delete: removes staged image objects from R2 before deleting file and article rows', async () => {
   const calls = [];
   const conn = {
