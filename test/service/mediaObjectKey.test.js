@@ -56,6 +56,18 @@ test('buildMediaObjectKey: builds exact immutable video and poster keys', () => 
   );
 });
 
+test('buildMediaObjectKey creates neutral keys when articleId is omitted', () => {
+  assert.equal(
+    buildMediaObjectKey({
+      fileId: 512,
+      sha256: SHA256,
+      variant: 'small',
+      extension: 'webp',
+    }),
+    `media/images/512/${SHA256.slice(0, 12)}-small.webp`,
+  );
+});
+
 test('buildMediaObjectKey: rejects traversal and malformed path components', () => {
   const base = {
     articleId: 88,

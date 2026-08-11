@@ -4,6 +4,8 @@ const path = require('node:path');
 
 require('module-alias/register');
 
+const { buildFindOrphanFilesSql } = require('@/tasks/cleanOrphanFiles.sql');
+
 const taskPath = path.resolve(__dirname, '../../src/tasks/cleanOrphanFiles.js');
 const databasePath = path.resolve(__dirname, '../../src/app/database.js');
 const mediaRuntimePath = path.resolve(__dirname, '../../src/service/mediaRuntime.service.js');
@@ -68,6 +70,18 @@ function loadTaskWithConnection(connectionMock, cronMock = null, mediaRuntimeMoc
 
   return require(taskPath);
 }
+
+test('image orphan SQL excludes files attached to Flow', () => {
+  const sql = buildFindOrphanFilesSql('image', 'DAY');
+
+  assert.match(sql, /NOT EXISTS\s*\(\s*SELECT 1 FROM flow_post_media fm WHERE fm\.file_id = f\.id\s*\)/i);
+});
+
+test('video orphan SQL excludes files attached to Flow', () => {
+  const sql = buildFindOrphanFilesSql('video', 'DAY');
+
+  assert.match(sql, /NOT EXISTS\s*\(\s*SELECT 1 FROM flow_post_media fm WHERE fm\.file_id = f\.id\s*\)/i);
+});
 
 test('cleanOrphanFiles: pg uses pg-safe orphan lookup SQL and commits when no orphan files exist', async () => {
   const calls = [];

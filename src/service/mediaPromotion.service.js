@@ -82,13 +82,16 @@ class MediaPromotionService {
     let mediaObject;
     let ownsReservation = false;
     try {
-      key = buildMediaObjectKey({
-        articleId,
+      const mediaObjectKeyInput = {
         fileId,
         sha256: snapshot.sha256,
         variant,
         extension: extension ?? path.extname(filename || localPath),
-      });
+      };
+      if (articleId != null) {
+        mediaObjectKeyInput.articleId = articleId;
+      }
+      key = buildMediaObjectKey(mediaObjectKeyInput);
 
       const reservation = await this.mediaObjectService.reserveR2Object({
         fileId,

@@ -45,7 +45,9 @@ function normalizeExtension({ extension, filename }) {
 }
 
 function buildMediaObjectKey({ articleId, fileId, sha256, variant, extension, filename } = {}) {
-  const normalizedArticleId = normalizePositiveId(articleId, 'articleId');
+  const scope = articleId == null
+    ? 'media'
+    : `articles/${normalizePositiveId(articleId, 'articleId')}`;
   const normalizedFileId = normalizePositiveId(fileId, 'fileId');
   if (typeof sha256 !== 'string' || !SHA256_PATTERN.test(sha256)) {
     throw new TypeError('sha256 must contain exactly 64 lowercase hexadecimal characters');
@@ -61,7 +63,7 @@ function buildMediaObjectKey({ articleId, fileId, sha256, variant, extension, fi
   }
 
   const normalizedExtension = normalizeExtension({ extension, filename });
-  return `articles/${normalizedArticleId}/${mediaDirectory}/${normalizedFileId}/${sha256.slice(0, 12)}-${variant}.${normalizedExtension}`;
+  return `${scope}/${mediaDirectory}/${normalizedFileId}/${sha256.slice(0, 12)}-${variant}.${normalizedExtension}`;
 }
 
 module.exports = {

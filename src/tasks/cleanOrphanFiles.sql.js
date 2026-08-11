@@ -57,6 +57,7 @@ function buildFindOrphanFilesSql(fileType, unit) {
         LEFT JOIN video_meta vm ON f.filename = vm.poster
         WHERE f.article_id IS NULL
           AND f.draft_id IS NULL
+          AND NOT EXISTS (SELECT 1 FROM flow_post_media fm WHERE fm.file_id = f.id)
           AND vm.poster IS NULL
           AND f.file_type = ?
           AND f.create_at < ${cutoffExpression}
@@ -83,6 +84,7 @@ function buildFindOrphanFilesSql(fileType, unit) {
         LEFT JOIN video_meta vm ON f.id = vm.file_id
         WHERE f.article_id IS NULL
           AND f.draft_id IS NULL
+          AND NOT EXISTS (SELECT 1 FROM flow_post_media fm WHERE fm.file_id = f.id)
           AND f.file_type = ?
           AND vm.transcode_status NOT IN ('pending', 'processing')
           AND f.create_at < ${cutoffExpression}
