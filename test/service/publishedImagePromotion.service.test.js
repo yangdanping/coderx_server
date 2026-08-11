@@ -158,6 +158,43 @@ test('published image promotion: local mode and the emergency pause never attemp
   });
 });
 
+test('published image promotion: neutral images respect switches and omit articleId from R2 payloads', async (t) => {
+  assert.equal(typeof createPublishedImagePromotionService, 'function');
+  const imageRoot = await createImageFixture(t);
+  const promoteCalls = [];
+  const promote = async (payload) => {
+    promoteCalls.push(payload);
+    return { key: `${payload.fileId}/${payload.variant}`, skipped: false, retainedLocal: true };
+  };
+  const localService = createPublishedImagePromotionService({
+    imageRoot,
+    writeMode: 'local',
+    mediaPromotionService: { promote },
+  });
+  const pausedService = createPublishedImagePromotionService({
+    imageRoot,
+    writeMode: 'r2_on_publish',
+    writePaused: true,
+    mediaPromotionService: { promote },
+  });
+  const r2Service = createPublishedImagePromotionService({
+    imageRoot,
+    writeMode: 'r2_on_publish',
+    mediaPromotionService: { promote },
+  });
+
+  assert.equal((await localService.promotePublishedImages({ images: [imageRow()] })).reason, 'write_mode_local');
+  assert.equal((await pausedService.promotePublishedImages({ articleId: null, images: [imageRow()] })).reason, 'r2_write_paused');
+
+  const result = await r2Service.promotePublishedImages({ images: [imageRow()] });
+  const nullScopeResult = await r2Service.promotePublishedImages({ articleId: null, images: [imageRow()] });
+
+  assert.equal(result.ready, 2);
+  assert.equal(nullScopeResult.ready, 2);
+  assert.deepEqual(promoteCalls.map((payload) => payload.variant), ['original', 'small', 'original', 'small']);
+  assert.equal(promoteCalls.every((payload) => !Object.hasOwn(payload, 'articleId')), true);
+});
+
 test('published image promotion: per-variant failures are reported without stopping other variants', async (t) => {
   assert.equal(typeof createPublishedImagePromotionService, 'function');
   const imageRoot = await createImageFixture(t);

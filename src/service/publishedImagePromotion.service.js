@@ -63,7 +63,7 @@ class PublishedImagePromotionService {
   }
 
   async promotePublishedImages({ articleId, images }) {
-    const normalizedArticleId = normalizePositiveId(articleId, 'articleId');
+    const normalizedArticleId = articleId == null ? null : normalizePositiveId(articleId, 'articleId');
     if (!Array.isArray(images)) {
       throw new TypeError('images must be an array');
     }
@@ -96,13 +96,16 @@ class PublishedImagePromotionService {
       for (const candidate of variants) {
         summary.attempted += 1;
         try {
-          const result = await this.mediaPromotionService.promote({
-            articleId: normalizedArticleId,
+          const promotionPayload = {
             fileId,
             variant: candidate.variant,
             localPath: candidate.localPath,
             contentType,
-          });
+          };
+          if (normalizedArticleId != null) {
+            promotionPayload.articleId = normalizedArticleId;
+          }
+          const result = await this.mediaPromotionService.promote(promotionPayload);
           if (result?.inProgress) {
             summary.inProgress += 1;
           } else {
