@@ -4,7 +4,7 @@ function buildInsertFlowSql() {
   return `
     INSERT INTO flow_post (user_id, client_request_id, content, body_text)
     VALUES (?, ?, ?::jsonb, ?)
-    RETURNING id, user_id AS "userId", client_request_id AS "clientRequestId", content, body_text AS "bodyText", create_at AS "createAt", update_at AS "updateAt";
+    ON CONFLICT (user_id, client_request_id) DO NOTHING RETURNING id;
   `;
 }
 
@@ -16,8 +16,8 @@ function buildLockFlowMediaSql(count) {
     SELECT f.id
     FROM file f
     LEFT JOIN flow_post_media fm ON fm.file_id = f.id
-    WHERE ${SqlUtils.queryIn('f.id', mediaIds)}
-      AND f.user_id = ?
+    WHERE f.user_id = ?
+      ${SqlUtils.queryIn('f.id', mediaIds, 'AND')}
       AND f.file_type = 'image'
       AND f.article_id IS NULL
       AND f.draft_id IS NULL
@@ -30,8 +30,17 @@ function buildLockFlowMediaSql(count) {
 function buildInsertFlowMediaSql(count) {
   if (!Number.isSafeInteger(count) || count <= 0) return null;
 
-  const rows = Array.from({ length: count }, () => '(?, ?, ?, ?)').join(', ');
-  return `INSERT INTO flow_post_media (flow_id, file_id, position, alt_text) VALUES ${rows};`;
+  const rows = Array.from({ length: count }, () => '(?, ?, ?)').join(', ');
+  return `INSERT INTO flow_post_media (flow_id, file_id, position) VALUES ${rows};`;
+}
+
+function buildFindFlowByRequestIdSql() {
+  return `
+    SELECT id
+    FROM flow_post
+    WHERE user_id = ? AND client_request_id = ?
+    LIMIT 1;
+  `;
 }
 
 function flowMediaAggregateSql() {
@@ -90,6 +99,7 @@ function buildFlowDetailSql() {
 }
 
 module.exports = {
+  buildFindFlowByRequestIdSql,
   buildFlowDetailSql,
   buildFlowFeedSql,
   buildInsertFlowMediaSql,
