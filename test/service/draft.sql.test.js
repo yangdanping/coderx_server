@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const helperPath = path.resolve(__dirname, '../../src/service/sql/draft.sql.js');
-const migrationPath = path.resolve(__dirname, '../../docs/sql/2026-04-13-draft-lifecycle-status.sql');
+const migrationPath = path.resolve(__dirname, '../../docs/10_flow/sql/2026-08-11-draft-type.sql');
 
 const normalizeSql = (sql) => sql.replace(/\s+/g, ' ').trim();
 
@@ -21,25 +21,23 @@ const loadHelper = () => {
 };
 
 const loadMigration = () => {
-  assert.equal(fs.existsSync(migrationPath), true, 'Expected draft lifecycle migration to exist');
+  assert.equal(fs.existsSync(migrationPath), true, 'Expected draft type migration to exist');
   return fs.readFileSync(migrationPath, 'utf8');
 };
 
 test('buildUpsertDraftSql: new article draft uses PG partial unique upsert on active-only index', () => {
   const { buildUpsertDraftSql } = loadHelper();
   const sql = buildUpsertDraftSql({ hasArticleId: false });
-  const updateSetClause = extractSqlFragment(
-    sql,
-    /DO UPDATE SET(?<fragment>[\s\S]+?)WHERE draft\.version = \$6/i,
-    'DO UPDATE SET clause for new draft upsert'
-  );
+  const updateSetClause = extractSqlFragment(sql, /DO UPDATE SET(?<fragment>[\s\S]+?)WHERE draft\.version = \$6/i, 'DO UPDATE SET clause for new draft upsert');
 
-  assert.match(sql, /INSERT INTO draft\s*\(user_id,\s*article_id,\s*title,\s*content,\s*meta,\s*version\)/i);
-  assert.match(sql, /ON CONFLICT\s*\(user_id\)\s*WHERE article_id IS NULL AND status = 'active'/i);
+  assert.match(sql, /INSERT INTO draft\s*\(draft_type,\s*user_id,\s*article_id,\s*title,\s*content,\s*meta,\s*version\)/i);
+  assert.match(sql, /VALUES\s*\('article',\s*\$1,\s*\$2,\s*\$3,\s*\$4::jsonb,\s*\$5::jsonb,\s*1\)/i);
+  assert.match(sql, /ON CONFLICT\s*\(user_id\)\s*WHERE draft_type = 'article' AND article_id IS NULL AND status = 'active'/i);
   assert.match(sql, /version\s*=\s*draft\.version \+ 1/i);
   assert.match(sql, /WHERE draft\.version = \$6/i);
   assert.match(sql, /RETURNING/i);
   assert.match(sql, /article_id AS "articleId"/i);
+  assert.match(sql, /draft_type AS "draftType"/i);
   assert.match(updateSetClause, /status = 'active'/i);
   assert.match(updateSetClause, /consumed_at = NULL/i);
   assert.match(updateSetClause, /discarded_at = NULL/i);
@@ -49,13 +47,9 @@ test('buildUpsertDraftSql: new article draft uses PG partial unique upsert on ac
 test('buildUpsertDraftSql: existing article draft conflicts only on active rows and resets lifecycle fields', () => {
   const { buildUpsertDraftSql } = loadHelper();
   const sql = buildUpsertDraftSql({ hasArticleId: true });
-  const updateSetClause = extractSqlFragment(
-    sql,
-    /DO UPDATE SET(?<fragment>[\s\S]+?)WHERE draft\.version = \$6/i,
-    'DO UPDATE SET clause for article draft upsert'
-  );
+  const updateSetClause = extractSqlFragment(sql, /DO UPDATE SET(?<fragment>[\s\S]+?)WHERE draft\.version = \$6/i, 'DO UPDATE SET clause for article draft upsert');
 
-  assert.match(sql, /ON CONFLICT\s*\(user_id,\s*article_id\)\s*WHERE article_id IS NOT NULL AND status = 'active'/i);
+  assert.match(sql, /ON CONFLICT\s*\(user_id,\s*article_id\)\s*WHERE draft_type = 'article' AND article_id IS NOT NULL AND status = 'active'/i);
   assert.match(sql, /WHERE draft\.version = \$6/i);
   assert.match(updateSetClause, /status = 'active'/i);
   assert.match(updateSetClause, /consumed_at = NULL/i);
@@ -63,11 +57,27 @@ test('buildUpsertDraftSql: existing article draft conflicts only on active rows 
   assert.match(updateSetClause, /consumed_article_id = NULL/i);
 });
 
+test('buildUpsertDraftSql: flow draft uses its own active partial unique index', () => {
+  const { DRAFT_TYPE, buildUpsertDraftSql } = loadHelper();
+  const sql = buildUpsertDraftSql({ hasArticleId: false, draftType: DRAFT_TYPE.FLOW });
+
+  assert.match(sql, /VALUES\s*\('flow',\s*\$1,\s*\$2,\s*\$3,\s*\$4::jsonb,\s*\$5::jsonb,\s*1\)/i);
+  assert.match(sql, /ON CONFLICT\s*\(user_id\)\s*WHERE draft_type = 'flow' AND status = 'active'/i);
+  assert.doesNotMatch(sql, /article_id IS NULL AND status = 'active'/i);
+});
+
+test('buildUpsertDraftSql: rejects article targets for flow drafts', () => {
+  const { DRAFT_TYPE, buildUpsertDraftSql } = loadHelper();
+
+  assert.throws(() => buildUpsertDraftSql({ hasArticleId: true, draftType: DRAFT_TYPE.FLOW }), /Flow draft cannot target an article/);
+});
+
 test('buildFindDraftSql: new draft lookup scopes to active status and article_id IS NULL', () => {
   const { buildFindDraftSql } = loadHelper();
   const sql = buildFindDraftSql({ hasArticleId: false });
 
-  assert.match(sql, /WHERE user_id = \$1 AND article_id IS NULL/i);
+  assert.match(sql, /WHERE user_id = \$1[\s\S]*article_id IS NULL/i);
+  assert.match(sql, /draft_type\s*=\s*'article'/i);
   assert.match(sql, /status\s*=\s*'active'/i);
   assert.match(sql, /LIMIT 1/i);
 });
@@ -77,8 +87,17 @@ test('buildFindDraftSql: article draft lookup scopes by user, article, and activ
   const sql = buildFindDraftSql({ hasArticleId: true });
 
   assert.match(sql, /WHERE user_id = \$1 AND article_id = \$2/i);
+  assert.match(sql, /draft_type\s*=\s*'article'/i);
   assert.match(sql, /status\s*=\s*'active'/i);
   assert.match(sql, /LIMIT 1/i);
+});
+
+test('buildFindDraftSql: flow lookup is active-only and type-scoped', () => {
+  const { DRAFT_TYPE, buildFindDraftSql } = loadHelper();
+  const sql = buildFindDraftSql({ hasArticleId: false, draftType: DRAFT_TYPE.FLOW });
+
+  assert.match(sql, /WHERE user_id = \$1 AND draft_type = 'flow' AND article_id IS NULL AND status = 'active'/i);
+  assert.match(sql, /draft_type AS "draftType"/i);
 });
 
 test('buildFindDraftForConsumeSql: standalone draft locks by id, user, null article, active, FOR UPDATE', () => {
@@ -152,8 +171,16 @@ test('buildDiscardDraftSql: soft-discards active draft by id and user and return
   assert.match(updateSetClause, /consumed_article_id = NULL/i);
   assert.match(sql, /WHERE id = \$1 AND user_id = \$2/i);
   assert.match(sql, /status\s*=\s*'active'/i);
+  assert.match(sql, /draft_type\s*=\s*'article'/i);
   assert.match(sql, /RETURNING/i);
   assert.match(sql, /article_id AS "articleId"/i);
+});
+
+test('buildDiscardDraftSql: flow discard cannot affect article drafts', () => {
+  const { DRAFT_TYPE, buildDiscardDraftSql } = loadHelper();
+  const sql = buildDiscardDraftSql(DRAFT_TYPE.FLOW);
+
+  assert.match(sql, /WHERE id = \$1 AND user_id = \$2 AND draft_type = 'flow' AND status = 'active'/i);
 });
 
 test('buildConsumeDraftSql: marks active draft consumed with article id and timestamps', () => {
@@ -168,7 +195,19 @@ test('buildConsumeDraftSql: marks active draft consumed with article id and time
   assert.match(updateSetClause, /discarded_at = NULL/i);
   assert.match(sql, /WHERE id = \$1 AND user_id = \$2/i);
   assert.match(sql, /status\s*=\s*'active'/i);
+  assert.match(sql, /draft_type\s*=\s*'article'/i);
   assert.match(sql, /RETURNING/i);
+});
+
+test('draft type migration adds discriminator constraints and three type-aware active indexes', () => {
+  const migration = loadMigration();
+
+  assert.match(migration, /ADD COLUMN draft_type text NOT NULL DEFAULT 'article'/i);
+  assert.match(migration, /CHECK \(draft_type IN \('article', 'flow'\)\)/i);
+  assert.match(migration, /draft_type = 'flow'[\s\S]*article_id IS NULL[\s\S]*consumed_article_id IS NULL/i);
+  assert.match(migration, /UNIQUE INDEX draft_user_article_uq[\s\S]*draft_type = 'article'[\s\S]*article_id IS NOT NULL[\s\S]*status = 'active'/i);
+  assert.match(migration, /UNIQUE INDEX draft_user_new_article_uq[\s\S]*draft_type = 'article'[\s\S]*article_id IS NULL[\s\S]*status = 'active'/i);
+  assert.match(migration, /UNIQUE INDEX draft_user_flow_uq[\s\S]*draft_type = 'flow'[\s\S]*status = 'active'/i);
 });
 
 test('buildDeleteExpiredDraftsSql: cleanup applies distinct retention rules per lifecycle status', () => {

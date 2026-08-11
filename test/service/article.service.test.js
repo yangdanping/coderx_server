@@ -166,10 +166,12 @@ test('addArticle with draftId: locks standalone draft, inserts article, consumes
 
   const stmts = conn.calls.filter((c) => c.statement).map((c) => c.statement);
   assert.match(stmts[0], /FROM draft/i);
+  assert.match(stmts[0], /draft_type\s*=\s*'article'/i);
   assert.match(stmts[0], /article_id IS NULL/i);
   assert.match(stmts[0], /FOR UPDATE/i);
   assert.match(stmts[1], /INSERT INTO article/i);
   assert.match(stmts[2], /UPDATE draft/i);
+  assert.match(stmts[2], /draft_type\s*=\s*'article'/i);
   assert.match(stmts[2], /consumed_article_id/i);
   assert.equal(
     stmts.some((statement) => /UPDATE file/i.test(statement)),
@@ -341,12 +343,14 @@ test('update with draftId: locks article-linked draft then updates then consumes
 
   const lockCall = conn.calls.find((c) => /FROM draft/i.test(c.statement || ''));
   assert.ok(lockCall);
+  assert.match(lockCall.statement, /draft_type\s*=\s*'article'/i);
   assert.match(lockCall.statement, /article_id = \$3/i);
   assert.deepEqual(lockCall.params, [44, 7, 100]);
   const updateCall = conn.calls.find((c) => /UPDATE article SET title/i.test(c.statement || ''));
   assert.doesNotMatch(updateCall.statement, /content_html/i);
   assert.deepEqual(updateCall.params, ['T', JSON.stringify(buildStructuredDoc('来自草稿')), '来自草稿', 100]);
   const consumeCall = conn.calls.find((c) => /UPDATE draft/i.test(c.statement || '') && /consumed/i.test(c.statement));
+  assert.match(consumeCall.statement, /draft_type\s*=\s*'article'/i);
   assert.deepEqual(consumeCall.params, [44, 7, 100]);
   const stmts = conn.calls.filter((c) => c.statement).map((c) => c.statement);
   assert.equal(

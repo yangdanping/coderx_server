@@ -524,7 +524,7 @@ test('deleteDraft: owner discard marks discarded and returns id', async () => {
   assert.deepEqual(result, { id: 88 });
   assert.match(executeCalls[0].statement, /UPDATE\s+draft/i);
   assert.match(executeCalls[0].statement, /status\s*=\s*'discarded'/i);
-  assert.match(executeCalls[0].statement, /WHERE\s+id\s*=\s*\$1\s+AND\s+user_id\s*=\s*\$2\s+AND\s+status\s*=\s*'active'/is);
+  assert.match(executeCalls[0].statement, /WHERE\s+id\s*=\s*\$1\s+AND\s+user_id\s*=\s*\$2[\s\S]*draft_type\s*=\s*'article'[\s\S]*status\s*=\s*'active'/is);
   assert.deepEqual(executeCalls[0].params, [88, 9]);
   assert.match(executeCalls[1].statement, /UPDATE file SET draft_id = NULL/i);
   assert.deepEqual(executeCalls[1].params, [9, 88, []]);
@@ -681,4 +681,137 @@ test('deleteDraft: direct service call accepts decimal-string draftId and uses n
   assert.deepEqual(result, { id: 88 });
   assert.deepEqual(executeCalls[0].params, [88, 9]);
   assert.deepEqual(executeCalls[1].params, [9, 88, []]);
+});
+
+test('upsertFlowDraft: forces flow type with null article and title while reusing media binding transaction', async () => {
+  const calls = [];
+  const content = { type: 'doc', content: [] };
+  const meta = { imageIds: [11], videoIds: [] };
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return {
+        async beginTransaction() {
+          calls.push({ type: 'beginTransaction' });
+        },
+        async execute(statement, params) {
+          calls.push({ type: 'execute', statement, params });
+          const executeCount = calls.filter((call) => call.type === 'execute').length;
+
+          if (executeCount === 1) return [{ affectedRows: 1 }, []];
+          if (executeCount === 2) return [[{ id: 71, draftType: 'flow', articleId: null, title: null, content, meta, version: 1 }], []];
+          if (executeCount === 3) return [[{ id: 11, articleId: null }], []];
+          return [{ affectedRows: 1 }, []];
+        },
+        async commit() {
+          calls.push({ type: 'commit' });
+        },
+        async rollback() {
+          calls.push({ type: 'rollback' });
+        },
+        release() {
+          calls.push({ type: 'release' });
+        },
+      };
+    },
+  });
+
+  const result = await service.upsertFlowDraft(9, {
+    articleId: 999,
+    title: 'must be ignored',
+    content,
+    meta,
+    version: 0,
+  });
+
+  const executeCalls = calls.filter((call) => call.type === 'execute');
+  assert.deepEqual(result, { id: 71, draftType: 'flow', articleId: null, title: null, content, meta, version: 1 });
+  assert.match(executeCalls[0].statement, /VALUES\s*\('flow'/i);
+  assert.deepEqual(executeCalls[0].params, [9, null, null, JSON.stringify(content), JSON.stringify(meta), 0]);
+  assert.match(executeCalls[1].statement, /draft_type\s*=\s*'flow'/i);
+  assert.deepEqual(executeCalls[1].params, [9]);
+  assert.deepEqual(executeCalls[2].params, [9, [11], null, 71]);
+  assert.deepEqual(executeCalls[3].params, [9, 71, [11]]);
+  assert.deepEqual(executeCalls[4].params, [9, 71, [11]]);
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    true,
+  );
+});
+
+test('getFlowDraft: reads only the current active flow draft', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      return [[{ id: 71, draftType: 'flow', articleId: null, version: 2 }], []];
+    },
+  });
+
+  const result = await service.getFlowDraft(9);
+
+  assert.deepEqual(result, { id: 71, draftType: 'flow', articleId: null, version: 2 });
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].statement, /draft_type\s*=\s*'flow'/i);
+  assert.match(calls[0].statement, /article_id IS NULL/i);
+  assert.deepEqual(calls[0].params, [9]);
+});
+
+test('deleteFlowDraft: discard is type-scoped and releases only that draft files', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return {
+        async beginTransaction() {
+          calls.push({ type: 'beginTransaction' });
+        },
+        async execute(statement, params) {
+          calls.push({ type: 'execute', statement, params });
+          return [{ affectedRows: 1 }, []];
+        },
+        async commit() {
+          calls.push({ type: 'commit' });
+        },
+        async rollback() {
+          calls.push({ type: 'rollback' });
+        },
+        release() {
+          calls.push({ type: 'release' });
+        },
+      };
+    },
+  });
+
+  const result = await service.deleteFlowDraft(9, 71);
+  const executeCalls = calls.filter((call) => call.type === 'execute');
+
+  assert.deepEqual(result, { id: 71 });
+  assert.match(executeCalls[0].statement, /draft_type\s*=\s*'flow'/i);
+  assert.deepEqual(executeCalls[0].params, [71, 9]);
+  assert.deepEqual(executeCalls[1].params, [9, 71, []]);
+  assert.equal(
+    calls.some((call) => call.type === 'commit'),
+    true,
+  );
+});
+
+test('upsertFlowDraft: invalid version is rejected before opening a transaction', async () => {
+  let getConnectionCalled = false;
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      getConnectionCalled = true;
+      throw new Error('should not acquire connection');
+    },
+  });
+
+  await assert.rejects(
+    () => service.upsertFlowDraft(9, { content: { type: 'doc', content: [] }, meta: {}, version: '1e2' }),
+    (error) => {
+      assert.equal(error.name, 'BusinessError');
+      assert.equal(error.message, '参数错误: version 必须是非负整数');
+      assert.equal(error.httpStatus, 400);
+      return true;
+    },
+  );
+
+  assert.equal(getConnectionCalled, false);
 });

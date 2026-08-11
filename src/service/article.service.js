@@ -20,7 +20,7 @@ const {
   buildGetRecommendArticleListSql,
   buildGetRandomTocArticleSql,
 } = require('./sql/article.sql');
-const { buildFindDraftForConsumeSql, buildConsumeDraftSql } = require('./sql/draft.sql');
+const { DRAFT_TYPE, buildFindDraftForConsumeSql, buildConsumeDraftSql } = require('./sql/draft.sql');
 
 function normalizePositiveId(value) {
   if (typeof value === 'number') {
@@ -50,7 +50,7 @@ function normalizeOptionalDraftId(draftId) {
 
 async function lockDraftForConsume(conn, { draftId, userId, articleId }) {
   const hasArticleId = articleId != null && articleId !== '';
-  const statement = buildFindDraftForConsumeSql({ hasArticleId });
+  const statement = buildFindDraftForConsumeSql({ hasArticleId, draftType: DRAFT_TYPE.ARTICLE });
   const params = hasArticleId ? [draftId, userId, articleId] : [draftId, userId];
   const [rows] = await conn.execute(statement, params);
   if (!rows[0]) {
@@ -60,7 +60,7 @@ async function lockDraftForConsume(conn, { draftId, userId, articleId }) {
 }
 
 async function consumeDraftInTx(conn, draftId, userId, consumedArticleId) {
-  const statement = buildConsumeDraftSql();
+  const statement = buildConsumeDraftSql(DRAFT_TYPE.ARTICLE);
   const [meta] = await conn.execute(statement, [draftId, userId, consumedArticleId]);
   if (!meta || meta.affectedRows < 1) {
     throw new BusinessError('草稿不存在', 404);

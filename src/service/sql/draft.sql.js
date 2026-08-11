@@ -1,11 +1,36 @@
-function buildUpsertDraftSql({ hasArticleId }) {
-  const conflictTarget = hasArticleId
-    ? "ON CONFLICT (user_id, article_id) WHERE article_id IS NOT NULL AND status = 'active'"
-    : "ON CONFLICT (user_id) WHERE article_id IS NULL AND status = 'active'";
+const DRAFT_TYPE = Object.freeze({
+  ARTICLE: 'article',
+  FLOW: 'flow',
+});
+
+function normalizeDraftType(draftType = DRAFT_TYPE.ARTICLE) {
+  if (!Object.values(DRAFT_TYPE).includes(draftType)) {
+    throw new TypeError(`Unsupported draft type: ${draftType}`);
+  }
+
+  return draftType;
+}
+
+function assertDraftTarget(draftType, hasArticleId) {
+  if (draftType === DRAFT_TYPE.FLOW && hasArticleId) {
+    throw new TypeError('Flow draft cannot target an article');
+  }
+}
+
+function buildUpsertDraftSql({ hasArticleId, draftType = DRAFT_TYPE.ARTICLE }) {
+  const normalizedDraftType = normalizeDraftType(draftType);
+  assertDraftTarget(normalizedDraftType, hasArticleId);
+
+  const conflictTarget =
+    normalizedDraftType === DRAFT_TYPE.FLOW
+      ? "ON CONFLICT (user_id) WHERE draft_type = 'flow' AND status = 'active'"
+      : hasArticleId
+        ? "ON CONFLICT (user_id, article_id) WHERE draft_type = 'article' AND article_id IS NOT NULL AND status = 'active'"
+        : "ON CONFLICT (user_id) WHERE draft_type = 'article' AND article_id IS NULL AND status = 'active'";
 
   return `
-    INSERT INTO draft (user_id, article_id, title, content, meta, version)
-    VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, 1)
+    INSERT INTO draft (draft_type, user_id, article_id, title, content, meta, version)
+    VALUES ('${normalizedDraftType}', $1, $2, $3, $4::jsonb, $5::jsonb, 1)
     ${conflictTarget}
     DO UPDATE SET
       title = EXCLUDED.title,
@@ -21,6 +46,7 @@ function buildUpsertDraftSql({ hasArticleId }) {
     RETURNING
       id,
       user_id AS "userId",
+      draft_type AS "draftType",
       article_id AS "articleId",
       title,
       content,
@@ -31,12 +57,16 @@ function buildUpsertDraftSql({ hasArticleId }) {
   `;
 }
 
-function buildFindDraftSql({ hasArticleId }) {
+function buildFindDraftSql({ hasArticleId, draftType = DRAFT_TYPE.ARTICLE }) {
+  const normalizedDraftType = normalizeDraftType(draftType);
+  assertDraftTarget(normalizedDraftType, hasArticleId);
+
   if (hasArticleId) {
     return `
       SELECT
         id,
         user_id AS "userId",
+        draft_type AS "draftType",
         article_id AS "articleId",
         title,
         content,
@@ -45,7 +75,7 @@ function buildFindDraftSql({ hasArticleId }) {
         create_at AS "createAt",
         update_at AS "updateAt"
       FROM draft
-      WHERE user_id = $1 AND article_id = $2 AND status = 'active'
+      WHERE user_id = $1 AND article_id = $2 AND draft_type = '${normalizedDraftType}' AND status = 'active'
       LIMIT 1;
     `;
   }
@@ -54,6 +84,7 @@ function buildFindDraftSql({ hasArticleId }) {
     SELECT
       id,
       user_id AS "userId",
+      draft_type AS "draftType",
       article_id AS "articleId",
       title,
       content,
@@ -62,17 +93,21 @@ function buildFindDraftSql({ hasArticleId }) {
       create_at AS "createAt",
       update_at AS "updateAt"
     FROM draft
-    WHERE user_id = $1 AND article_id IS NULL AND status = 'active'
+    WHERE user_id = $1 AND draft_type = '${normalizedDraftType}' AND article_id IS NULL AND status = 'active'
     LIMIT 1;
   `;
 }
 
 /** 按 draftId 锁定可消费的 active 草稿（发布/更新文章事务内使用，FOR UPDATE） */
-function buildFindDraftForConsumeSql({ hasArticleId }) {
+function buildFindDraftForConsumeSql({ hasArticleId, draftType = DRAFT_TYPE.ARTICLE }) {
+  const normalizedDraftType = normalizeDraftType(draftType);
+  assertDraftTarget(normalizedDraftType, hasArticleId);
+
   const selectList = `
       SELECT
         id,
         user_id AS "userId",
+        draft_type AS "draftType",
         article_id AS "articleId",
         title,
         content,
@@ -81,7 +116,7 @@ function buildFindDraftForConsumeSql({ hasArticleId }) {
         create_at AS "createAt",
         update_at AS "updateAt"
       FROM draft
-      WHERE id = $1 AND user_id = $2 AND status = 'active'`;
+      WHERE id = $1 AND user_id = $2 AND draft_type = '${normalizedDraftType}' AND status = 'active'`;
 
   if (hasArticleId) {
     return `${selectList} AND article_id = $3 FOR UPDATE;`;
@@ -129,7 +164,9 @@ function buildBindDraftFilesSql() {
   `;
 }
 
-function buildDiscardDraftSql() {
+function buildDiscardDraftSql(draftType = DRAFT_TYPE.ARTICLE) {
+  const normalizedDraftType = normalizeDraftType(draftType);
+
   return `
     UPDATE draft
     SET
@@ -138,10 +175,11 @@ function buildDiscardDraftSql() {
       consumed_at = NULL,
       consumed_article_id = NULL,
       update_at = NOW()
-    WHERE id = $1 AND user_id = $2 AND status = 'active'
+    WHERE id = $1 AND user_id = $2 AND draft_type = '${normalizedDraftType}' AND status = 'active'
     RETURNING
       id,
       user_id AS "userId",
+      draft_type AS "draftType",
       article_id AS "articleId",
       title,
       content,
@@ -152,7 +190,9 @@ function buildDiscardDraftSql() {
   `;
 }
 
-function buildConsumeDraftSql() {
+function buildConsumeDraftSql(draftType = DRAFT_TYPE.ARTICLE) {
+  const normalizedDraftType = normalizeDraftType(draftType);
+
   return `
     UPDATE draft
     SET
@@ -161,10 +201,11 @@ function buildConsumeDraftSql() {
       discarded_at = NULL,
       consumed_article_id = $3,
       update_at = NOW()
-    WHERE id = $1 AND user_id = $2 AND status = 'active'
+    WHERE id = $1 AND user_id = $2 AND draft_type = '${normalizedDraftType}' AND status = 'active'
     RETURNING
       id,
       user_id AS "userId",
+      draft_type AS "draftType",
       article_id AS "articleId",
       title,
       content,
@@ -252,6 +293,8 @@ function buildDeleteExpiredDraftsSql() {
 }
 
 module.exports = {
+  DRAFT_TYPE,
+  normalizeDraftType,
   buildUpsertDraftSql,
   buildFindDraftSql,
   buildFindDraftForConsumeSql,

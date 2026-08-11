@@ -6,6 +6,7 @@ const BusinessError = require('@/errors/BusinessError');
 const { collectMediaRefs, hydrateStructuredContentMediaSources, resolveStructuredArticleContent } = require('@/utils/articleContent');
 const { buildPublicAssetUrl } = require('@/utils/publicAssetUrls');
 const {
+  DRAFT_TYPE,
   buildUpsertDraftSql,
   buildFindDraftSql,
   buildCheckOwnedArticleSql,
@@ -178,7 +179,20 @@ async function ensureOwnedArticle(executor, articleId, userId) {
 }
 
 class DraftService {
-  upsertDraft = async (userId, payload) => {
+  upsertDraft = async (userId, payload) => this.upsertDraftByType(userId, payload, DRAFT_TYPE.ARTICLE);
+
+  upsertFlowDraft = async (userId, payload) =>
+    this.upsertDraftByType(
+      userId,
+      {
+        ...payload,
+        articleId: null,
+        title: null,
+      },
+      DRAFT_TYPE.FLOW,
+    );
+
+  upsertDraftByType = async (userId, payload, draftType) => {
     const normalizedArticleId = payload.articleId === null || payload.articleId === undefined ? null : normalizePositiveId(payload.articleId);
     if (payload.articleId !== null && payload.articleId !== undefined && normalizedArticleId === null) {
       throw new BusinessError('参数错误: articleId 必须是正整数', 400);
@@ -201,7 +215,7 @@ class DraftService {
         await ensureOwnedArticle(conn, normalizedArticleId, userId);
       }
 
-      const [upsertResult] = await conn.execute(buildUpsertDraftSql({ hasArticleId }), [
+      const [upsertResult] = await conn.execute(buildUpsertDraftSql({ hasArticleId, draftType }), [
         userId,
         normalizedArticleId,
         payload.title ?? null,
@@ -215,7 +229,7 @@ class DraftService {
       }
 
       const findParams = hasArticleId ? [userId, normalizedArticleId] : [userId];
-      const [draftRows] = await conn.execute(buildFindDraftSql({ hasArticleId }), findParams);
+      const [draftRows] = await conn.execute(buildFindDraftSql({ hasArticleId, draftType }), findParams);
       const draft = draftRows[0];
 
       if (!draft) {
@@ -245,7 +259,11 @@ class DraftService {
     }
   };
 
-  getDraft = async (userId, articleId = null) => {
+  getDraft = async (userId, articleId = null) => this.getDraftByType(userId, articleId, DRAFT_TYPE.ARTICLE);
+
+  getFlowDraft = async (userId) => this.getDraftByType(userId, null, DRAFT_TYPE.FLOW);
+
+  getDraftByType = async (userId, articleId, draftType) => {
     const normalizedArticleId = articleId === null || articleId === undefined ? null : normalizePositiveId(articleId);
     if (articleId !== null && articleId !== undefined && normalizedArticleId === null) {
       throw new BusinessError('参数错误: articleId 必须是正整数', 400);
@@ -257,7 +275,7 @@ class DraftService {
       await ensureOwnedArticle(connection, normalizedArticleId, userId);
     }
 
-    const [rows] = await connection.execute(buildFindDraftSql({ hasArticleId }), hasArticleId ? [userId, normalizedArticleId] : [userId]);
+    const [rows] = await connection.execute(buildFindDraftSql({ hasArticleId, draftType }), hasArticleId ? [userId, normalizedArticleId] : [userId]);
     if (!rows[0]) {
       return null;
     }
@@ -265,7 +283,11 @@ class DraftService {
     return hydrateDraftContentMedia(connection, rows[0]);
   };
 
-  deleteDraft = async (userId, draftId) => {
+  deleteDraft = async (userId, draftId) => this.deleteDraftByType(userId, draftId, DRAFT_TYPE.ARTICLE);
+
+  deleteFlowDraft = async (userId, draftId) => this.deleteDraftByType(userId, draftId, DRAFT_TYPE.FLOW);
+
+  deleteDraftByType = async (userId, draftId, draftType) => {
     const normalizedDraftId = normalizePositiveId(draftId);
     if (normalizedDraftId === null) {
       throw new BusinessError('参数错误: draftId 必须是正整数', 400);
@@ -276,7 +298,7 @@ class DraftService {
     try {
       await conn.beginTransaction();
 
-      const [result] = await conn.execute(buildDiscardDraftSql(), [normalizedDraftId, userId]);
+      const [result] = await conn.execute(buildDiscardDraftSql(draftType), [normalizedDraftId, userId]);
 
       if (!result.affectedRows) {
         throw new BusinessError('草稿不存在', 404);
