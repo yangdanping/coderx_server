@@ -48,7 +48,12 @@ function testDependencies(overrides = {}) {
     },
     fsPromises: {
       async mkdir() {},
-      async writeFile() {},
+      async open() {
+        return {
+          async writeFile() {},
+          async close() {},
+        };
+      },
       async unlink() {},
     },
     imageRoot: '/tmp/coderx-media-image-tests',
@@ -138,6 +143,28 @@ test('normalizeImage rejects 40,000,001 decoded pixels and configures Sharp fail
   assert.deepEqual(calls[0].options, { failOn: 'warning', limitInputPixels: MAX_FLOW_IMAGE_PIXELS });
 });
 
+test('normalizeImage maps Sharp actual pixel-limit decode failures to the pixel BusinessError', async () => {
+  const service = createMediaImageService(testDependencies({
+    sharp() {
+      return {
+        async metadata() {
+          throw new Error('Input image exceeds pixel limit');
+        },
+      };
+    },
+  }));
+
+  await assert.rejects(
+    () => service.normalizeImage(Buffer.from('oversized-png'), 'image/png'),
+    (error) => {
+      assert.equal(error.name, 'BusinessError');
+      assert.equal(error.httpStatus, 400);
+      assert.equal(error.message, '图片像素不能超过 40,000,000');
+      return true;
+    },
+  );
+});
+
 test('createPendingImage writes both normalized variants before DB insert and compensates both after DB failure', async () => {
   const calls = [];
   const conn = transaction({
@@ -159,8 +186,13 @@ test('createPendingImage writes both normalized variants before DB insert and co
     conn,
     fsPromises: {
       async mkdir() {},
-      async writeFile(filePath) {
-        calls.push({ type: 'write', filePath });
+      async open(filePath) {
+        return {
+          async writeFile() {
+            calls.push({ type: 'write', filePath });
+          },
+          async close() {},
+        };
       },
       async unlink(filePath) {
         calls.push({ type: 'unlink', filePath });
@@ -182,6 +214,116 @@ test('createPendingImage writes both normalized variants before DB insert and co
   assert.ok(calls.findIndex((call) => call.type === 'execute') > calls.findLastIndex((call) => call.type === 'write'));
   assert.ok(calls.some((call) => call.type === 'rollback'));
   assert.ok(writes.every((call) => path.dirname(call.filePath) === '/tmp/coderx-media-image-tests'));
+});
+
+test('createPendingImage does not unlink a pre-existing asset when the first exclusive open gets EEXIST', async () => {
+  const calls = [];
+  const exists = Object.assign(new Error('already exists'), { code: 'EEXIST' });
+  const service = createMediaImageService(testDependencies({
+    fsPromises: {
+      async mkdir() {},
+      async open(filePath, flags) {
+        calls.push({ type: 'open', filePath, flags });
+        throw exists;
+      },
+      async writeFile(filePath) {
+        calls.push({ type: 'legacyWrite', filePath });
+        throw exists;
+      },
+      async unlink(filePath) {
+        calls.push({ type: 'unlink', filePath });
+      },
+    },
+  }));
+  const png = await imageBuffer('png');
+
+  await assert.rejects(
+    () => service.createPendingImage(9, { buffer: png, mimetype: 'image/png' }),
+    (error) => error.code === 'EEXIST',
+  );
+  assert.equal(calls.filter((call) => call.type === 'unlink').length, 0);
+});
+
+test('createPendingImage compensates only the first owned asset when the second exclusive open gets EEXIST', async () => {
+  const calls = [];
+  const exists = Object.assign(new Error('already exists'), { code: 'EEXIST' });
+  let opened = 0;
+  const service = createMediaImageService(testDependencies({
+    fsPromises: {
+      async mkdir() {},
+      async open(filePath, flags) {
+        calls.push({ type: 'open', filePath, flags });
+        opened += 1;
+        if (opened === 2) throw exists;
+        return {
+          async writeFile() {},
+          async close() {
+            calls.push({ type: 'close', filePath });
+          },
+        };
+      },
+      async writeFile(filePath) {
+        calls.push({ type: 'legacyWrite', filePath });
+        if (calls.filter((call) => call.type === 'legacyWrite').length === 2) throw exists;
+      },
+      async unlink(filePath) {
+        calls.push({ type: 'unlink', filePath });
+      },
+    },
+  }));
+  const png = await imageBuffer('png');
+
+  await assert.rejects(
+    () => service.createPendingImage(9, { buffer: png, mimetype: 'image/png' }),
+    (error) => error.code === 'EEXIST',
+  );
+  assert.deepEqual(calls.filter((call) => call.type === 'open').map((call) => call.flags), ['wx', 'wx']);
+  assert.deepEqual(
+    calls.filter((call) => call.type === 'unlink').map((call) => call.filePath),
+    ['/tmp/coderx-media-image-tests/123e4567-e89b-12d3-a456-426614174000.webp'],
+  );
+});
+
+test('createPendingImage closes and compensates an owned path when writing through its handle fails', async () => {
+  const calls = [];
+  const writeError = new Error('disk write failed');
+  const service = createMediaImageService(testDependencies({
+    fsPromises: {
+      async mkdir() {},
+      async open(filePath, flags) {
+        calls.push({ type: 'open', filePath, flags });
+        return {
+          async writeFile() {
+            calls.push({ type: 'handleWrite', filePath });
+            throw writeError;
+          },
+          async close() {
+            calls.push({ type: 'close', filePath });
+          },
+        };
+      },
+      async writeFile(filePath) {
+        calls.push({ type: 'legacyWrite', filePath });
+        throw writeError;
+      },
+      async unlink(filePath) {
+        calls.push({ type: 'unlink', filePath });
+      },
+    },
+  }));
+  const png = await imageBuffer('png');
+
+  await assert.rejects(
+    () => service.createPendingImage(9, { buffer: png, mimetype: 'image/png' }),
+    /disk write failed/,
+  );
+  assert.equal(calls.filter((call) => call.type === 'open').length, 1);
+  assert.equal(calls.filter((call) => call.type === 'handleWrite').length, 1);
+  assert.equal(calls.filter((call) => call.type === 'close').length, 1);
+  assert.deepEqual(
+    calls.filter((call) => call.type === 'unlink').map((call) => call.filePath),
+    ['/tmp/coderx-media-image-tests/123e4567-e89b-12d3-a456-426614174000.webp'],
+  );
 });
 
 test('createPendingImage persists real output dimensions and returns the MediaImageAsset contract', async () => {

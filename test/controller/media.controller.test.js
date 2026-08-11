@@ -93,6 +93,47 @@ test('media image middleware uses memory storage, one image field, the byte limi
   assert.equal(rejected.accepted, undefined);
 });
 
+test('media image middleware maps Multer LIMIT_FILE_SIZE to an exact exposed 400 error', async () => {
+  const multerPath = require.resolve('@koa/multer');
+  const middlewarePath = path.resolve(__dirname, '../../src/middleware/mediaImage.middleware.js');
+  const originalMulter = require.cache[multerPath];
+  const limitError = Object.assign(new Error('File too large'), {
+    code: 'LIMIT_FILE_SIZE',
+    field: 'image',
+  });
+  function multer() {
+    return {
+      single() {
+        return async () => {
+          throw limitError;
+        };
+      },
+    };
+  }
+  multer.memoryStorage = () => ({ kind: 'memory' });
+
+  try {
+    delete require.cache[middlewarePath];
+    injectCache(multerPath, multer);
+    const middleware = require(middlewarePath);
+
+    await assert.rejects(
+      () => middleware({ path: '/media/images' }, async () => {}),
+      (error) => {
+        assert.equal(error.name, 'BusinessError');
+        assert.equal(error.httpStatus, 400);
+        assert.equal(error.expose, true);
+        assert.equal(error.message, '图片大小不能超过 10MB');
+        return true;
+      },
+    );
+  } finally {
+    delete require.cache[middlewarePath];
+    if (originalMulter) require.cache[multerPath] = originalMulter;
+    else delete require.cache[multerPath];
+  }
+});
+
 test('media router protects POST and DELETE with maintenance then authentication', () => {
   const routerPath = path.resolve(__dirname, '../../src/router/media.router.js');
   const authPath = path.resolve(__dirname, '../../src/middleware/auth.middleware.js');

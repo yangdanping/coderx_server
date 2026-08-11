@@ -2,7 +2,7 @@ const multer = require('@koa/multer');
 const BusinessError = require('@/errors/BusinessError');
 const { FLOW_IMAGE_MIME_TYPES, MAX_FLOW_IMAGE_FILE_SIZE } = require('@/constants/upload');
 
-const mediaImageUpload = multer({
+const rawMediaImageUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: MAX_FLOW_IMAGE_FILE_SIZE,
@@ -15,5 +15,16 @@ const mediaImageUpload = multer({
     callback(new BusinessError('图片必须是 JPEG、PNG 或 WebP 格式', 400));
   },
 }).single('image');
+
+async function mediaImageUpload(ctx, next) {
+  try {
+    await rawMediaImageUpload(ctx, next);
+  } catch (error) {
+    if (error?.code === 'LIMIT_FILE_SIZE') {
+      throw new BusinessError('图片大小不能超过 10MB', 400);
+    }
+    throw error;
+  }
+}
 
 module.exports = mediaImageUpload;

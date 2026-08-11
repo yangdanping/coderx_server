@@ -28,6 +28,10 @@ function formatError() {
   return new BusinessError('图片必须是 JPEG、PNG 或 WebP 格式', 400);
 }
 
+function pixelLimitError() {
+  return new BusinessError('图片像素不能超过 40,000,000', 400);
+}
+
 function localImageUrl(filename, variant, publicApiOrigin) {
   const original = `${String(publicApiOrigin).replace(/\/$/, '')}/article/images/${encodeURIComponent(filename)}`;
   return variant === 'small' ? `${original}?type=small` : original;
@@ -68,7 +72,10 @@ function createMediaImageService(options = {}) {
         limitInputPixels: MAX_FLOW_IMAGE_PIXELS,
       });
       metadata = await image.metadata();
-    } catch {
+    } catch (error) {
+      if (/input image exceeds pixel limit/i.test(String(error?.message || error))) {
+        throw pixelLimitError();
+      }
       throw formatError();
     }
 
@@ -76,7 +83,7 @@ function createMediaImageService(options = {}) {
     if (!decodedMimeType || decodedMimeType !== declaredMimeType) throw formatError();
     const decodedPixels = Number(metadata.width) * Number(metadata.height);
     if (!Number.isSafeInteger(decodedPixels) || decodedPixels > MAX_FLOW_IMAGE_PIXELS) {
-      throw new BusinessError('图片像素不能超过 40,000,000', 400);
+      throw pixelLimitError();
     }
 
     let originalResult;
@@ -122,6 +129,16 @@ function createMediaImageService(options = {}) {
     );
   }
 
+  async function writeOwnedFile(filePath, buffer, ownedPaths) {
+    const handle = await dependencies.fsPromises.open(filePath, 'wx');
+    ownedPaths.push(filePath);
+    try {
+      await handle.writeFile(buffer);
+    } finally {
+      await handle.close();
+    }
+  }
+
   async function resolveUrl(fileId, filename, variant) {
     try {
       const resolved = await dependencies.mediaRuntime.resolveImageUrl(fileId, { variant });
@@ -140,14 +157,14 @@ function createMediaImageService(options = {}) {
     const normalized = await normalizeImage(file.buffer, file.mimetype);
     const originalPath = imagePath(normalized.filename);
     const smallPath = imagePath(normalized.smallFilename);
-    const generatedPaths = [originalPath, smallPath];
+    const ownedPaths = [];
     let conn;
     let transactionStarted = false;
 
     try {
       await dependencies.fsPromises.mkdir(dependencies.imageRoot, { recursive: true });
-      await dependencies.fsPromises.writeFile(originalPath, normalized.original, { flag: 'wx' });
-      await dependencies.fsPromises.writeFile(smallPath, normalized.small, { flag: 'wx' });
+      await writeOwnedFile(originalPath, normalized.original, ownedPaths);
+      await writeOwnedFile(smallPath, normalized.small, ownedPaths);
 
       conn = await dependencies.database.getConnection();
       await conn.beginTransaction();
@@ -183,7 +200,7 @@ function createMediaImageService(options = {}) {
           console.error('media image transaction rollback failed:', rollbackError);
         }
       }
-      await unlinkGenerated(generatedPaths);
+      await unlinkGenerated(ownedPaths);
       throw error;
     } finally {
       conn?.release();
