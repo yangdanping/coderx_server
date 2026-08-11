@@ -13,7 +13,7 @@ function buildLockFlowMediaSql(count) {
 
   const mediaIds = Array.from({ length: count });
   return `
-    SELECT f.id
+    SELECT f.id, f.filename, f.mimetype
     FROM file f
     LEFT JOIN flow_post_media fm ON fm.file_id = f.id
     WHERE f.user_id = ?

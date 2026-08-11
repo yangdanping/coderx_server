@@ -17,6 +17,7 @@ test('flow migration creates ordered unique media ownership and feed indexes', (
 
 test('flow SQL locks requested image rows for ownership validation', () => {
   const sql = flowSql.buildLockFlowMediaSql(2);
+  assert.match(sql, /SELECT\s+f\.id,\s+f\.filename,\s+f\.mimetype/is);
   assert.match(sql, /FROM file f/i);
   assert.match(sql, /LEFT JOIN flow_post_media/i);
   assert.match(sql, /WHERE\s+f\.user_id = \?\s+AND\s+f\.id IN \(\?,\?\)/i);
