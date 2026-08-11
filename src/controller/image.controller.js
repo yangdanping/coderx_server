@@ -1,8 +1,6 @@
 const imageService = require('@/service/image.service');
 const Result = require('@/app/Result');
 const { baseURL } = require('@/constants/urls');
-const deleteFile = require('@/utils/deleteFile');
-const mediaRuntime = require('@/service/mediaRuntime.service');
 
 /**
  * 图片控制器
@@ -52,6 +50,7 @@ class ImageController {
    * 仅当前端显式传入封面标记时才设置封面
    */
   updateFile = async (ctx, next) => {
+    const userId = ctx.user.id;
     const { articleId } = ctx.params;
     const { uploaded } = ctx.request.body;
 
@@ -65,48 +64,20 @@ class ImageController {
     }
 
     if (uploaded.length === 0) {
-      const result = await imageService.updateImageArticle(articleId, [], null);
+      const result = await imageService.updateImageArticle(userId, articleId, [], null);
       ctx.body = Result.success(result);
       return;
     }
 
-    // 处理混合格式：{ id, isCover } 或 { url, isCover }
-    const processedUploaded = [];
-
-    for (const item of uploaded) {
-      if (item.id) {
-        // 已有 ID，直接使用
-        processedUploaded.push(item);
-        console.log(`✅ 使用已有ID: ${item.id}, isCover: ${item.isCover}`);
-      } else if (item.url) {
-        // 从 URL 提取文件名并查询数据库
-        const urlParts = item.url.split('/');
-        const filename = urlParts[urlParts.length - 1].split('?')[0]; // 移除查询参数
-        console.log(`🔍 从URL提取文件名: ${filename}`);
-
-        try {
-          const fileInfo = await imageService.getImageByFilename(filename);
-          if (fileInfo && fileInfo.id) {
-            processedUploaded.push({ id: fileInfo.id, isCover: item.isCover });
-            console.log(`✅ 通过文件名查询到ID: ${fileInfo.id}, isCover: ${item.isCover}`);
-          } else {
-            console.warn(`⚠️ 未找到文件名对应的记录: ${filename}`);
-          }
-        } catch (error) {
-          console.error(`❌ 查询文件失败: ${filename}`, error);
-        }
-      }
-    }
-
-    if (processedUploaded.length === 0) {
-      console.error('❌ updateFile - 没有有效的图片数据');
-      ctx.body = Result.fail('没有有效的图片数据');
+    if (!uploaded.every((item) => Number.isSafeInteger(item?.id) && item.id > 0)) {
+      console.error('❌ updateFile - uploaded 包含无效图片ID');
+      ctx.body = Result.fail('上传数据格式错误');
       return;
     }
 
     // 提取图片ID和封面ID
-    const uploadedIds = processedUploaded.map((img) => img.id);
-    const coverImage = processedUploaded.find((img) => img.isCover === true);
+    const uploadedIds = uploaded.map((img) => img.id);
+    const coverImage = uploaded.find((img) => img.isCover === true);
     const coverImageId = coverImage ? coverImage.id : null;
 
     console.log('📋 updateFile - 处理后的图片 ID 列表:', uploadedIds);
@@ -114,7 +85,7 @@ class ImageController {
 
     try {
       // 使用 imageService.updateImageArticle 方法
-      const result = await imageService.updateImageArticle(articleId, uploadedIds, coverImageId);
+      const result = await imageService.updateImageArticle(userId, articleId, uploadedIds, coverImageId);
       console.log('✅ updateFile - 更新成功:', result);
 
       ctx.body = Result.success(result);
@@ -129,24 +100,20 @@ class ImageController {
    * 删除物理文件和数据库记录
    */
   deleteFile = async (ctx, next) => {
+    const userId = ctx.user.id;
     const { uploaded } = ctx.request.body;
-    const uploadedId = uploaded.map((img) => img.id);
+    if (!Array.isArray(uploaded) || !uploaded.every((item) => Number.isSafeInteger(item?.id) && item.id > 0)) {
+      ctx.body = Result.fail('上传数据格式错误');
+      return;
+    }
+    const uploadedIds = uploaded.map((img) => img.id);
 
-    // 查询图片信息
-    const files = await imageService.findImagesByIds(uploadedId);
-
-    // 先把所有 R2 对象置为 deleting 并幂等删除，失败时保留数据库与本地文件供重试
-    await mediaRuntime.deleteR2ObjectsForFiles(uploadedId);
-
-    // 删除数据库记录（会自动删除 image_meta 记录，因为有外键级联）
-    await imageService.deleteImages(uploadedId);
-
-    // 数据库删除成功后再幂等删除本地原图与 small
-    if (files.length) {
-      deleteFile(files);
+    const { imagesToDelete, localCleanup } = await imageService.deleteOwnedUnattachedImages(userId, uploadedIds);
+    if (localCleanup?.pendingIds?.length) {
+      console.warn(`${localCleanup.pendingIds.length} 个本地图片文件已进入持久化重试队列`);
     }
 
-    ctx.body = Result.success(`已删除${files.length}张图片成功`);
+    ctx.body = Result.success(`已删除${imagesToDelete.length}张图片成功`);
   };
 }
 

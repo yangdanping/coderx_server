@@ -34,14 +34,15 @@ function loadControllerWithMocks({ imageService, deleteFile = () => {}, mediaRun
 test('updateFile: empty uploaded array clears article image links instead of failing validation', async () => {
   const calls = [];
   const imageService = {
-    async updateImageArticle(articleId, imageIds, coverImageId) {
-      calls.push({ articleId, imageIds, coverImageId });
+    async updateImageArticle(userId, articleId, imageIds, coverImageId) {
+      calls.push({ userId, articleId, imageIds, coverImageId });
       return { success: true, affectedRows: 0, deletedCount: 2, coverSet: false };
     },
   };
 
   const controller = loadControllerWithMocks({ imageService });
   const ctx = {
+    user: { id: 7 },
     params: { articleId: '15' },
     request: {
       body: {
@@ -52,7 +53,7 @@ test('updateFile: empty uploaded array clears article image links instead of fai
 
   await controller.updateFile(ctx, async () => {});
 
-  assert.deepEqual(calls, [{ articleId: '15', imageIds: [], coverImageId: null }]);
+  assert.deepEqual(calls, [{ userId: 7, articleId: '15', imageIds: [], coverImageId: null }]);
   assert.equal(ctx.body.code, 0);
   assert.deepEqual(ctx.body.data, {
     success: true,
@@ -62,45 +63,103 @@ test('updateFile: empty uploaded array clears article image links instead of fai
   });
 });
 
-test('deleteFile: removes staged R2 objects before database rows and local variants', async () => {
+test('updateFile forwards the authenticated user to the ownership-checked service', async () => {
   const calls = [];
   const imageService = {
-    async findImagesByIds(imageIds) {
-      calls.push({ type: 'find', imageIds });
-      return [{ id: 41, filename: 'cover.jpg' }];
-    },
-    async deleteImages(imageIds) {
-      calls.push({ type: 'deleteRows', imageIds });
-      return { affectedRows: 1 };
+    async updateImageArticle(userId, articleId, imageIds, coverImageId) {
+      calls.push({ userId, articleId, imageIds, coverImageId });
+      return { success: true };
     },
   };
-  const controller = loadControllerWithMocks({
-    imageService,
-    mediaRuntime: {
-      async deleteR2ObjectsForFiles(fileIds) {
-        calls.push({ type: 'deleteR2', fileIds });
-        return { staged: 2, deleted: 2 };
+  const controller = loadControllerWithMocks({ imageService });
+  const ctx = {
+    user: { id: 7 },
+    params: { articleId: '15' },
+    request: {
+      body: {
+        uploaded: [{ id: 41, isCover: false }],
       },
     },
-    deleteFile(files) {
-      calls.push({ type: 'deleteLocal', files });
+  };
+
+  await controller.updateFile(ctx);
+
+  assert.deepEqual(calls, [{ userId: 7, articleId: '15', imageIds: [41], coverImageId: null }]);
+});
+
+test('updateFile rejects uploaded entries without safe positive integer IDs', async () => {
+  const calls = [];
+  const controller = loadControllerWithMocks({
+    imageService: {
+      async updateImageArticle(...args) {
+        calls.push(args);
+      },
     },
   });
   const ctx = {
-    request: {
-      body: {
-        uploaded: [{ id: 41 }],
-      },
-    },
+    user: { id: 7 },
+    params: { articleId: '15' },
+    request: { body: { uploaded: [{ id: Number.MAX_SAFE_INTEGER + 1 }] } },
   };
 
-  await controller.deleteFile(ctx, async () => {});
+  await controller.updateFile(ctx);
 
-  assert.deepEqual(calls, [
-    { type: 'find', imageIds: [41] },
-    { type: 'deleteR2', fileIds: [41] },
-    { type: 'deleteRows', imageIds: [41] },
-    { type: 'deleteLocal', files: [{ id: 41, filename: 'cover.jpg' }] },
-  ]);
+  assert.deepEqual(calls, []);
+  assert.equal(ctx.body.code, -1);
+});
+
+test('deleteFile refuses images that are owned by another user or already attached', async () => {
+  const imageService = {
+    async deleteOwnedUnattachedImages() {
+      const BusinessError = require('../../src/errors/BusinessError');
+      throw new BusinessError('图片不可删除', 403);
+    },
+  };
+  const controller = loadControllerWithMocks({ imageService, mediaRuntime: {} });
+  const ctx = { user: { id: 7 }, request: { body: { uploaded: [{ id: 41 }] } } };
+
+  await assert.rejects(() => controller.deleteFile(ctx), /图片不可删除/);
+});
+
+test('deleteFile delegates owner-scoped durable deletion to the service', async () => {
+  const calls = [];
+  const imageService = {
+    async deleteOwnedUnattachedImages(userId, imageIds) {
+      calls.push({ userId, imageIds });
+      return {
+        result: { affectedRows: 1 },
+        imagesToDelete: [{ id: 41, filename: 'cover.jpg', file_type: 'image' }],
+        localCleanup: { examined: 2, deleted: 2, missing: 0, failed: 0, pendingIds: [] },
+      };
+    },
+  };
+  const controller = loadControllerWithMocks({ imageService });
+  const ctx = {
+    user: { id: 7 },
+    request: { body: { uploaded: [{ id: 41 }] } },
+  };
+
+  await controller.deleteFile(ctx);
+
+  assert.deepEqual(calls, [{ userId: 7, imageIds: [41] }]);
   assert.equal(ctx.body.code, 0);
+  assert.equal(ctx.body.data, '已删除1张图片成功');
+});
+
+test('deleteFile rejects non-array and unsafe uploaded IDs before calling the service', async () => {
+  const calls = [];
+  const controller = loadControllerWithMocks({
+    imageService: {
+      async deleteOwnedUnattachedImages(...args) {
+        calls.push(args);
+      },
+    },
+  });
+
+  for (const uploaded of [null, [{ id: 0 }], [{ id: 1.5 }], [{ id: '41' }]]) {
+    const ctx = { user: { id: 7 }, request: { body: { uploaded } } };
+    await controller.deleteFile(ctx);
+    assert.equal(ctx.body.code, -1);
+  }
+  assert.deepEqual(calls, []);
 });
