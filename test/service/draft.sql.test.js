@@ -130,11 +130,18 @@ test('buildCheckOwnedArticleSql: article ownership check scopes by article and u
   assert.match(sql, /LIMIT 1/i);
 });
 
-test('buildValidateDraftFilesSql: validates same-user files and allows current article files during edit drafts', () => {
-  const { buildLockDraftFilesSql, buildValidateDraftFilesSql } = loadHelper();
+test('buildValidateDraftFilesSql: reads current bindings then locks an owner-filtered union before fresh validation', () => {
+  const { buildFindDraftFileIdsSql, buildLockDraftFilesSql, buildValidateDraftFilesSql } = loadHelper();
+  const currentSql = buildFindDraftFileIdsSql();
+  assert.match(currentSql, /SELECT id FROM file/i);
+  assert.match(currentSql, /user_id = \$1/i);
+  assert.match(currentSql, /draft_id = \$2/i);
+  assert.doesNotMatch(currentSql, /FOR UPDATE/i);
+
   const lockSql = buildLockDraftFilesSql();
   assert.match(lockSql, /SELECT id FROM file/i);
-  assert.match(lockSql, /id = ANY\(\$1::bigint\[\]\)/i);
+  assert.match(lockSql, /user_id = \$1/i);
+  assert.match(lockSql, /id = ANY\(\$2::bigint\[\]\)/i);
   assert.match(lockSql, /ORDER BY id[\s\S]*FOR UPDATE/i);
   assert.doesNotMatch(lockSql, /flow_post_media/i);
 

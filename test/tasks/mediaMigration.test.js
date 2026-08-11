@@ -1,9 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 
 require('module-alias/register');
 
 const { migrateMediaToR2 } = require('@/tasks/migrateMediaToR2');
+const { createMediaCatalog } = require('@/tasks/mediaCatalog');
 
 function candidate(fileId, variant = 'original', sizeBytes = 10) {
   return {
@@ -181,4 +185,52 @@ test('historical migration omits article scope for neutral Flow candidates and p
   assert.equal(promoted[0].articleId, 7);
   assert.equal(Object.hasOwn(promoted[1], 'articleId'), false);
   assert.equal(Object.hasOwn(promoted[1], 'flowId'), false);
+});
+
+test('historical migration never promotes corrupt dual-owned or still-draft-bound Flow rows', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'coderx-corrupt-migration-'));
+  const imageRoot = path.join(root, 'img');
+  const videoRoot = path.join(root, 'video');
+  await fs.mkdir(imageRoot);
+  await fs.mkdir(videoRoot);
+  await fs.writeFile(path.join(imageRoot, 'dual.jpg'), 'dual');
+  await fs.writeFile(path.join(imageRoot, 'flow-draft.jpg'), 'flow-draft');
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const rows = [
+    { id: 31, articleId: 7, flowId: 91, draftId: null, filename: 'dual.jpg', mimetype: 'image/jpeg', fileType: 'image' },
+    { id: 32, articleId: null, flowId: 92, draftId: 71, filename: 'flow-draft.jpg', mimetype: 'image/jpeg', fileType: 'image' },
+  ];
+  const catalog = createMediaCatalog({
+    database: {
+      async execute() {
+        return [rows, []];
+      },
+    },
+    imageRoot,
+    videoRoot,
+  });
+  let promoteCalls = 0;
+
+  const report = await migrateMediaToR2({
+    catalog,
+    mediaPromotionService: {
+      async promote() {
+        promoteCalls += 1;
+      },
+    },
+    dryRun: false,
+    concurrency: 1,
+    writeMode: 'r2_on_publish',
+    writePaused: false,
+  });
+
+  assert.equal(promoteCalls, 0);
+  assert.equal(report.attempted, 0);
+  assert.deepEqual(
+    report.invalidRows.map(({ fileId, code }) => ({ fileId, code })),
+    [
+      { fileId: 31, code: 'MULTIPLE_PUBLISHED_OWNERS' },
+      { fileId: 32, code: 'FLOW_MEDIA_STILL_DRAFT_BOUND' },
+    ],
+  );
 });

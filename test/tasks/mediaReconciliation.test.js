@@ -1,9 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 
 require('module-alias/register');
 
 const { reconcileR2Media } = require('@/tasks/reconcileR2Media');
+const { createMediaCatalog } = require('@/tasks/mediaCatalog');
 
 const SHA_A = 'a'.repeat(64);
 const SHA_B = 'b'.repeat(64);
@@ -356,4 +360,75 @@ test('reconciliation detects and repairs a stale pending neutral Flow object wit
     true,
   );
   assert.deepEqual(report.databaseRowsWithoutPublishedMedia, []);
+});
+
+test('full-scope reconciliation exposes corrupt published ownership and never repairs its media rows', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'coderx-corrupt-reconcile-'));
+  const imageRoot = path.join(root, 'img');
+  const videoRoot = path.join(root, 'video');
+  await fs.mkdir(imageRoot);
+  await fs.mkdir(videoRoot);
+  await fs.writeFile(path.join(imageRoot, 'dual.jpg'), 'dual');
+  await fs.writeFile(path.join(imageRoot, 'flow-draft.jpg'), 'flow-draft');
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const files = [
+    { id: 71, articleId: 7, flowId: 91, draftId: null, filename: 'dual.jpg', mimetype: 'image/jpeg', fileType: 'image' },
+    { id: 72, articleId: null, flowId: 92, draftId: 81, filename: 'flow-draft.jpg', mimetype: 'image/jpeg', fileType: 'image' },
+  ];
+  const stale = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const mediaRows = [
+    row({ id: 71, fileId: 71, provider: 'r2', status: 'pending', sha256: SHA_A, objectKey: 'media/71', updatedAt: stale }),
+    row({ id: 72, fileId: 72, provider: 'r2', status: 'pending', sha256: SHA_A, objectKey: 'media/72', updatedAt: stale }),
+  ];
+  const catalog = createMediaCatalog({
+    database: {
+      async execute() {
+        return [files, []];
+      },
+    },
+    imageRoot,
+    videoRoot,
+  });
+  const repairs = [];
+
+  const report = await reconcileR2Media({
+    catalog,
+    database: {
+      async execute() {
+        return [mediaRows, []];
+      },
+    },
+    inspector: async () => ({ sizeBytes: 10, sha256: SHA_A }),
+    mediaObjectService: {
+      async markReady(value) {
+        repairs.push(['ready', value.id]);
+      },
+      async markFailed(value) {
+        repairs.push(['failed', value.id]);
+      },
+      async markVerificationFailed(value) {
+        repairs.push(['verification', value.id]);
+      },
+    },
+    r2Store: {
+      async head(key) {
+        return { key, sizeBytes: 10, sha256: SHA_A };
+      },
+      async list() {
+        return { objects: mediaRows.map((item) => ({ key: item.objectKey, sizeBytes: 10 })), continuationToken: null };
+      },
+    },
+    repair: true,
+    pendingOlderThanMs: 60 * 60 * 1000,
+  });
+
+  assert.deepEqual(repairs, []);
+  assert.equal(report.repaired, 0);
+  assert.deepEqual(
+    report.invalidRows.map(({ fileId, code }) => ({ fileId, code })),
+    [
+      { fileId: 71, code: 'MULTIPLE_PUBLISHED_OWNERS' },
+      { fileId: 72, code: 'FLOW_MEDIA_STILL_DRAFT_BOUND' },
+    ],
+  );
 });

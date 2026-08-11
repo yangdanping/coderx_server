@@ -178,6 +178,7 @@ test('createFlow locks and binds only current-user unattached images in submitte
 
   const insertFlow = events.find((event) => event.type === 'insert-flow');
   assert.deepEqual(insertFlow.params, [7, REQUEST_ID, JSON.stringify(CONTENT), 'hello']);
+  assert.deepEqual(events.find((event) => event.type === 'lock-media').params, [7, 42, 41]);
   assert.deepEqual(events.find((event) => event.type === 'insert-media').params, [90, 42, 0, 90, 41, 1]);
   const consume = events.find((event) => event.type === 'consume-draft');
   assert.deepEqual(consume.params, [71, 7, null]);
@@ -258,7 +259,7 @@ test('createFlow locks the active Flow draft before files, accepts its safe-uplo
   const orderedEvents = events.filter((event) => typeof event === 'object').map((event) => event.type);
   assert.deepEqual(orderedEvents, ['lock-draft', 'lock-files', 'validate-files', 'clear-draft-binding', 'consume-draft']);
   assert.deepEqual(events.find((event) => event.type === 'lock-draft').params, [7]);
-  assert.deepEqual(events.find((event) => event.type === 'lock-files').params, [41]);
+  assert.deepEqual(events.find((event) => event.type === 'lock-files').params, [7, 41]);
   assert.deepEqual(events.find((event) => event.type === 'validate-files').params, [7, 71, 41]);
   assert.deepEqual(events.find((event) => event.type === 'clear-draft-binding').params, [71, 41]);
   assert.deepEqual(events.find((event) => event.type === 'consume-draft').params, [71, 7, null]);

@@ -30,6 +30,7 @@ function normalizeFileRow(row) {
     id: Number(row.id),
     articleId: nullableNumber(row.articleId ?? row.article_id),
     flowId: nullableNumber(row.flowId ?? row.flow_id),
+    draftId: nullableNumber(row.draftId ?? row.draft_id),
     filename: row.filename,
     mimetype: row.mimetype,
     // Historical image rows predate file_type; the existing read path also treats
@@ -123,6 +124,7 @@ function createMediaCatalog({ database, imageRoot, videoRoot, filesystem = fs })
           f.id,
           f.article_id AS "articleId",
           fm.flow_id AS "flowId",
+          f.draft_id AS "draftId",
           f.filename,
           f.mimetype,
           f.file_type AS "fileType",
@@ -150,6 +152,14 @@ function createMediaCatalog({ database, imageRoot, videoRoot, filesystem = fs })
       const ownership = ownershipFor(row);
       const hasArticleOwner = Number.isSafeInteger(ownership.articleId) && ownership.articleId > 0;
       const hasFlowOwner = Number.isSafeInteger(ownership.flowId) && ownership.flowId > 0;
+      if (hasArticleOwner && hasFlowOwner) {
+        result.invalidRows.push({ fileId: row.id, ...ownership, code: 'MULTIPLE_PUBLISHED_OWNERS' });
+        continue;
+      }
+      if (hasFlowOwner && row.draftId != null) {
+        result.invalidRows.push({ fileId: row.id, ...ownership, draftId: row.draftId, code: 'FLOW_MEDIA_STILL_DRAFT_BOUND' });
+        continue;
+      }
       if (!Number.isSafeInteger(row.id) || row.id <= 0 || (!hasArticleOwner && !hasFlowOwner) || !isSafeFilename(row.filename)) {
         result.invalidRows.push({ fileId: row.id, ...ownership, code: 'UNSAFE_FILENAME' });
         continue;

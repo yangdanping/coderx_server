@@ -33,10 +33,12 @@ function assertLocalDevelopmentDatabase() {
 async function scopedConnection(pool) {
   const client = await pool.connect();
   await client.query(`SET search_path TO ${quotedSchema}`);
-  return createPgConnectionAdapter(client);
+  const connection = createPgConnectionAdapter(client);
+  connection.processId = client.processID;
+  return connection;
 }
 
-function scopedDatabase(pool, onQueryStarted = null) {
+function scopedDatabase(pool, onQueryStarted = null, onQueryCompleted = null) {
   return {
     async getConnection() {
       const connection = await scopedConnection(pool);
@@ -45,8 +47,10 @@ function scopedDatabase(pool, onQueryStarted = null) {
         ...connection,
         async execute(sql, params = []) {
           const pending = connection.execute(sql, params);
-          await onQueryStarted(sql, params);
-          return pending;
+          await onQueryStarted(sql, params, { processId: connection.processId });
+          const result = await pending;
+          if (onQueryCompleted) await onQueryCompleted(sql, params, { processId: connection.processId });
+          return result;
         },
       };
     },
@@ -121,6 +125,48 @@ function assertConflict(result) {
   assert.equal(result.status, 'rejected');
   assert.ok(result.reason instanceof BusinessError, `expected BusinessError, received ${result.reason?.constructor?.name}: ${result.reason?.message}`);
   assert.equal(result.reason.httpStatus, 409);
+}
+
+async function waitForBackendLock(admin, processId) {
+  const deadline = Date.now() + 2_000;
+  while (Date.now() < deadline) {
+    const result = await admin.query(`SELECT wait_event_type FROM pg_stat_activity WHERE pid = $1`, [processId]);
+    if (result.rows[0]?.wait_event_type === 'Lock') return;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  throw new Error(`backend ${processId} did not enter a PostgreSQL lock wait`);
+}
+
+function twoFileLockGate(admin) {
+  let notifyFirst;
+  let releaseFirst;
+  const firstStarted = new Promise((resolve) => {
+    notifyFirst = resolve;
+  });
+  const firstCanContinue = new Promise((resolve) => {
+    releaseFirst = resolve;
+  });
+  let startedLockQueries = 0;
+  let completedLockQueries = 0;
+  return {
+    firstStarted,
+    async onQueryStarted(sql, _params, context) {
+      if (!/FROM file/i.test(sql) || !/FOR UPDATE/i.test(sql)) return;
+      startedLockQueries += 1;
+      if (startedLockQueries === 2) {
+        await waitForBackendLock(admin, context.processId);
+        releaseFirst();
+      }
+    },
+    async onQueryCompleted(sql) {
+      if (!/FROM file/i.test(sql) || !/FOR UPDATE/i.test(sql)) return;
+      completedLockQueries += 1;
+      if (completedLockQueries === 1) {
+        notifyFirst();
+        await firstCanContinue;
+      }
+    },
+  };
 }
 
 test('Flow publishing enforces safe provenance, exact draft handoff, idempotency, and cross-binder ownership under PostgreSQL concurrency', async () => {
@@ -290,6 +336,88 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
     assertConflict(staleRace[1]);
     assert.equal((await admin.query(`SELECT count(*)::int AS count FROM flow_post_media WHERE file_id = $1`, [staleMedia])).rows[0].count, 1);
     assert.equal((await admin.query(`SELECT draft_id FROM file WHERE id = $1`, [staleMedia])).rows[0].draft_id, null);
+
+    const articleOldMedia = await insertSafeImage(admin, userId, 11);
+    const articleNewMedia = await insertSafeImage(admin, userId, 12);
+    await admin.query(`UPDATE file SET article_id = $1 WHERE id = $2`, [articleId, articleOldMedia]);
+    const articleUnionGate = twoFileLockGate(admin);
+    const articleUnionDatabase = scopedDatabase(pool, articleUnionGate.onQueryStarted, articleUnionGate.onQueryCompleted);
+    const articleUnionPromise = loadBinderService(servicePaths.image, articleUnionDatabase).updateImageArticle(userId, articleId, [articleNewMedia], null);
+    await articleUnionGate.firstStarted;
+    const articleUnionFlowPromise = flowService(articleUnionDatabase).createFlow(userId, {
+      clientRequestId: '51111111-1111-4111-8111-111111111111',
+      content: CONTENT,
+      mediaIds: [articleOldMedia, articleNewMedia],
+    });
+    const articleUnionRace = await Promise.allSettled([articleUnionPromise, articleUnionFlowPromise]);
+    assert.equal(articleUnionRace.filter((result) => result.status === 'fulfilled').length, 1);
+    const articleUnionLoser = articleUnionRace.find((result) => result.status === 'rejected');
+    assert.notEqual(articleUnionLoser.reason?.code, '40P01');
+    assertConflict(articleUnionLoser);
+    const articleUnionState = (
+      await admin.query(
+        `SELECT f.id, f.article_id,
+                EXISTS (SELECT 1 FROM flow_post_media fm WHERE fm.file_id = f.id) AS in_flow
+         FROM file f WHERE f.id = ANY($1::bigint[]) ORDER BY f.id`,
+        [[articleOldMedia, articleNewMedia]],
+      )
+    ).rows;
+    assert.equal(
+      articleUnionState.some((row) => row.article_id != null && row.in_flow),
+      false,
+    );
+    assert.equal(
+      articleUnionState.find((row) => Number(row.id) === Number(articleNewMedia)).article_id != null ||
+        articleUnionState.find((row) => Number(row.id) === Number(articleNewMedia)).in_flow,
+      true,
+    );
+
+    const articleDraftId = (
+      await admin.query(
+        `INSERT INTO draft (user_id, draft_type, content, meta, version)
+         VALUES ($1, 'article', $2::jsonb, $3::jsonb, 3)
+         RETURNING id`,
+        [userId, JSON.stringify(CONTENT), JSON.stringify({ imageIds: [] })],
+      )
+    ).rows[0].id;
+    const draftOldMedia = await insertSafeImage(admin, userId, 13, { draftId: articleDraftId });
+    const draftNewMedia = await insertSafeImage(admin, userId, 14);
+    const draftUnionGate = twoFileLockGate(admin);
+    const draftUnionDatabase = scopedDatabase(pool, draftUnionGate.onQueryStarted, draftUnionGate.onQueryCompleted);
+    const draftUnionPromise = loadBinderService(servicePaths.draft, draftUnionDatabase).upsertDraft(userId, {
+      articleId: null,
+      title: null,
+      content: CONTENT,
+      meta: { imageIds: [draftNewMedia] },
+      version: 3,
+    });
+    await draftUnionGate.firstStarted;
+    const draftUnionFlowPromise = flowService(draftUnionDatabase).createFlow(userId, {
+      clientRequestId: '61111111-1111-4111-8111-111111111111',
+      content: CONTENT,
+      mediaIds: [draftOldMedia, draftNewMedia],
+    });
+    const draftUnionRace = await Promise.allSettled([draftUnionPromise, draftUnionFlowPromise]);
+    assert.equal(draftUnionRace.filter((result) => result.status === 'fulfilled').length, 1);
+    const draftUnionLoser = draftUnionRace.find((result) => result.status === 'rejected');
+    assert.notEqual(draftUnionLoser.reason?.code, '40P01');
+    assertConflict(draftUnionLoser);
+    const draftUnionState = (
+      await admin.query(
+        `SELECT f.id, f.draft_id,
+                EXISTS (SELECT 1 FROM flow_post_media fm WHERE fm.file_id = f.id) AS in_flow
+         FROM file f WHERE f.id = ANY($1::bigint[]) ORDER BY f.id`,
+        [[draftOldMedia, draftNewMedia]],
+      )
+    ).rows;
+    assert.equal(
+      draftUnionState.some((row) => row.draft_id != null && row.in_flow),
+      false,
+    );
+    assert.equal(
+      draftUnionState.find((row) => Number(row.id) === Number(draftNewMedia)).draft_id != null || draftUnionState.find((row) => Number(row.id) === Number(draftNewMedia)).in_flow,
+      true,
+    );
   } finally {
     await admin.query('RESET search_path').catch(() => {});
     await admin.query(`DROP SCHEMA IF EXISTS ${quotedSchema} CASCADE`).catch(() => {});

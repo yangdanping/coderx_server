@@ -115,21 +115,36 @@ class ImageService {
         throw new BusinessError('文章不存在或无权关联图片', 403);
       }
 
-      if (uniqueImageIds.length > 0) {
+      const selectOldStatement = `
+        SELECT id
+        FROM file
+        WHERE article_id = ?
+          AND user_id = ?
+          AND file_type = 'image'
+        ORDER BY id;
+      `;
+      const [oldImages] = await conn.execute(selectOldStatement, [normalizedArticleId, normalizedUserId]);
+      const oldImageIds = oldImages.map((image) => Number(image.id));
+      const lockImageIds = Array.from(new Set([...oldImageIds, ...uniqueImageIds])).sort((left, right) => left - right);
+
+      if (lockImageIds.length > 0) {
         const [lockedImages] = await conn.execute(
           `
             SELECT f.id
             FROM file f
-            WHERE f.id = ANY(?::bigint[])
+            WHERE f.user_id = ?
+              AND f.id = ANY(?::bigint[])
             ORDER BY f.id
             FOR UPDATE OF f;
           `,
-          [uniqueImageIds],
+          [normalizedUserId, lockImageIds],
         );
-        if (lockedImages.length !== uniqueImageIds.length) {
+        if (lockedImages.length !== lockImageIds.length) {
           throw new BusinessError('部分图片不存在、无权访问或已被关联', 403);
         }
+      }
 
+      if (uniqueImageIds.length > 0) {
         const [selectedImages] = await conn.execute(
           `
             SELECT f.id
@@ -166,18 +181,7 @@ class ImageService {
       await conn.execute(clearCoverStatement, [normalizedArticleId, normalizedUserId]);
       console.log('✅ 步骤1 - 清空旧封面标识');
 
-      // 2. 查询该文章原有的图片ID
-      const selectOldStatement = `
-        SELECT id
-        FROM file
-        WHERE article_id = ?
-          AND user_id = ?
-          AND file_type = 'image'
-        ORDER BY id
-        FOR UPDATE;
-      `;
-      const [oldImages] = await conn.execute(selectOldStatement, [normalizedArticleId, normalizedUserId]);
-      const oldImageIds = oldImages.map((img) => img.id);
+      // 2. 原有图片 ID 已在统一加锁前读取
       console.log(`📋 步骤2 - 原有图片ID:`, oldImageIds);
 
       // 3. 将该文章的所有图片关联清空

@@ -101,7 +101,7 @@ test('updateImageArticle: pg uses update-from SQL for cover reset and cover set'
             return [[{ id: 9 }], []];
           }
           if (/SELECT f\.id[\s\S]*FOR UPDATE OF f/i.test(statement)) {
-            return [[{ id: 5 }, { id: 6 }], []];
+            return [[{ id: 4 }, { id: 5 }, { id: 6 }], []];
           }
           if (/^\s*SELECT/i.test(statement) && /NOT EXISTS[\s\S]*flow_post_media/i.test(statement)) {
             return [[{ id: 5 }, { id: 6 }], []];
@@ -148,7 +148,7 @@ test('updateImageArticle: pg uses update-from SQL for cover reset and cover set'
 
     const fileLockExecute = executeCalls.find((call) => /SELECT f\.id[\s\S]*FOR UPDATE OF f/i.test(call.statement));
     assert.ok(fileLockExecute, 'Expected bare selected image lock');
-    assert.deepEqual(fileLockExecute.params, [[5, 6]]);
+    assert.deepEqual(fileLockExecute.params, [7, [4, 5, 6]]);
 
     const selectedImagesExecute = executeCalls.find((call) => /^\s*SELECT/i.test(call.statement) && /NOT EXISTS[\s\S]*flow_post_media/i.test(call.statement));
     assert.ok(selectedImagesExecute, 'Expected fresh selected image ownership validation');
@@ -180,7 +180,7 @@ test('updateImageArticle: pg uses update-from SQL for cover reset and cover set'
   }
 });
 
-test('updateImageArticle: locks bare file rows, validates Flow ownership in a fresh statement, and guards the final bind', async () => {
+test('updateImageArticle: reads old IDs then locks one owner-filtered sorted union before fresh validation and guarded bind', async () => {
   const calls = [];
   const service = loadServiceWithConnection({
     async getConnection() {
@@ -189,9 +189,9 @@ test('updateImageArticle: locks bare file rows, validates Flow ownership in a fr
         async execute(statement, params) {
           calls.push({ statement, params });
           if (/SELECT id FROM article/i.test(statement)) return [[{ id: 9 }], []];
-          if (/SELECT f\.id[\s\S]*FROM file f[\s\S]*FOR UPDATE OF f/i.test(statement)) return [[{ id: 5 }], []];
-          if (/NOT EXISTS[\s\S]*FROM flow_post_media/i.test(statement) && /^\s*SELECT/i.test(statement)) return [[{ id: 5 }], []];
-          if (/SELECT id\s+FROM file\s+WHERE article_id/i.test(statement)) return [[], []];
+          if (/SELECT id\s+FROM file\s+WHERE article_id/i.test(statement)) return [[{ id: 1 }], []];
+          if (/SELECT f\.id[\s\S]*FROM file f[\s\S]*FOR UPDATE OF f/i.test(statement)) return [[{ id: 1 }, { id: 2 }], []];
+          if (/NOT EXISTS[\s\S]*FROM flow_post_media/i.test(statement) && /^\s*SELECT/i.test(statement)) return [[{ id: 2 }], []];
           if (/SET article_id = \?,\s*draft_id = NULL/i.test(statement)) return [{ affectedRows: 1 }, []];
           if (/SELECT[\s\S]+filename[\s\S]+FROM file/i.test(statement)) return [[], []];
           return [{ affectedRows: 1 }, []];
@@ -203,13 +203,16 @@ test('updateImageArticle: locks bare file rows, validates Flow ownership in a fr
     },
   });
 
-  await service.updateImageArticle(7, 9, [5], null);
+  await service.updateImageArticle(7, 9, [2], null);
 
+  const currentIdsIndex = calls.findIndex((call) => /SELECT id\s+FROM file\s+WHERE article_id/i.test(call.statement));
   const fileLockIndex = calls.findIndex((call) => /SELECT f\.id[\s\S]*FOR UPDATE OF f/i.test(call.statement));
   const validationIndex = calls.findIndex((call) => /^\s*SELECT/i.test(call.statement) && /NOT EXISTS[\s\S]*flow_post_media/i.test(call.statement));
-  assert.ok(fileLockIndex >= 0 && validationIndex > fileLockIndex);
+  assert.ok(currentIdsIndex >= 0 && fileLockIndex > currentIdsIndex && validationIndex > fileLockIndex);
   assert.doesNotMatch(calls[fileLockIndex].statement, /JOIN flow_post_media/i);
-  assert.doesNotMatch(calls[fileLockIndex].statement, /user_id/i);
+  assert.match(calls[fileLockIndex].statement, /f\.user_id = \?/i);
+  assert.deepEqual(calls[fileLockIndex].params, [7, [1, 2]]);
+  assert.equal(calls.filter((call) => /FROM file/i.test(call.statement) && /FOR UPDATE/i.test(call.statement)).length, 1);
   const bind = calls.find((call) => /SET article_id = \?,\s*draft_id = NULL/i.test(call.statement));
   assert.match(bind.statement, /NOT EXISTS[\s\S]*FROM flow_post_media fm[\s\S]*fm\.file_id = file\.id/i);
 });
@@ -264,6 +267,7 @@ test('updateImageArticle: empty imageIds still clears old article image links wi
           if (/SELECT id\s+FROM file\s+WHERE article_id = \?[\s\S]+user_id = \?[\s\S]+file_type = 'image'/i.test(statement)) {
             return [[{ id: 7 }, { id: 8 }], []];
           }
+          if (/SELECT f\.id[\s\S]*FOR UPDATE OF f/i.test(statement)) return [[{ id: 7 }, { id: 8 }], []];
 
           return [{ affectedRows: 2 }, []];
         },
@@ -491,6 +495,7 @@ test('updateImageArticle deduplicates IDs and rejects any selected image outside
         async execute(statement, params) {
           calls.push({ statement, params });
           if (/SELECT id FROM article/i.test(statement)) return [[{ id: 9 }], []];
+          if (/SELECT id\s+FROM file\s+WHERE article_id/i.test(statement)) return [[], []];
           if (/SELECT f\.id[\s\S]*FOR UPDATE OF f/i.test(statement)) return [[{ id: 41 }], []];
           return [{ affectedRows: 1 }, []];
         },
@@ -505,7 +510,7 @@ test('updateImageArticle deduplicates IDs and rejects any selected image outside
 
   const lockCall = calls.find((call) => /SELECT f\.id[\s\S]*FOR UPDATE OF f/i.test(call.statement));
   assert.ok(lockCall);
-  assert.deepEqual(lockCall.params, [[41, 42]]);
+  assert.deepEqual(lockCall.params, [7, [41, 42]]);
   assert.doesNotMatch(lockCall.statement, /flow_post_media/i);
   assert.equal(
     calls.some((call) => /^\s*UPDATE/i.test(call.statement)),

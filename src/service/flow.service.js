@@ -194,7 +194,7 @@ class FlowService {
         const lockedDraftId = activeDraftRows[0] ? positiveSafeInteger(activeDraftRows[0].id, 'draft.id') : null;
 
         if (normalized.mediaIds.length) {
-          const [lockedRows] = await conn.execute(buildLockFlowMediaSql(normalized.mediaIds.length), normalized.mediaIds);
+          const [lockedRows] = await conn.execute(buildLockFlowMediaSql(normalized.mediaIds.length), [normalizedUserId, ...normalized.mediaIds]);
           const lockedIds = new Set(lockedRows.map((row) => Number(row.id)));
           if (lockedRows.length !== normalized.mediaIds.length || normalized.mediaIds.some((id) => !lockedIds.has(id))) {
             throw new BusinessError('图片不可用于此 Flow', 409);

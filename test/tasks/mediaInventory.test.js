@@ -178,8 +178,8 @@ test('unfiltered media inventory includes article and Flow-owned files while pre
   await fs.writeFile(path.join(imageRoot, 'article.jpg'), 'article');
   await fs.writeFile(path.join(imageRoot, 'flow.jpg'), 'flow');
   const database = databaseWithRows([
-    { id: 51, articleId: 12, flowId: null, filename: 'article.jpg', mimetype: 'image/jpeg', fileType: 'image' },
-    { id: 52, articleId: null, flowId: 91, filename: 'flow.jpg', mimetype: 'image/jpeg', fileType: 'image' },
+    { id: 51, articleId: 12, flowId: null, draftId: null, filename: 'article.jpg', mimetype: 'image/jpeg', fileType: 'image' },
+    { id: 52, articleId: null, flowId: 91, draftId: null, filename: 'flow.jpg', mimetype: 'image/jpeg', fileType: 'image' },
   ]);
   const catalog = createMediaCatalog({ database, imageRoot, videoRoot });
 
@@ -189,10 +189,10 @@ test('unfiltered media inventory includes article and Flow-owned files while pre
   assert.match(database.calls[0].statement, /LEFT JOIN flow_post_media fm ON fm\.file_id = f\.id/i);
   assert.match(database.calls[0].statement, /f\.article_id IS NOT NULL\s+OR\s+fm\.file_id IS NOT NULL/i);
   assert.deepEqual(
-    files.map(({ id, articleId, flowId }) => ({ id, articleId, flowId })),
+    files.map(({ id, articleId, flowId, draftId }) => ({ id, articleId, flowId, draftId })),
     [
-      { id: 51, articleId: 12, flowId: null },
-      { id: 52, articleId: null, flowId: 91 },
+      { id: 51, articleId: 12, flowId: null, draftId: null },
+      { id: 52, articleId: null, flowId: 91, draftId: null },
     ],
   );
   assert.equal(report.published.logicalFiles, 2);
@@ -205,6 +205,59 @@ test('unfiltered media inventory includes article and Flow-owned files while pre
       { fileId: 52, articleId: null, flowId: 91 },
     ],
   );
+});
+
+test('catalog and inventory quarantine dual-published and still-draft-bound Flow rows before filesystem discovery', async (t) => {
+  const { imageRoot, videoRoot } = await fixtureRoots(t);
+  await fs.writeFile(path.join(imageRoot, 'dual.jpg'), 'dual');
+  await fs.writeFile(path.join(imageRoot, 'flow-draft.jpg'), 'flow-draft');
+  const rows = [
+    { id: 61, articleId: 12, flowId: 91, draftId: null, filename: 'dual.jpg', mimetype: 'image/jpeg', fileType: 'image' },
+    { id: 62, articleId: null, flowId: 92, draftId: 71, filename: 'flow-draft.jpg', mimetype: 'image/jpeg', fileType: 'image' },
+  ];
+  const database = databaseWithRows(rows);
+  const catalog = createMediaCatalog({ database, imageRoot, videoRoot });
+
+  const files = await catalog.listPublishedFiles({ afterFileId: 60, limit: 10 });
+  const discovered = await catalog.discoverVariants(files);
+  const report = await inventoryMedia({ catalog, database, afterFileId: 60, limit: 10 });
+
+  assert.match(database.calls[0].statement, /f\.draft_id AS "draftId"/i);
+  assert.deepEqual(
+    files.map(({ id, articleId, flowId, draftId }) => ({ id, articleId, flowId, draftId })),
+    [
+      { id: 61, articleId: 12, flowId: 91, draftId: null },
+      { id: 62, articleId: null, flowId: 92, draftId: 71 },
+    ],
+  );
+  assert.deepEqual(discovered.candidates, []);
+  assert.deepEqual(discovered.missingAssets, []);
+  assert.deepEqual(discovered.optionalMissingAssets, []);
+  assert.deepEqual(discovered.invalidRows, [
+    { fileId: 61, articleId: 12, flowId: 91, code: 'MULTIPLE_PUBLISHED_OWNERS' },
+    { fileId: 62, articleId: null, flowId: 92, draftId: 71, code: 'FLOW_MEDIA_STILL_DRAFT_BOUND' },
+  ]);
+  assert.deepEqual(report.invalidRows, discovered.invalidRows);
+  assert.equal(report.published.physicalObjects, 0);
+});
+
+test('article-filtered catalog returns a dual-owned row for audit while its article predicate excludes pure Flow rows', async (t) => {
+  const { imageRoot, videoRoot } = await fixtureRoots(t);
+  await fs.writeFile(path.join(imageRoot, 'dual.jpg'), 'dual');
+  const database = databaseWithRows([{ id: 63, articleId: 12, flowId: 91, draftId: null, filename: 'dual.jpg', mimetype: 'image/jpeg', fileType: 'image' }]);
+  const catalog = createMediaCatalog({ database, imageRoot, videoRoot });
+
+  const files = await catalog.listPublishedFiles({ articleId: 12, afterFileId: 60, limit: 10 });
+  const discovered = await catalog.discoverVariants(files);
+
+  assert.match(database.calls[0].statement, /f\.article_id = \?/i);
+  assert.doesNotMatch(database.calls[0].statement, /fm\.flow_id = \?/i);
+  assert.deepEqual(
+    files.map((file) => file.id),
+    [63],
+  );
+  assert.deepEqual(discovered.invalidRows, [{ fileId: 63, articleId: 12, flowId: 91, code: 'MULTIPLE_PUBLISHED_OWNERS' }]);
+  assert.deepEqual(discovered.candidates, []);
 });
 
 test('article-filtered media catalog remains article-only', async (t) => {

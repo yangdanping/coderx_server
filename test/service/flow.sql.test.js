@@ -19,11 +19,11 @@ test('flow SQL locks bare requested file rows before a fresh ownership and assoc
   const sql = flowSql.buildLockFlowMediaSql(2);
   assert.match(sql, /SELECT\s+f\.id/is);
   assert.match(sql, /FROM file f/i);
-  assert.match(sql, /WHERE\s+f\.id IN \(\?,\?\)/i);
+  assert.match(sql, /WHERE\s+f\.user_id = \?/i);
+  assert.match(sql, /AND\s+f\.id IN \(\?,\?\)/i);
   assert.match(sql, /FOR UPDATE OF f/i);
   assert.doesNotMatch(sql, /JOIN flow_post_media/i);
-  assert.doesNotMatch(sql, /user_id/i);
-  assert.equal((sql.match(/\?/g) || []).length, 2);
+  assert.equal((sql.match(/\?/g) || []).length, 3);
 
   const validationSql = flowSql.buildValidateFlowMediaSql(2);
   assert.match(validationSql, /INNER JOIN image_meta im ON im\.file_id = f\.id/i);

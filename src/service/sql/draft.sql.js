@@ -152,10 +152,20 @@ function buildValidateDraftFilesSql() {
   `;
 }
 
+function buildFindDraftFileIdsSql() {
+  return `
+    SELECT id FROM file
+    WHERE user_id = $1
+      AND draft_id = $2
+    ORDER BY id;
+  `;
+}
+
 function buildLockDraftFilesSql() {
   return `
     SELECT id FROM file
-    WHERE id = ANY($1::bigint[])
+    WHERE user_id = $1
+      AND id = ANY($2::bigint[])
     ORDER BY id
     FOR UPDATE;
   `;
@@ -320,6 +330,7 @@ module.exports = {
   buildFindDraftSql,
   buildFindDraftForConsumeSql,
   buildCheckOwnedArticleSql,
+  buildFindDraftFileIdsSql,
   buildLockDraftFilesSql,
   buildValidateDraftFilesSql,
   buildClearRemovedDraftFilesSql,

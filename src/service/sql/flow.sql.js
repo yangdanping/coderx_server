@@ -15,7 +15,8 @@ function buildLockFlowMediaSql(count) {
   return `
     SELECT f.id
     FROM file f
-    WHERE ${SqlUtils.queryIn('f.id', mediaIds)}
+    WHERE f.user_id = ?
+      ${SqlUtils.queryIn('f.id', mediaIds, 'AND')}
     ORDER BY f.id ASC
     FOR UPDATE OF f;
   `;
