@@ -3,6 +3,10 @@ const path = require('node:path');
 
 const DEFAULT_LIMIT = 1_000;
 
+function nullableNumber(value) {
+  return value == null ? null : Number(value);
+}
+
 function positiveInteger(value, name, fallback) {
   if (value == null && fallback != null) return fallback;
   const parsed = Number(value);
@@ -24,7 +28,8 @@ function nonNegativeInteger(value, name, fallback = 0) {
 function normalizeFileRow(row) {
   return {
     id: Number(row.id),
-    articleId: Number(row.articleId ?? row.article_id),
+    articleId: nullableNumber(row.articleId ?? row.article_id),
+    flowId: nullableNumber(row.flowId ?? row.flow_id),
     filename: row.filename,
     mimetype: row.mimetype,
     // Historical image rows predate file_type; the existing read path also treats
@@ -32,6 +37,13 @@ function normalizeFileRow(row) {
     fileType: row.fileType ?? row.file_type ?? 'image',
     poster: row.poster ?? null,
     transcodeStatus: row.transcodeStatus ?? row.transcode_status ?? null,
+  };
+}
+
+function ownershipFor(row) {
+  return {
+    articleId: row.articleId == null ? null : Number(row.articleId),
+    ...(row.flowId == null ? {} : { flowId: Number(row.flowId) }),
   };
 }
 
@@ -101,6 +113,7 @@ function createMediaCatalog({ database, imageRoot, videoRoot, filesystem = fs })
     const normalizedLimit = positiveInteger(limit, 'limit', DEFAULT_LIMIT);
     const normalizedArticleId = articleId == null ? null : positiveInteger(articleId, 'articleId');
     const params = [normalizedAfterFileId];
+    const ownershipFilter = normalizedArticleId == null ? '(f.article_id IS NOT NULL OR fm.file_id IS NOT NULL)' : 'f.article_id IS NOT NULL';
     const articleFilter = normalizedArticleId == null ? '' : 'AND f.article_id = ?';
     if (normalizedArticleId != null) params.push(normalizedArticleId);
     params.push(normalizedLimit);
@@ -109,14 +122,16 @@ function createMediaCatalog({ database, imageRoot, videoRoot, filesystem = fs })
         SELECT
           f.id,
           f.article_id AS "articleId",
+          fm.flow_id AS "flowId",
           f.filename,
           f.mimetype,
           f.file_type AS "fileType",
           vm.poster,
           vm.transcode_status AS "transcodeStatus"
         FROM file f
+        LEFT JOIN flow_post_media fm ON fm.file_id = f.id
         LEFT JOIN video_meta vm ON vm.file_id = f.id
-        WHERE f.article_id IS NOT NULL
+        WHERE ${ownershipFilter}
           AND f.id > ?
           ${articleFilter}
         ORDER BY f.id ASC
@@ -132,18 +147,21 @@ function createMediaCatalog({ database, imageRoot, videoRoot, filesystem = fs })
     const result = { candidates: [], missingAssets: [], optionalMissingAssets: [], invalidRows: [] };
     for (const rawRow of fileRows) {
       const row = normalizeFileRow(rawRow);
-      if (!Number.isSafeInteger(row.id) || row.id <= 0 || !Number.isSafeInteger(row.articleId) || row.articleId <= 0 || !isSafeFilename(row.filename)) {
-        result.invalidRows.push({ fileId: row.id, articleId: row.articleId, code: 'UNSAFE_FILENAME' });
+      const ownership = ownershipFor(row);
+      const hasArticleOwner = Number.isSafeInteger(ownership.articleId) && ownership.articleId > 0;
+      const hasFlowOwner = Number.isSafeInteger(ownership.flowId) && ownership.flowId > 0;
+      if (!Number.isSafeInteger(row.id) || row.id <= 0 || (!hasArticleOwner && !hasFlowOwner) || !isSafeFilename(row.filename)) {
+        result.invalidRows.push({ fileId: row.id, ...ownership, code: 'UNSAFE_FILENAME' });
         continue;
       }
       if (row.fileType === 'image') {
         const originalPath = path.join(resolvedImageRoot, row.filename);
         const originalSize = await regularFileSize(originalPath, filesystem);
         if (originalSize == null) {
-          result.missingAssets.push({ fileId: row.id, articleId: row.articleId, variant: 'original' });
+          result.missingAssets.push({ fileId: row.id, ...ownership, variant: 'original' });
         } else {
           result.candidates.push({
-            articleId: row.articleId,
+            ...ownership,
             fileId: row.id,
             fileType: 'image',
             variant: 'original',
@@ -157,10 +175,10 @@ function createMediaCatalog({ database, imageRoot, videoRoot, filesystem = fs })
         const smallPath = path.join(resolvedImageRoot, small);
         const smallSize = await regularFileSize(smallPath, filesystem);
         if (smallSize == null) {
-          result.optionalMissingAssets.push({ fileId: row.id, articleId: row.articleId, variant: 'small' });
+          result.optionalMissingAssets.push({ fileId: row.id, ...ownership, variant: 'small' });
         } else {
           result.candidates.push({
-            articleId: row.articleId,
+            ...ownership,
             fileId: row.id,
             fileType: 'image',
             variant: 'small',
@@ -174,11 +192,11 @@ function createMediaCatalog({ database, imageRoot, videoRoot, filesystem = fs })
       }
       if (row.fileType === 'video') {
         if (row.transcodeStatus !== 'completed') {
-          result.invalidRows.push({ fileId: row.id, articleId: row.articleId, code: 'VIDEO_NOT_COMPLETED', transcodeStatus: row.transcodeStatus });
+          result.invalidRows.push({ fileId: row.id, ...ownership, code: 'VIDEO_NOT_COMPLETED', transcodeStatus: row.transcodeStatus });
           continue;
         }
         if (!isSafeFilename(row.poster)) {
-          result.invalidRows.push({ fileId: row.id, articleId: row.articleId, code: 'UNSAFE_POSTER_FILENAME' });
+          result.invalidRows.push({ fileId: row.id, ...ownership, code: 'UNSAFE_POSTER_FILENAME' });
           continue;
         }
         const variants = [
@@ -189,10 +207,10 @@ function createMediaCatalog({ database, imageRoot, videoRoot, filesystem = fs })
           const localPath = path.join(resolvedVideoRoot, variant.filename);
           const sizeBytes = await regularFileSize(localPath, filesystem);
           if (sizeBytes == null) {
-            result.missingAssets.push({ fileId: row.id, articleId: row.articleId, variant: variant.variant });
+            result.missingAssets.push({ fileId: row.id, ...ownership, variant: variant.variant });
           } else {
             result.candidates.push({
-              articleId: row.articleId,
+              ...ownership,
               fileId: row.id,
               fileType: 'video',
               variant: variant.variant,
@@ -205,7 +223,7 @@ function createMediaCatalog({ database, imageRoot, videoRoot, filesystem = fs })
         }
         continue;
       }
-      result.invalidRows.push({ fileId: row.id, articleId: row.articleId, code: 'UNSUPPORTED_FILE_TYPE' });
+      result.invalidRows.push({ fileId: row.id, ...ownership, code: 'UNSUPPORTED_FILE_TYPE' });
     }
     return result;
   }

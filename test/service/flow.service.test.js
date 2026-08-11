@@ -74,7 +74,7 @@ test('createFlow rejects duplicate, excessive, unsafe, string, and non-positive 
   }
 });
 
-function createAtomicDatabase({ lockedRows, insertId = 90, mediaInsertError = null, detailRow = null, existingImages = [] }) {
+function createAtomicDatabase({ lockedRows, validatedRows = lockedRows, activeDraftId = 71, insertId = 90, mediaInsertError = null, detailRow = null, existingImages = [] }) {
   const events = [];
   const conn = {
     async beginTransaction() {
@@ -85,9 +85,21 @@ function createAtomicDatabase({ lockedRows, insertId = 90, mediaInsertError = nu
         events.push({ type: 'insert-flow', params });
         return [{ insertId, affectedRows: insertId ? 1 : 0 }];
       }
+      if (/FROM draft/i.test(sql) && /FOR UPDATE/i.test(sql)) {
+        events.push({ type: 'lock-draft', params });
+        return [activeDraftId ? [{ id: activeDraftId }] : []];
+      }
       if (/FROM file f/i.test(sql) && /FOR UPDATE OF f/i.test(sql)) {
         events.push({ type: 'lock-media', params });
         return [lockedRows];
+      }
+      if (/INNER JOIN image_meta/i.test(sql)) {
+        events.push({ type: 'validate-media', params });
+        return [validatedRows];
+      }
+      if (/UPDATE file/i.test(sql) && /SET draft_id = NULL/i.test(sql)) {
+        events.push({ type: 'clear-draft-binding', params });
+        return [{ affectedRows: validatedRows.length }];
       }
       if (/INSERT INTO flow_post_media/i.test(sql)) {
         events.push({ type: 'insert-media', params });
@@ -168,16 +180,99 @@ test('createFlow locks and binds only current-user unattached images in submitte
   assert.deepEqual(insertFlow.params, [7, REQUEST_ID, JSON.stringify(CONTENT), 'hello']);
   assert.deepEqual(events.find((event) => event.type === 'insert-media').params, [90, 42, 0, 90, 41, 1]);
   const consume = events.find((event) => event.type === 'consume-draft');
-  assert.deepEqual(consume.params, [7]);
+  assert.deepEqual(consume.params, [71, 7, null]);
   assert.match(consume.sql, /draft_type = 'flow'/i);
   assert.match(consume.sql, /status = 'consumed'/i);
   assert.match(consume.sql, /consumed_at = NOW\(\)/i);
   assert.match(consume.sql, /discarded_at = NULL/i);
-  assert.match(consume.sql, /consumed_article_id = NULL/i);
+  assert.match(consume.sql, /consumed_article_id = \$3/i);
   assert.ok(events.indexOf('commit') < events.indexOf('promote'));
   assert.deepEqual(promotionCalls, [{ images: [lockedRows[1], lockedRows[0]] }]);
   assert.equal(result.body, 'hello');
   assert.equal(result.bodyHtml, '<p>hello</p>');
+});
+
+test('createFlow locks the active Flow draft before files, accepts its safe-upload image, clears the binding, and consumes that exact draft', async () => {
+  const events = [];
+  const safeImage = {
+    id: 41,
+    filename: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.webp',
+    mimetype: 'image/webp',
+    width: 640,
+    height: 480,
+  };
+  const conn = {
+    async beginTransaction() {
+      events.push('begin');
+    },
+    async execute(sql, params) {
+      if (/INSERT INTO flow_post \(/i.test(sql)) return [{ insertId: 90, affectedRows: 1 }];
+      if (/FROM draft/i.test(sql) && /FOR UPDATE/i.test(sql)) {
+        events.push({ type: 'lock-draft', params });
+        return [[{ id: 71 }]];
+      }
+      if (/FROM file f/i.test(sql) && /FOR UPDATE OF f/i.test(sql)) {
+        events.push({ type: 'lock-files', params, sql });
+        return [[{ id: 41 }]];
+      }
+      if (/INNER JOIN image_meta/i.test(sql)) {
+        events.push({ type: 'validate-files', params, sql });
+        return [[safeImage]];
+      }
+      if (/UPDATE file/i.test(sql) && /SET draft_id = NULL/i.test(sql)) {
+        events.push({ type: 'clear-draft-binding', params });
+        return [{ affectedRows: 1 }];
+      }
+      if (/INSERT INTO flow_post_media/i.test(sql)) return [{ affectedRows: 1 }];
+      if (/UPDATE draft/i.test(sql)) {
+        events.push({ type: 'consume-draft', params });
+        return [{ affectedRows: 1 }];
+      }
+      throw new Error(`unexpected SQL: ${sql}`);
+    },
+    async commit() {
+      events.push('commit');
+    },
+    async rollback() {
+      events.push('rollback');
+    },
+    release() {
+      events.push('release');
+    },
+  };
+  const database = {
+    async getConnection() {
+      return conn;
+    },
+    async execute(sql) {
+      if (/WHERE fp\.id = \?/i.test(sql)) {
+        return [[{ id: 90, content: CONTENT, bodyText: 'hello', author: { id: 7, name: 'account' }, media: [] }]];
+      }
+      throw new Error(`unexpected root SQL: ${sql}`);
+    },
+  };
+  const service = serviceWith({ database });
+
+  await service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
+
+  const orderedEvents = events.filter((event) => typeof event === 'object').map((event) => event.type);
+  assert.deepEqual(orderedEvents, ['lock-draft', 'lock-files', 'validate-files', 'clear-draft-binding', 'consume-draft']);
+  assert.deepEqual(events.find((event) => event.type === 'lock-draft').params, [7]);
+  assert.deepEqual(events.find((event) => event.type === 'lock-files').params, [41]);
+  assert.deepEqual(events.find((event) => event.type === 'validate-files').params, [7, 71, 41]);
+  assert.deepEqual(events.find((event) => event.type === 'clear-draft-binding').params, [71, 41]);
+  assert.deepEqual(events.find((event) => event.type === 'consume-draft').params, [71, 7, null]);
+});
+
+test('createFlow rejects a locked row that fails safe-upload provenance validation with an exposed 409', async () => {
+  const { database, events } = createAtomicDatabase({ lockedRows: [{ id: 41 }], validatedRows: [] });
+  const service = serviceWith({ database });
+
+  await assert.rejects(
+    service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] }),
+    (error) => error instanceof BusinessError && error.httpStatus === 409,
+  );
+  assert.ok(events.includes('rollback'));
 });
 
 test('createFlow rolls back atomically when any media association fails', async () => {
@@ -259,6 +354,39 @@ test('idempotent retry rolls back before selecting outside the transaction, re-p
     false,
   );
   assert.deepEqual(promotionCalls, [{ images: existingImages }]);
+});
+
+test('idempotent Flow retry re-enters neutral promotion so a repaired failed reservation can become ready', async () => {
+  const existingImages = [{ id: 41, filename: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.webp', mimetype: 'image/webp' }];
+  const { database, events } = createAtomicDatabase({ lockedRows: [], insertId: 0, existingImages });
+  let reservationStatus = 'failed';
+  const service = serviceWith({
+    database,
+    mediaRuntime: {
+      async promotePublishedImages(payload) {
+        assert.deepEqual(payload, { images: existingImages });
+        assert.equal(reservationStatus, 'failed');
+        reservationStatus = 'ready';
+        return { attempted: 2, ready: 2, failed: 0 };
+      },
+      async resolveImageUrl() {
+        return null;
+      },
+    },
+  });
+
+  const result = await service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
+
+  assert.equal(result.id, 90);
+  assert.equal(reservationStatus, 'ready');
+  assert.equal(
+    events.some((event) => event.type === 'lock-draft'),
+    false,
+  );
+  assert.equal(
+    events.some((event) => event.type === 'consume-draft'),
+    false,
+  );
 });
 
 test('promotion failure is contained after commit and cannot roll back the published Flow', async () => {
@@ -420,4 +548,26 @@ test('getFlowDetail rejects an absent Flow', async () => {
     },
   });
   await assert.rejects(service.getFlowDetail(404), (error) => error instanceof BusinessError && error.httpStatus === 404);
+});
+
+test('getFlowDetail emits stable empty-string URL fallbacks when avatar and media resolvers are absent', async () => {
+  const service = serviceWith({
+    database: {
+      async execute() {
+        return [[{ id: 51, content: CONTENT, bodyText: 'hello', author: { id: 7, name: 'account', avatarUrl: null }, media: [{ id: 41, position: 0 }] }]];
+      },
+    },
+    mediaRuntime: {
+      async promotePublishedImages() {},
+      async resolveImageUrl() {
+        return null;
+      },
+    },
+  });
+
+  const result = await service.getFlowDetail(51);
+
+  assert.equal(result.author.avatarUrl, '');
+  assert.equal(result.media[0].url, '');
+  assert.equal(result.media[0].thumbnailUrl, '');
 });

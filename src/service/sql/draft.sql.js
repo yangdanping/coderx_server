@@ -143,7 +143,21 @@ function buildValidateDraftFilesSql() {
     WHERE user_id = $1
       AND id = ANY($2::bigint[])
       AND (article_id IS NULL OR article_id = $3)
-      AND (draft_id IS NULL OR draft_id = $4);
+      AND (draft_id IS NULL OR draft_id = $4)
+      AND NOT EXISTS (
+        SELECT 1
+        FROM flow_post_media fm
+        WHERE fm.file_id = file.id
+      );
+  `;
+}
+
+function buildLockDraftFilesSql() {
+  return `
+    SELECT id FROM file
+    WHERE id = ANY($1::bigint[])
+    ORDER BY id
+    FOR UPDATE;
   `;
 }
 
@@ -160,7 +174,14 @@ function buildBindDraftFilesSql() {
   return `
     UPDATE file SET draft_id = $2
     WHERE user_id = $1
-      AND id = ANY($3::bigint[]);
+      AND id = ANY($3::bigint[])
+      AND (article_id IS NULL OR article_id = $4)
+      AND (draft_id IS NULL OR draft_id = $2)
+      AND NOT EXISTS (
+        SELECT 1
+        FROM flow_post_media fm
+        WHERE fm.file_id = file.id
+      );
   `;
 }
 
@@ -299,6 +320,7 @@ module.exports = {
   buildFindDraftSql,
   buildFindDraftForConsumeSql,
   buildCheckOwnedArticleSql,
+  buildLockDraftFilesSql,
   buildValidateDraftFilesSql,
   buildClearRemovedDraftFilesSql,
   buildBindDraftFilesSql,

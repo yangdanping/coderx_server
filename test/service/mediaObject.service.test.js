@@ -169,6 +169,37 @@ test('mediaObjectService: identical pending or ready reservations are idempotent
   );
 });
 
+test('mediaObjectService: a failed neutral reservation can be reserved again after recovery', async () => {
+  const objectKey = `media/images/512/${SHA256.slice(0, 12)}-original.webp`;
+  const existing = {
+    id: 71,
+    fileId: 512,
+    provider: 'r2',
+    variant: 'original',
+    objectKey,
+    localPath: null,
+    sizeBytes: 500,
+    sha256: SHA256,
+    status: 'failed',
+  };
+  const { calls, database } = createDatabaseMock((statement) => {
+    if (/pg_advisory_xact_lock/i.test(statement)) return [[{}], []];
+    if (/FROM media_object/i.test(statement) && /FOR UPDATE/i.test(statement)) return [[existing], []];
+    if (/COALESCE\s*\(\s*SUM/i.test(statement)) return [[{ reservedBytes: 0 }], []];
+    if (/UPDATE media_object/i.test(statement) && /status\s*=\s*'pending'/i.test(statement)) return [{ affectedRows: 1 }, []];
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = createMediaObjectService({ database, hardLimitBytes: 1_000 });
+
+  const result = await service.reserveR2Object({ fileId: 512, variant: 'original', objectKey, sizeBytes: 500, sha256: SHA256 });
+
+  assert.equal(result.reserved, true);
+  assert.equal(result.mediaObject.status, 'pending');
+  const retryUpdate = calls.find((call) => call.type === 'execute' && /UPDATE media_object/i.test(call.statement));
+  assert.ok(retryUpdate);
+  assert.deepEqual(retryUpdate.params, [objectKey, 500, SHA256, 71]);
+});
+
 test('mediaObjectService: capacity summary counts only R2 pending and ready rows', async () => {
   const { calls, database } = createDatabaseMock((statement) => {
     assert.match(statement, /provider\s*=\s*'r2'/i);

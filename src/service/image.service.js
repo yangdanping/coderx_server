@@ -116,24 +116,40 @@ class ImageService {
       }
 
       if (uniqueImageIds.length > 0) {
+        const [lockedImages] = await conn.execute(
+          `
+            SELECT f.id
+            FROM file f
+            WHERE f.id = ANY(?::bigint[])
+            ORDER BY f.id
+            FOR UPDATE OF f;
+          `,
+          [uniqueImageIds],
+        );
+        if (lockedImages.length !== uniqueImageIds.length) {
+          throw new BusinessError('部分图片不存在、无权访问或已被关联', 403);
+        }
+
         const [selectedImages] = await conn.execute(
           `
             SELECT f.id
             FROM file f
-            LEFT JOIN flow_post_media fm ON fm.file_id = f.id
             WHERE f.id = ANY(?::bigint[])
               AND f.user_id = ?
               AND f.file_type = 'image'
               AND (f.article_id IS NULL OR f.article_id = ?)
               AND f.draft_id IS NULL
-              AND fm.file_id IS NULL
-            ORDER BY f.id
-            FOR UPDATE OF f;
+              AND NOT EXISTS (
+                SELECT 1
+                FROM flow_post_media fm
+                WHERE fm.file_id = f.id
+              )
+            ORDER BY f.id;
           `,
           [uniqueImageIds, normalizedUserId, normalizedArticleId],
         );
         if (selectedImages.length !== uniqueImageIds.length) {
-          throw new BusinessError('部分图片不存在、无权访问或已被关联', 403);
+          throw new BusinessError('部分图片已被其他内容关联', 409);
         }
       }
 
@@ -184,11 +200,16 @@ class ImageService {
             AND user_id = ?
             AND file_type = 'image'
             AND (article_id IS NULL OR article_id = ?)
-            AND draft_id IS NULL;
+            AND draft_id IS NULL
+            AND NOT EXISTS (
+              SELECT 1
+              FROM flow_post_media fm
+              WHERE fm.file_id = file.id
+            );
         `;
         const [result4] = await conn.execute(updateArticleStatement, [normalizedArticleId, uniqueImageIds, normalizedUserId, normalizedArticleId]);
         if (result4.affectedRows !== uniqueImageIds.length) {
-          throw new Error('updateImageArticle: not every locked image row was associated');
+          throw new BusinessError('部分图片已被其他内容关联', 409);
         }
         console.log(`✅ 步骤4 - 关联新图片: ${result4.affectedRows} 条记录`);
       }

@@ -6,7 +6,18 @@ const BusinessError = require('@/errors/BusinessError');
 const mediaRuntime = require('@/service/mediaRuntime.service');
 const { deriveFlowContent } = require('@/utils/flowContent');
 const { hydrateAvatarUrls } = require('@/utils/publicAssetUrls');
-const { buildFindFlowByRequestIdSql, buildFlowDetailSql, buildFlowFeedSql, buildInsertFlowMediaSql, buildInsertFlowSql, buildLockFlowMediaSql } = require('./sql/flow.sql');
+const { DRAFT_TYPE, buildConsumeDraftSql } = require('./sql/draft.sql');
+const {
+  buildClearFlowDraftMediaSql,
+  buildFindFlowByRequestIdSql,
+  buildFlowDetailSql,
+  buildFlowFeedSql,
+  buildInsertFlowMediaSql,
+  buildInsertFlowSql,
+  buildLockActiveFlowDraftSql,
+  buildLockFlowMediaSql,
+  buildValidateFlowMediaSql,
+} = require('./sql/flow.sql');
 
 const MAX_MEDIA = 9;
 
@@ -59,29 +70,6 @@ function parseContent(value) {
   }
 }
 
-function consumeActiveFlowDraftSql() {
-  return `
-    UPDATE draft
-    SET
-      status = 'consumed',
-      consumed_at = NOW(),
-      discarded_at = NULL,
-      consumed_article_id = NULL,
-      update_at = NOW()
-    WHERE id = (
-      SELECT id
-      FROM draft
-      WHERE user_id = ?
-        AND draft_type = 'flow'
-        AND article_id IS NULL
-        AND status = 'active'
-      ORDER BY update_at DESC, id DESC
-      LIMIT 1
-      FOR UPDATE
-    );
-  `;
-}
-
 class FlowService {
   constructor({ database: databaseDependency, mediaRuntime: mediaRuntimeDependency, logger, publicApiOrigin }) {
     this.database = databaseDependency;
@@ -98,7 +86,7 @@ class FlowService {
       id: positiveSafeInteger(rawAuthor.id, 'author.id'),
       name: rawAuthor.nickname || rawAuthor.name || '',
       username: rawAuthor.name || '',
-      avatarUrl: rawAuthor.avatarUrl || null,
+      avatarUrl: rawAuthor.avatarUrl || '',
     };
     hydrateAvatarUrls(author, this.publicApiOrigin);
 
@@ -113,8 +101,8 @@ class FlowService {
         ]);
         return {
           id,
-          url: url || null,
-          thumbnailUrl: smallUrl || url || null,
+          url: url || '',
+          thumbnailUrl: smallUrl || url || '',
           title: typeof item.altText === 'string' ? item.altText : '',
         };
       }),
@@ -202,19 +190,37 @@ class FlowService {
         transactionActive = false;
         idempotentConflict = true;
       } else {
+        const [activeDraftRows] = await conn.execute(buildLockActiveFlowDraftSql(), [normalizedUserId]);
+        const lockedDraftId = activeDraftRows[0] ? positiveSafeInteger(activeDraftRows[0].id, 'draft.id') : null;
+
         if (normalized.mediaIds.length) {
-          const [lockedRows] = await conn.execute(buildLockFlowMediaSql(normalized.mediaIds.length), [normalizedUserId, ...normalized.mediaIds]);
-          const lockedById = new Map(lockedRows.map((row) => [Number(row.id), row]));
-          if (lockedRows.length !== normalized.mediaIds.length || normalized.mediaIds.some((id) => !lockedById.has(id))) {
+          const [lockedRows] = await conn.execute(buildLockFlowMediaSql(normalized.mediaIds.length), normalized.mediaIds);
+          const lockedIds = new Set(lockedRows.map((row) => Number(row.id)));
+          if (lockedRows.length !== normalized.mediaIds.length || normalized.mediaIds.some((id) => !lockedIds.has(id))) {
             throw new BusinessError('图片不可用于此 Flow', 409);
           }
-          orderedImages = normalized.mediaIds.map((id) => lockedById.get(id));
+
+          const [validatedRows] = await conn.execute(buildValidateFlowMediaSql(normalized.mediaIds.length), [normalizedUserId, lockedDraftId, ...normalized.mediaIds]);
+          const validatedById = new Map(validatedRows.map((row) => [Number(row.id), row]));
+          if (validatedRows.length !== normalized.mediaIds.length || normalized.mediaIds.some((id) => !validatedById.has(id))) {
+            throw new BusinessError('图片不可用于此 Flow', 409);
+          }
+
+          orderedImages = normalized.mediaIds.map((id) => validatedById.get(id));
+          if (lockedDraftId) {
+            await conn.execute(buildClearFlowDraftMediaSql(orderedImages.length), [lockedDraftId, ...normalized.mediaIds]);
+          }
           await conn.execute(
             buildInsertFlowMediaSql(orderedImages.length),
             orderedImages.flatMap((image, position) => [flowId, image.id, position]),
           );
         }
-        await conn.execute(consumeActiveFlowDraftSql(), [normalizedUserId]);
+
+        if (lockedDraftId) {
+          const [consumedRows] = await conn.execute(buildConsumeDraftSql(DRAFT_TYPE.FLOW), [lockedDraftId, normalizedUserId, null]);
+          const consumedCount = Array.isArray(consumedRows) ? consumedRows.length : Number(consumedRows?.affectedRows || 0);
+          if (consumedCount !== 1) throw new BusinessError('Flow 草稿已发生变更', 409);
+        }
         await conn.commit();
         transactionActive = false;
       }
@@ -226,6 +232,7 @@ class FlowService {
           this.logger.error('Flow transaction rollback failed:', rollbackError);
         }
       }
+      if (error?.code === '23505') throw new BusinessError('图片不可用于此 Flow', 409);
       throw error;
     } finally {
       conn.release();

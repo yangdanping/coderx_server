@@ -71,6 +71,10 @@ test('upsertDraft: new draft inserts row, validates file refs, and binds draft_i
           }
 
           if (executeCount === 3) {
+            return [[{ id: 11 }], []];
+          }
+
+          if (executeCount === 4) {
             return [[{ id: 11, articleId: null }], []];
           }
 
@@ -108,13 +112,16 @@ test('upsertDraft: new draft inserts row, validates file refs, and binds draft_i
   assert.deepEqual(executeCalls[1].params, [9]);
 
   assert.match(executeCalls[2].statement, /FROM file/i);
-  assert.deepEqual(executeCalls[2].params, [9, [11], null, 41]);
+  assert.deepEqual(executeCalls[2].params, [[11]]);
 
-  assert.match(executeCalls[3].statement, /UPDATE file SET draft_id = NULL/i);
-  assert.deepEqual(executeCalls[3].params, [9, 41, [11]]);
+  assert.match(executeCalls[3].statement, /FROM file/i);
+  assert.deepEqual(executeCalls[3].params, [9, [11], null, 41]);
 
-  assert.match(executeCalls[4].statement, /UPDATE file SET draft_id = \$2/i);
+  assert.match(executeCalls[4].statement, /UPDATE file SET draft_id = NULL/i);
   assert.deepEqual(executeCalls[4].params, [9, 41, [11]]);
+
+  assert.match(executeCalls[5].statement, /UPDATE file SET draft_id = \$2/i);
+  assert.deepEqual(executeCalls[5].params, [9, 41, [11], null]);
 
   assert.equal(
     calls.some((call) => call.type === 'commit'),
@@ -238,7 +245,7 @@ test('upsertDraft: direct service call normalizes decimal-string articleId acros
   assert.deepEqual(executeCalls[0].params, [12, 9]);
   assert.deepEqual(executeCalls[1].params, [9, 12, 'Draft', JSON.stringify(content), JSON.stringify(meta), 1]);
   assert.deepEqual(executeCalls[2].params, [9, 12]);
-  assert.deepEqual(executeCalls[3].params, [9, [], 12, 41]);
+  assert.deepEqual(executeCalls[3].params, [9, 41, []]);
 });
 
 test('upsertDraft: zero affected rows becomes 409 conflict and rolls back transaction', async () => {
@@ -699,7 +706,8 @@ test('upsertFlowDraft: forces flow type with null article and title while reusin
 
           if (executeCount === 1) return [{ affectedRows: 1 }, []];
           if (executeCount === 2) return [[{ id: 71, draftType: 'flow', articleId: null, title: null, content, meta, version: 1 }], []];
-          if (executeCount === 3) return [[{ id: 11, articleId: null }], []];
+          if (executeCount === 3) return [[{ id: 11 }], []];
+          if (executeCount === 4) return [[{ id: 11, articleId: null }], []];
           return [{ affectedRows: 1 }, []];
         },
         async commit() {
@@ -729,13 +737,49 @@ test('upsertFlowDraft: forces flow type with null article and title while reusin
   assert.deepEqual(executeCalls[0].params, [9, null, null, JSON.stringify(content), JSON.stringify(meta), 0]);
   assert.match(executeCalls[1].statement, /draft_type\s*=\s*'flow'/i);
   assert.deepEqual(executeCalls[1].params, [9]);
-  assert.deepEqual(executeCalls[2].params, [9, [11], null, 71]);
-  assert.deepEqual(executeCalls[3].params, [9, 71, [11]]);
+  assert.deepEqual(executeCalls[2].params, [[11]]);
+  assert.deepEqual(executeCalls[3].params, [9, [11], null, 71]);
   assert.deepEqual(executeCalls[4].params, [9, 71, [11]]);
+  assert.deepEqual(executeCalls[5].params, [9, 71, [11], null]);
   assert.equal(
     calls.some((call) => call.type === 'commit'),
     true,
   );
+});
+
+test('upsertFlowDraft: locks bare file rows before fresh validation and returns 409 when the guarded bind loses ownership', async () => {
+  const calls = [];
+  const content = { type: 'doc', content: [] };
+  const meta = { imageIds: [11], videoIds: [] };
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return {
+        async beginTransaction() {},
+        async execute(statement, params) {
+          calls.push({ statement, params });
+          const index = calls.length;
+          if (index === 1) return [{ affectedRows: 1 }, []];
+          if (index === 2) return [[{ id: 71, draftType: 'flow', articleId: null, content, meta, version: 1 }], []];
+          if (index === 3) return [[{ id: 11 }], []];
+          if (index === 4) return [[{ id: 11, articleId: null }], []];
+          if (index === 5) return [{ affectedRows: 0 }, []];
+          if (index === 6) return [{ affectedRows: 0 }, []];
+          throw new Error(`unexpected SQL: ${statement}`);
+        },
+        async commit() {},
+        async rollback() {},
+        release() {},
+      };
+    },
+  });
+
+  await assert.rejects(service.upsertFlowDraft(9, { content, meta, version: 0 }), (error) => error.name === 'BusinessError' && error.httpStatus === 409);
+
+  assert.match(calls[2].statement, /SELECT id FROM file[\s\S]*ORDER BY id[\s\S]*FOR UPDATE/i);
+  assert.doesNotMatch(calls[2].statement, /flow_post_media/i);
+  assert.match(calls[3].statement, /NOT EXISTS[\s\S]*flow_post_media/i);
+  assert.match(calls[5].statement, /NOT EXISTS[\s\S]*flow_post_media/i);
+  assert.deepEqual(calls[5].params, [9, 71, [11], null]);
 });
 
 test('getFlowDraft: reads only the current active flow draft', async () => {

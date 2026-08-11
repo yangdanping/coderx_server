@@ -30,7 +30,16 @@ function issue(code, media = {}, details = {}) {
     code,
     ...(media.fileId != null ? { fileId: media.fileId } : {}),
     ...(media.variant ? { variant: media.variant } : {}),
+    ...(Object.hasOwn(media, 'articleId') ? { articleId: media.articleId } : {}),
+    ...(media.flowId != null ? { flowId: media.flowId } : {}),
     ...details,
+  };
+}
+
+function mediaScope(media) {
+  return {
+    ...(Object.hasOwn(media, 'articleId') ? { articleId: media.articleId } : {}),
+    ...(media.flowId != null ? { flowId: media.flowId } : {}),
   };
 }
 
@@ -119,24 +128,24 @@ async function reconcileR2Media({
     try {
       head = await r2Store.head(r2Row.objectKey);
     } catch (error) {
-      issues.push(issue('R2_HEAD_FAILED', r2Row, { message: String(error?.message || error).slice(0, 500) }));
+      issues.push(issue('R2_HEAD_FAILED', r2Row, { ...mediaScope(actual.candidate), message: String(error?.message || error).slice(0, 500) }));
       continue;
     }
     const headMatchesRow = identityMatches(head, r2Row);
     const rowMatchesLocal = identityMatches(r2Row, actual);
     if (!rowMatchesLocal) {
-      issues.push(issue('R2_LOCAL_IDENTITY_MISMATCH', r2Row));
+      issues.push(issue('R2_LOCAL_IDENTITY_MISMATCH', r2Row, mediaScope(actual.candidate)));
     }
 
     if (r2Row.status === 'pending') {
       const updatedAt = new Date(r2Row.updatedAt).getTime();
       const stale = Number.isFinite(updatedAt) && Date.now() - updatedAt >= normalizedPendingAge;
       if (!stale) {
-        issues.push(issue('R2_PENDING_FRESH', r2Row));
+        issues.push(issue('R2_PENDING_FRESH', r2Row, mediaScope(actual.candidate)));
         continue;
       }
       const recoverable = headMatchesRow && rowMatchesLocal;
-      issues.push(issue(recoverable ? 'R2_PENDING_STALE_MATCH' : 'R2_PENDING_STALE_MISSING_OR_MISMATCH', r2Row));
+      issues.push(issue(recoverable ? 'R2_PENDING_STALE_MATCH' : 'R2_PENDING_STALE_MISSING_OR_MISMATCH', r2Row, mediaScope(actual.candidate)));
       if (repair) {
         try {
           if (recoverable) {
@@ -146,27 +155,27 @@ async function reconcileR2Media({
           }
           repaired += 1;
         } catch (error) {
-          issues.push(issue('R2_REPAIR_FAILED', r2Row, { message: String(error?.message || error).slice(0, 500) }));
+          issues.push(issue('R2_REPAIR_FAILED', r2Row, { ...mediaScope(actual.candidate), message: String(error?.message || error).slice(0, 500) }));
         }
       }
       continue;
     }
 
     if (r2Row.status === 'ready' && (!headMatchesRow || !rowMatchesLocal)) {
-      if (!headMatchesRow) issues.push(issue(head ? 'R2_HEAD_MISMATCH' : 'R2_HEAD_MISSING', r2Row));
-      else issues.push(issue('R2_READY_NOT_CURRENT_LOCAL', r2Row));
+      if (!headMatchesRow) issues.push(issue(head ? 'R2_HEAD_MISMATCH' : 'R2_HEAD_MISSING', r2Row, mediaScope(actual.candidate)));
+      else issues.push(issue('R2_READY_NOT_CURRENT_LOCAL', r2Row, mediaScope(actual.candidate)));
       if (repair) {
         try {
           await mediaObjectService.markVerificationFailed(r2Row, new Error(`Ready R2 object ${r2Row.objectKey} is missing or mismatched`));
           repaired += 1;
         } catch (error) {
-          issues.push(issue('R2_REPAIR_FAILED', r2Row, { message: String(error?.message || error).slice(0, 500) }));
+          issues.push(issue('R2_REPAIR_FAILED', r2Row, { ...mediaScope(actual.candidate), message: String(error?.message || error).slice(0, 500) }));
         }
       }
     } else if (r2Row.status === 'failed') {
-      issues.push(issue('R2_ROW_FAILED', r2Row));
+      issues.push(issue('R2_ROW_FAILED', r2Row, mediaScope(actual.candidate)));
     } else if (r2Row.status === 'deleting') {
-      issues.push(issue('R2_ROW_DELETING', r2Row));
+      issues.push(issue('R2_ROW_DELETING', r2Row, mediaScope(actual.candidate)));
     }
   }
 

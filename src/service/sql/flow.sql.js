@@ -13,17 +13,63 @@ function buildLockFlowMediaSql(count) {
 
   const mediaIds = Array.from({ length: count });
   return `
-    SELECT f.id, f.filename, f.mimetype
+    SELECT f.id
     FROM file f
-    LEFT JOIN flow_post_media fm ON fm.file_id = f.id
-    WHERE f.user_id = ?
-      ${SqlUtils.queryIn('f.id', mediaIds, 'AND')}
-      AND f.file_type = 'image'
-      AND f.article_id IS NULL
-      AND f.draft_id IS NULL
-      AND fm.file_id IS NULL
+    WHERE ${SqlUtils.queryIn('f.id', mediaIds)}
     ORDER BY f.id ASC
     FOR UPDATE OF f;
+  `;
+}
+
+function buildValidateFlowMediaSql(count) {
+  if (!Number.isSafeInteger(count) || count <= 0) return null;
+
+  const mediaIds = Array.from({ length: count });
+  return `
+    SELECT f.id, f.filename, f.mimetype, im.width, im.height
+    FROM file f
+    INNER JOIN image_meta im ON im.file_id = f.id
+    WHERE f.user_id = ?
+      AND (f.draft_id IS NULL OR f.draft_id = ?)
+      ${SqlUtils.queryIn('f.id', mediaIds, 'AND')}
+      AND f.file_type = 'image'
+      AND f.mimetype = 'image/webp'
+      AND f.filename ~ '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.webp$'
+      AND im.width BETWEEN 1 AND 2560
+      AND im.height BETWEEN 1 AND 2560
+      AND f.article_id IS NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM flow_post_media fm
+        WHERE fm.file_id = f.id
+      )
+    ORDER BY f.id ASC;
+  `;
+}
+
+function buildLockActiveFlowDraftSql() {
+  return `
+    SELECT id
+    FROM draft
+    WHERE user_id = ?
+      AND draft_type = 'flow'
+      AND article_id IS NULL
+      AND status = 'active'
+    ORDER BY update_at DESC, id DESC
+    LIMIT 1
+    FOR UPDATE;
+  `;
+}
+
+function buildClearFlowDraftMediaSql(count) {
+  if (!Number.isSafeInteger(count) || count <= 0) return null;
+
+  const mediaIds = Array.from({ length: count });
+  return `
+    UPDATE file
+    SET draft_id = NULL
+    WHERE draft_id = ?
+      ${SqlUtils.queryIn('id', mediaIds, 'AND')};
   `;
 }
 
@@ -100,9 +146,12 @@ function buildFlowDetailSql() {
 
 module.exports = {
   buildFindFlowByRequestIdSql,
+  buildClearFlowDraftMediaSql,
   buildFlowDetailSql,
   buildFlowFeedSql,
   buildInsertFlowMediaSql,
   buildInsertFlowSql,
+  buildLockActiveFlowDraftSql,
   buildLockFlowMediaSql,
+  buildValidateFlowMediaSql,
 };

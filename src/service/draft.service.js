@@ -10,6 +10,7 @@ const {
   buildUpsertDraftSql,
   buildFindDraftSql,
   buildCheckOwnedArticleSql,
+  buildLockDraftFilesSql,
   buildValidateDraftFilesSql,
   buildClearRemovedDraftFilesSql,
   buildBindDraftFilesSql,
@@ -236,16 +237,25 @@ class DraftService {
         throw new Error('草稿保存后读取失败');
       }
 
-      const [validRows] = await conn.execute(buildValidateDraftFilesSql(), [userId, fileIds, normalizedArticleId, draft.id]);
+      if (fileIds.length > 0) {
+        const [lockedRows] = await conn.execute(buildLockDraftFilesSql(), [fileIds]);
+        if (lockedRows.length !== fileIds.length) {
+          throw new BusinessError('草稿引用了无效文件', 400);
+        }
 
-      if (validRows.length !== fileIds.length) {
-        throw new BusinessError('草稿引用了无效文件', 400);
+        const [validRows] = await conn.execute(buildValidateDraftFilesSql(), [userId, fileIds, normalizedArticleId, draft.id]);
+        if (validRows.length !== fileIds.length) {
+          throw new BusinessError('草稿引用的文件已被关联', 409);
+        }
       }
 
       await conn.execute(buildClearRemovedDraftFilesSql(), [userId, draft.id, fileIds]);
 
       if (fileIds.length > 0) {
-        await conn.execute(buildBindDraftFilesSql(), [userId, draft.id, fileIds]);
+        const [bindResult] = await conn.execute(buildBindDraftFilesSql(), [userId, draft.id, fileIds, normalizedArticleId]);
+        if (Number(bindResult?.affectedRows || 0) !== fileIds.length) {
+          throw new BusinessError('草稿引用的文件已被关联', 409);
+        }
       }
 
       await hydrateDraftContentMedia(conn, draft);

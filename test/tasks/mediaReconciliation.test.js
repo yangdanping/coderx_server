@@ -311,3 +311,49 @@ test('reconciliation recognizes a verified R2 fallback when the required local f
   assert.deepEqual(report.databaseRowsWithoutPublishedMedia, []);
   assert.deepEqual(report.r2ObjectsWithoutDatabase, []);
 });
+
+test('reconciliation detects and repairs a stale pending neutral Flow object with Flow identity', async () => {
+  const flowCandidate = { ...candidate(61, SHA_A), articleId: null, flowId: 91 };
+  const stale = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const r2Row = row({ id: 61, fileId: 61, provider: 'r2', status: 'pending', sha256: SHA_A, objectKey: 'media/images/61/hash-original.jpg', updatedAt: stale });
+  const calls = [];
+
+  const report = await reconcileR2Media({
+    catalog: catalogFixture([flowCandidate]),
+    database: {
+      async execute() {
+        return [[r2Row], []];
+      },
+    },
+    inspector: async () => ({ sizeBytes: 10, sha256: SHA_A }),
+    mediaObjectService: {
+      async markReady(value) {
+        calls.push(['ready', value.id]);
+      },
+      async markFailed(value) {
+        calls.push(['failed', value.id]);
+      },
+      async markVerificationFailed(value) {
+        calls.push(['verification', value.id]);
+      },
+    },
+    r2Store: {
+      async head(key) {
+        return { key, sizeBytes: 10, sha256: SHA_A };
+      },
+      async list() {
+        return { objects: [{ key: r2Row.objectKey, sizeBytes: 10 }], continuationToken: null };
+      },
+    },
+    repair: true,
+    pendingOlderThanMs: 60 * 60 * 1000,
+  });
+
+  assert.deepEqual(calls, [['ready', 61]]);
+  assert.equal(report.repaired, 1);
+  assert.equal(
+    report.issues.some((item) => item.code === 'R2_PENDING_STALE_MATCH' && item.fileId === 61 && item.flowId === 91),
+    true,
+  );
+  assert.deepEqual(report.databaseRowsWithoutPublishedMedia, []);
+});

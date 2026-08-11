@@ -172,3 +172,49 @@ test('filtered inventory marks filesystem coverage incomplete instead of reporti
   assert.equal(report.filesystemCoverageComplete, false);
   assert.deepEqual(report.filesystemFilesWithoutDatabase, []);
 });
+
+test('unfiltered media inventory includes article and Flow-owned files while preserving nullable ownership', async (t) => {
+  const { imageRoot, videoRoot } = await fixtureRoots(t);
+  await fs.writeFile(path.join(imageRoot, 'article.jpg'), 'article');
+  await fs.writeFile(path.join(imageRoot, 'flow.jpg'), 'flow');
+  const database = databaseWithRows([
+    { id: 51, articleId: 12, flowId: null, filename: 'article.jpg', mimetype: 'image/jpeg', fileType: 'image' },
+    { id: 52, articleId: null, flowId: 91, filename: 'flow.jpg', mimetype: 'image/jpeg', fileType: 'image' },
+  ]);
+  const catalog = createMediaCatalog({ database, imageRoot, videoRoot });
+
+  const files = await catalog.listPublishedFiles({ afterFileId: 50, limit: 10 });
+  const report = await inventoryMedia({ catalog, database, afterFileId: 50, limit: 10 });
+
+  assert.match(database.calls[0].statement, /LEFT JOIN flow_post_media fm ON fm\.file_id = f\.id/i);
+  assert.match(database.calls[0].statement, /f\.article_id IS NOT NULL\s+OR\s+fm\.file_id IS NOT NULL/i);
+  assert.deepEqual(
+    files.map(({ id, articleId, flowId }) => ({ id, articleId, flowId })),
+    [
+      { id: 51, articleId: 12, flowId: null },
+      { id: 52, articleId: null, flowId: 91 },
+    ],
+  );
+  assert.equal(report.published.logicalFiles, 2);
+  assert.equal(report.published.physicalObjects, 2);
+  assert.deepEqual(report.invalidRows, []);
+  assert.deepEqual(
+    (await catalog.discoverVariants(files)).candidates.map(({ fileId, articleId, flowId }) => ({ fileId, articleId, flowId })),
+    [
+      { fileId: 51, articleId: 12, flowId: undefined },
+      { fileId: 52, articleId: null, flowId: 91 },
+    ],
+  );
+});
+
+test('article-filtered media catalog remains article-only', async (t) => {
+  const { imageRoot, videoRoot } = await fixtureRoots(t);
+  const database = databaseWithRows([]);
+  const catalog = createMediaCatalog({ database, imageRoot, videoRoot });
+
+  await catalog.listPublishedFiles({ articleId: 12, afterFileId: 50, limit: 10 });
+
+  assert.deepEqual(database.calls[0].params, [50, 12, 10]);
+  assert.match(database.calls[0].statement, /f\.article_id IS NOT NULL/i);
+  assert.match(database.calls[0].statement, /f\.article_id = \?/i);
+});

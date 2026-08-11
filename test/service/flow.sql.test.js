@@ -15,14 +15,35 @@ test('flow migration creates ordered unique media ownership and feed indexes', (
   assert.match(migration, /position BETWEEN 0 AND 8/i);
 });
 
-test('flow SQL locks requested image rows for ownership validation', () => {
+test('flow SQL locks bare requested file rows before a fresh ownership and association validation', () => {
   const sql = flowSql.buildLockFlowMediaSql(2);
-  assert.match(sql, /SELECT\s+f\.id,\s+f\.filename,\s+f\.mimetype/is);
+  assert.match(sql, /SELECT\s+f\.id/is);
   assert.match(sql, /FROM file f/i);
-  assert.match(sql, /LEFT JOIN flow_post_media/i);
-  assert.match(sql, /WHERE\s+f\.user_id = \?\s+AND\s+f\.id IN \(\?,\?\)/i);
+  assert.match(sql, /WHERE\s+f\.id IN \(\?,\?\)/i);
   assert.match(sql, /FOR UPDATE OF f/i);
-  assert.equal((sql.match(/\?/g) || []).length, 3);
+  assert.doesNotMatch(sql, /JOIN flow_post_media/i);
+  assert.doesNotMatch(sql, /user_id/i);
+  assert.equal((sql.match(/\?/g) || []).length, 2);
+
+  const validationSql = flowSql.buildValidateFlowMediaSql(2);
+  assert.match(validationSql, /INNER JOIN image_meta im ON im\.file_id = f\.id/i);
+  assert.match(validationSql, /f\.user_id = \?/i);
+  assert.match(validationSql, /\(f\.draft_id IS NULL OR f\.draft_id = \?\)/i);
+  assert.match(validationSql, /NOT EXISTS[\s\S]*FROM flow_post_media fm[\s\S]*fm\.file_id = f\.id/i);
+  assert.match(validationSql, /f\.mimetype = 'image\/webp'/i);
+  assert.match(validationSql, /f\.filename ~/i);
+  assert.match(validationSql, /im\.width BETWEEN 1 AND 2560/i);
+  assert.match(validationSql, /im\.height BETWEEN 1 AND 2560/i);
+  assert.equal((validationSql.match(/\?/g) || []).length, 4);
+});
+
+test('flow SQL locks the exact active Flow draft before files and clears only its submitted bindings', () => {
+  assert.match(flowSql.buildLockActiveFlowDraftSql(), /FROM draft[\s\S]*user_id = \?[\s\S]*draft_type = 'flow'[\s\S]*status = 'active'[\s\S]*FOR UPDATE/i);
+  const clearSql = flowSql.buildClearFlowDraftMediaSql(2);
+  assert.match(clearSql, /UPDATE file[\s\S]*SET draft_id = NULL/i);
+  assert.match(clearSql, /draft_id = \?/i);
+  assert.match(clearSql, /id IN \(\?,\?\)/i);
+  assert.equal((clearSql.match(/\?/g) || []).length, 3);
 });
 
 test('flow SQL builders create posts, ordered media, and read queries', () => {

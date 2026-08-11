@@ -157,3 +157,28 @@ test('historical migration rejects unsafe concurrency before discovering media',
   const { catalog } = catalogFixture([]);
   await assert.rejects(migrateMediaToR2({ catalog, mediaPromotionService: { async promote() {} }, concurrency: 11 }), /concurrency/i);
 });
+
+test('historical migration omits article scope for neutral Flow candidates and preserves legacy article scope', async () => {
+  const articleCandidate = candidate(21);
+  const flowCandidate = { ...candidate(22), articleId: null, flowId: 91 };
+  const { catalog } = catalogFixture([articleCandidate, flowCandidate]);
+  const promoted = [];
+
+  await migrateMediaToR2({
+    catalog,
+    mediaPromotionService: {
+      async promote(payload) {
+        promoted.push(payload);
+        return { retainedLocal: true };
+      },
+    },
+    dryRun: false,
+    concurrency: 1,
+    writeMode: 'r2_on_publish',
+    writePaused: false,
+  });
+
+  assert.equal(promoted[0].articleId, 7);
+  assert.equal(Object.hasOwn(promoted[1], 'articleId'), false);
+  assert.equal(Object.hasOwn(promoted[1], 'flowId'), false);
+});

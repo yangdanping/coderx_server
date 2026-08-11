@@ -87,14 +87,15 @@ async function migrateMediaToR2({
   await runBounded(discovered.candidates, normalizedConcurrency, async (candidate) => {
     report.attempted += 1;
     try {
-      const result = await mediaPromotionService.promote({
-        articleId: candidate.articleId,
+      const promotion = {
         fileId: candidate.fileId,
         variant: candidate.variant,
         localPath: candidate.localPath,
         filename: candidate.filename,
         contentType: candidate.contentType,
-      });
+      };
+      if (candidate.articleId != null) promotion.articleId = candidate.articleId;
+      const result = await mediaPromotionService.promote(promotion);
       if (result?.inProgress) {
         report.inProgress += 1;
         return;

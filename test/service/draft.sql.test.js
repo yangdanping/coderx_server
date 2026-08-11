@@ -131,13 +131,21 @@ test('buildCheckOwnedArticleSql: article ownership check scopes by article and u
 });
 
 test('buildValidateDraftFilesSql: validates same-user files and allows current article files during edit drafts', () => {
-  const { buildValidateDraftFilesSql } = loadHelper();
+  const { buildLockDraftFilesSql, buildValidateDraftFilesSql } = loadHelper();
+  const lockSql = buildLockDraftFilesSql();
+  assert.match(lockSql, /SELECT id FROM file/i);
+  assert.match(lockSql, /id = ANY\(\$1::bigint\[\]\)/i);
+  assert.match(lockSql, /ORDER BY id[\s\S]*FOR UPDATE/i);
+  assert.doesNotMatch(lockSql, /flow_post_media/i);
+
   const sql = buildValidateDraftFilesSql();
 
   assert.match(sql, /id = ANY\(\$2::bigint\[\]\)/i);
   assert.match(sql, /user_id = \$1/i);
   assert.match(sql, /\(article_id IS NULL OR article_id = \$3\)/i);
   assert.match(sql, /\(draft_id IS NULL OR draft_id = \$4\)/i);
+  assert.match(sql, /NOT EXISTS[\s\S]*FROM flow_post_media fm[\s\S]*fm\.file_id = file\.id/i);
+  assert.doesNotMatch(sql, /FOR UPDATE/i);
 });
 
 test('buildClearRemovedDraftFilesSql: clears previous refs not in the latest file set', () => {
@@ -157,6 +165,9 @@ test('buildBindDraftFilesSql: binds current draft refs using PG array params', (
   assert.match(sql, /UPDATE file SET draft_id = \$2/i);
   assert.match(sql, /WHERE user_id = \$1/i);
   assert.match(sql, /id = ANY\(\$3::bigint\[\]\)/i);
+  assert.match(sql, /\(article_id IS NULL OR article_id = \$4\)/i);
+  assert.match(sql, /\(draft_id IS NULL OR draft_id = \$2\)/i);
+  assert.match(sql, /NOT EXISTS[\s\S]*FROM flow_post_media fm[\s\S]*fm\.file_id = file\.id/i);
 });
 
 test('buildDiscardDraftSql: soft-discards active draft by id and user and returns row', () => {
