@@ -717,6 +717,7 @@ test('upsertFlowDraft: forces flow type with null article and title while reusin
           if (executeCount === 3) return [[], []];
           if (executeCount === 4) return [[{ id: 11 }], []];
           if (executeCount === 5) return [[{ id: 11, articleId: null }], []];
+          if (executeCount === 8) return [[{ id: 11, filename: '11.webp', mimetype: 'image/webp', size: 1100, width: 110, height: 90 }], []];
           return [{ affectedRows: 1 }, []];
         },
         async commit() {
@@ -741,7 +742,26 @@ test('upsertFlowDraft: forces flow type with null article and title while reusin
   });
 
   const executeCalls = calls.filter((call) => call.type === 'execute');
-  assert.deepEqual(result, { id: 71, draftType: 'flow', articleId: null, title: null, content, meta, version: 1 });
+  assert.deepEqual(result, {
+    id: 71,
+    draftType: 'flow',
+    articleId: null,
+    title: null,
+    content,
+    meta,
+    version: 1,
+    images: [
+      {
+        id: 11,
+        url: 'https://api.example/article/images/fresh-image.png',
+        thumbnailUrl: 'https://api.example/article/images/fresh-image.png',
+        mimeType: 'image/webp',
+        sizeBytes: 1100,
+        width: 110,
+        height: 90,
+      },
+    ],
+  });
   assert.match(executeCalls[0].statement, /VALUES\s*\('flow'/i);
   assert.deepEqual(executeCalls[0].params, [9, null, null, JSON.stringify(content), JSON.stringify(meta), 0]);
   assert.match(executeCalls[1].statement, /draft_type\s*=\s*'flow'/i);
@@ -808,11 +828,90 @@ test('getFlowDraft: reads only the current active flow draft', async () => {
 
   const result = await service.getFlowDraft(9);
 
-  assert.deepEqual(result, { id: 71, draftType: 'flow', articleId: null, version: 2 });
+  assert.deepEqual(result, { id: 71, draftType: 'flow', articleId: null, version: 2, images: [] });
   assert.equal(calls.length, 1);
   assert.match(calls[0].statement, /draft_type\s*=\s*'flow'/i);
   assert.match(calls[0].statement, /article_id IS NULL/i);
   assert.deepEqual(calls[0].params, [9]);
+});
+
+test('getFlowDraft: ordered image assets follow meta.imageIds instead of database row order', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection(
+    {
+      async execute(statement, params) {
+        calls.push({ statement, params });
+        if (calls.length === 1) {
+          return [[{ id: 71, userId: 9, draftType: 'flow', articleId: null, meta: { imageIds: [42, 41] }, version: 2 }], []];
+        }
+
+        return [
+          [
+            { id: 41, filename: '41.webp', mimetype: 'image/webp', size: 4100, width: 410, height: 240 },
+            { id: 42, filename: '42.webp', mimetype: 'image/webp', size: 4200, width: 420, height: 240 },
+          ],
+          [],
+        ];
+      },
+    },
+    {
+      async resolveImageUrl(fileId, { variant }) {
+        return `https://cdn.test/${fileId}/${variant}`;
+      },
+    },
+  );
+
+  const result = await service.getFlowDraft(9);
+
+  assert.deepEqual(result.images.map((image) => image.id), [42, 41]);
+  assert.deepEqual(result.images[0], {
+    id: 42,
+    url: 'https://cdn.test/42/original',
+    thumbnailUrl: 'https://cdn.test/42/small',
+    mimeType: 'image/webp',
+    sizeBytes: 4200,
+    width: 420,
+    height: 240,
+  });
+  assert.match(calls[1].statement, /user_id\s*=\s*\$1/i);
+  assert.match(calls[1].statement, /draft_id\s*=\s*\$2/i);
+  assert.match(calls[1].statement, /file_type\s*=\s*'image'/i);
+  assert.match(calls[1].statement, /NOT EXISTS[\s\S]*flow_post_media/i);
+  assert.deepEqual(calls[1].params, [9, 71, [42, 41]]);
+});
+
+test('getFlowDraft: empty imageIds returns an empty image list without querying files', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      return [[{ id: 71, userId: 9, draftType: 'flow', articleId: null, meta: { imageIds: [] }, version: 2 }], []];
+    },
+  });
+
+  const result = await service.getFlowDraft(9);
+
+  assert.deepEqual(result.images, []);
+  assert.equal(calls.length, 1);
+});
+
+test('getFlowDraft: incomplete image binding rejects with a conflict instead of returning partial images', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      if (calls.length === 1) {
+        return [[{ id: 71, userId: 9, draftType: 'flow', articleId: null, meta: { imageIds: [42, 41] }, version: 2 }], []];
+      }
+      return [[{ id: 42, filename: '42.webp', mimetype: 'image/webp', size: 4200, width: 420, height: 240 }], []];
+    },
+  });
+
+  await assert.rejects(
+    () => service.getFlowDraft(9),
+    (error) => error.name === 'BusinessError' && error.httpStatus === 409,
+  );
+  assert.equal(calls.length, 2);
 });
 
 test('deleteFlowDraft: discard is type-scoped and releases only that draft files', async () => {

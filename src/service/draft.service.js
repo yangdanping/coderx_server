@@ -173,6 +173,53 @@ async function hydrateDraftContentMedia(executor, draft) {
   return draft;
 }
 
+async function hydrateFlowDraftImages(executor, draft) {
+  const imageIds = normalizeIdList(draft?.meta?.imageIds);
+  if (imageIds.length === 0) {
+    return { ...draft, images: [] };
+  }
+
+  const [rows] = await executor.execute(
+    `
+      SELECT f.id, f.filename, f.mimetype, f.size, im.width, im.height
+      FROM file f
+      INNER JOIN image_meta im ON im.file_id = f.id
+      WHERE f.user_id = $1
+        AND f.draft_id = $2
+        AND f.id = ANY($3::bigint[])
+        AND f.file_type = 'image'
+        AND NOT EXISTS (
+          SELECT 1 FROM flow_post_media fm WHERE fm.file_id = f.id
+        );
+    `,
+    [draft.userId, draft.id, imageIds],
+  );
+  if (rows.length !== imageIds.length) {
+    throw new BusinessError('Flow 草稿图片无法完整恢复', 409);
+  }
+
+  const rowsById = new Map(rows.map((row) => [Number(row.id), row]));
+  const images = await Promise.all(
+    imageIds.map(async (id) => {
+      const row = rowsById.get(id);
+      const [url, thumbnailUrl] = await Promise.all([
+        mediaRuntime.resolveImageUrl(id, { variant: MEDIA_VARIANT.ORIGINAL }),
+        mediaRuntime.resolveImageUrl(id, { variant: MEDIA_VARIANT.SMALL }),
+      ]);
+      return {
+        id,
+        url: url || buildPublicAssetUrl(baseURL, `/article/images/${row.filename}`),
+        thumbnailUrl: thumbnailUrl || buildPublicAssetUrl(baseURL, `/article/images/${row.filename}?type=small`),
+        mimeType: row.mimetype,
+        sizeBytes: Number(row.size),
+        width: Number(row.width),
+        height: Number(row.height),
+      };
+    }),
+  );
+  return { ...draft, images };
+}
+
 async function ensureOwnedArticle(executor, articleId, userId) {
   const [rows] = await executor.execute(buildCheckOwnedArticleSql(), [articleId, userId]);
   if (!rows[0]) {
@@ -267,8 +314,9 @@ class DraftService {
       }
 
       await hydrateDraftContentMedia(conn, draft);
+      const hydratedDraft = draftType === DRAFT_TYPE.FLOW ? await hydrateFlowDraftImages(conn, draft) : draft;
       await conn.commit();
-      return draft;
+      return hydratedDraft;
     } catch (error) {
       await conn.rollback();
       throw error;
@@ -298,7 +346,8 @@ class DraftService {
       return null;
     }
 
-    return hydrateDraftContentMedia(connection, rows[0]);
+    const draft = await hydrateDraftContentMedia(connection, rows[0]);
+    return draftType === DRAFT_TYPE.FLOW ? hydrateFlowDraftImages(connection, draft) : draft;
   };
 
   deleteDraft = async (userId, draftId) => this.deleteDraftByType(userId, draftId, DRAFT_TYPE.ARTICLE);
