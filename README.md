@@ -2,7 +2,9 @@
 
 ## 项目简介
 
-CoderX Server 是 CoderX 论坛项目的后端服务，基于 Koa.js 框架构建。它提供了 RESTful API 和实时通信服务（WebSocket/Socket.IO），支持用户认证、文章管理、评论互动以及 AI 助手等功能。
+CoderX Server 是 CoderX 论坛项目的后端服务，当前生产 HTTP 服务基于 Koa 3。它提供 RESTful API 和实时通信服务（WebSocket/Socket.IO），支持用户认证、文章管理、评论互动以及 AI 助手等功能。
+
+当前不实施后端框架迁移。Hono 仅作为未来候选方向记录在 [HONO_MIGRATION.md](./HONO_MIGRATION.md)，是否启动由用户另行决定；在此之前，新功能继续遵循现有 Koa、PostgreSQL、R2/CDN 和 PM2 架构。
 
 ## 目录结构
 
