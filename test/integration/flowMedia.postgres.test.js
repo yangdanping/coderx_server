@@ -301,37 +301,50 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
 
     const staleDraft = await createActiveFlowDraft(admin, userId, 3);
     const staleMedia = await insertSafeImage(admin, userId, 10, { draftId: staleDraft });
-    const draftBlocker = await pool.connect();
-    await draftBlocker.query(`SET search_path TO ${quotedSchema}`);
-    await draftBlocker.query('BEGIN');
-    await draftBlocker.query('SELECT id FROM draft WHERE id = $1 FOR UPDATE', [staleDraft]);
-    let firstDraftWaiter;
-    const firstDraftWaiterStarted = new Promise((resolve) => {
-      firstDraftWaiter = resolve;
+    let notifyFlowDraftLocked;
+    let releaseFlowDraftLock;
+    const flowDraftLocked = new Promise((resolve) => {
+      notifyFlowDraftLocked = resolve;
     });
-    let draftWaiters = 0;
-    const draftRaceDatabase = scopedDatabase(pool, async (sql) => {
-      const waitsForDraft = (/FROM draft/i.test(sql) && /FOR UPDATE/i.test(sql)) || /INSERT INTO draft/i.test(sql);
-      if (waitsForDraft) {
-        draftWaiters += 1;
-        if (draftWaiters === 1) firstDraftWaiter();
-        if (draftWaiters === 2) await draftBlocker.query('COMMIT');
-      }
+    const flowMayContinue = new Promise((resolve) => {
+      releaseFlowDraftLock = resolve;
     });
-    const staleFlowPromise = flowService(draftRaceDatabase).createFlow(userId, {
+    const staleFlowDatabase = scopedDatabase(
+      pool,
+      async () => {},
+      async (sql) => {
+        if (/FROM draft/i.test(sql) && /FOR UPDATE/i.test(sql)) {
+          notifyFlowDraftLocked();
+          await flowMayContinue;
+        }
+      },
+    );
+    const staleFlowPromise = flowService(staleFlowDatabase).createFlow(userId, {
       clientRequestId: '41111111-1111-4111-8111-111111111111',
       content: CONTENT,
       mediaIds: [staleMedia],
     });
-    await firstDraftWaiterStarted;
-    const draftService = loadBinderService(servicePaths.draft, draftRaceDatabase);
+    await flowDraftLocked;
+
+    let notifyStaleSaveStarted;
+    const staleSaveStarted = new Promise((resolve) => {
+      notifyStaleSaveStarted = resolve;
+    });
+    const staleDraftDatabase = scopedDatabase(pool, async (sql, _params, context) => {
+      if (/INSERT INTO draft/i.test(sql)) {
+        notifyStaleSaveStarted(context.processId);
+      }
+    });
+    const draftService = loadBinderService(servicePaths.draft, staleDraftDatabase);
     const staleDraftPromise = draftService.upsertFlowDraft(userId, {
       content: CONTENT,
       meta: { imageIds: [staleMedia] },
       version: 3,
     });
+    const staleSaveProcessId = await staleSaveStarted;
+    await waitForBackendLock(admin, staleSaveProcessId);
+    releaseFlowDraftLock();
     const staleRace = await Promise.allSettled([staleFlowPromise, staleDraftPromise]);
-    draftBlocker.release();
     assert.equal(staleRace[0].status, 'fulfilled');
     assertConflict(staleRace[1]);
     assert.equal((await admin.query(`SELECT count(*)::int AS count FROM flow_post_media WHERE file_id = $1`, [staleMedia])).rows[0].count, 1);
