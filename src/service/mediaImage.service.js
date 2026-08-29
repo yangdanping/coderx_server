@@ -288,6 +288,7 @@ function createMediaImageService(options = {}) {
 
       if (draftId !== null) {
         // Preserve version so the next autosave can use its current optimistic-lock value.
+        // Recover missing/malformed imageIds as empty without replacing other metadata.
         const [draftUpdateResult] = await conn.execute(
           `
             UPDATE draft
