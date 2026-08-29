@@ -218,6 +218,7 @@ function createMediaImageService(options = {}) {
       const [probeRows] = await conn.execute(
         `
           SELECT f.id,
+                 f.user_id,
                  f.filename,
                  f.file_type,
                  f.article_id,
@@ -226,15 +227,17 @@ function createMediaImageService(options = {}) {
           FROM file f
           LEFT JOIN flow_post_media fm ON fm.file_id = f.id
           WHERE f.id = ?
-            AND f.user_id = ?
             AND f.file_type = 'image';
         `,
-        [normalizedMediaId, normalizedUserId],
+        [normalizedMediaId],
       );
       const probe = probeRows[0];
       if (!probe) {
         await conn.commit();
         return { deleted: false };
+      }
+      if (Number(probe.user_id) !== normalizedUserId) {
+        throw new BusinessError('图片不可删除', 403);
       }
 
       const draftId = probe.draft_id == null ? null : Number(probe.draft_id);
@@ -288,7 +291,6 @@ function createMediaImageService(options = {}) {
 
       if (draftId !== null) {
         // Preserve version so the next autosave can use its current optimistic-lock value.
-        // Recover missing/malformed imageIds as empty without replacing other metadata.
         const [draftUpdateResult] = await conn.execute(
           `
             UPDATE draft

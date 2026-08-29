@@ -359,7 +359,7 @@ test('createPendingImage persists real output dimensions and returns the MediaIm
   assert.deepEqual(statements[1].params, [73, 2560, 1280]);
 });
 
-test('deletePendingImage is owner-scoped, idempotent for missing rows, and commits without cleanup', async () => {
+test('deletePendingImage is idempotent for a missing image and commits without cleanup', async () => {
   const calls = [];
   const conn = transaction({
     async execute(statement, params) {
@@ -375,16 +375,18 @@ test('deletePendingImage is owner-scoped, idempotent for missing rows, and commi
   const result = await service.deletePendingImage(9, 73);
 
   const probe = calls.find((call) => call.type === 'execute');
-  assert.match(probe.statement, /WHERE f\.id = \?\s+AND f\.user_id = \?/i);
+  assert.match(probe.statement, /SELECT[\s\S]*f\.user_id[\s\S]*WHERE f\.id = \?/i);
+  assert.doesNotMatch(probe.statement, /AND f\.user_id = \?/i);
   assert.doesNotMatch(probe.statement, /FOR UPDATE/i);
-  assert.deepEqual(probe.params, [73, 9]);
+  assert.deepEqual(probe.params, [73]);
   assert.deepEqual(result, { deleted: false });
+  assert.equal(calls.filter((call) => call.type === 'execute').length, 1);
   assert.equal(calls.filter((call) => call.type === 'commit').length, 1);
 });
 
 test('deletePendingImage deletes an active owned Flow draft image with draft-first locking and version-preserving metadata update', async () => {
   const calls = [];
-  const row = { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
+  const row = { id: 73, user_id: 9, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
   const conn = transaction({
     async execute(statement, params) {
       calls.push({ type: 'execute', statement, params });
@@ -423,7 +425,7 @@ test('deletePendingImage deletes an active owned Flow draft image with draft-fir
 test('deletePendingImage rejects a missing, foreign, inactive, or article draft before locking the file', async () => {
   for (const scenario of ['missing', 'foreign', 'inactive', 'article']) {
     const calls = [];
-    const row = { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
+    const row = { id: 73, user_id: 9, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
     const conn = transaction({
       async execute(statement, params) {
         calls.push({ statement, params });
@@ -448,7 +450,7 @@ test('deletePendingImage rejects a missing, foreign, inactive, or article draft 
 
 test('deletePendingImage revalidates the locked draft image after a modeled concurrent autosave interleaving', async () => {
   const calls = [];
-  const probed = { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
+  const probed = { id: 73, user_id: 9, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
   const changed = { ...probed, draft_id: 72 };
   const conn = transaction({
     async execute(statement, params) {
@@ -474,8 +476,8 @@ test('deletePendingImage revalidates the locked draft image after a modeled conc
 
 test('deletePendingImage rejects locked article-bound or published Flow media', async () => {
   for (const lockedRow of [
-    { id: 73, filename: 'a.webp', file_type: 'image', article_id: 5, draft_id: null, flow_id: null },
-    { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: null, flow_id: 7 },
+    { id: 73, user_id: 9, filename: 'a.webp', file_type: 'image', article_id: 5, draft_id: null, flow_id: null },
+    { id: 73, user_id: 9, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: null, flow_id: 7 },
   ]) {
     let selects = 0;
     const conn = transaction({
@@ -493,15 +495,38 @@ test('deletePendingImage rejects locked article-bound or published Flow media', 
   }
 });
 
-test('deletePendingImage treats a foreign owner like a missing owner-scoped image', async () => {
-  const conn = transaction({ async execute() { return [[], []]; } });
+test('deletePendingImage rejects an existing foreign-owned image with a 403 BusinessError', async () => {
+  const calls = [];
+  const foreignRow = { id: 73, user_id: 10, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: null, flow_id: null };
+  const conn = transaction({
+    async execute(statement, params) {
+      calls.push({ type: 'execute', statement, params });
+      if (/FROM file f/i.test(statement) && !/FOR UPDATE/i.test(statement)) return [[foreignRow], []];
+      throw new Error('foreign image rejection must not acquire locks or mutate');
+    },
+    async rollback() {
+      calls.push({ type: 'rollback' });
+    },
+  });
   const service = createMediaImageService(testDependencies({ conn }));
-  assert.deepEqual(await service.deletePendingImage(9, 73), { deleted: false });
+
+  await assert.rejects(
+    () => service.deletePendingImage(9, 73),
+    (error) => {
+      assert.equal(error.name, 'BusinessError');
+      assert.equal(error.httpStatus, 403);
+      assert.equal(error.message, '图片不可删除');
+      return true;
+    },
+  );
+
+  assert.equal(calls.filter((call) => call.type === 'execute').length, 1);
+  assert.equal(calls.filter((call) => call.type === 'rollback').length, 1);
 });
 
 test('deletePendingImage stages R2/local cleanup, deletes, commits, then consumes local outbox', async () => {
   const calls = [];
-  const row = { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: null, flow_id: null };
+  const row = { id: 73, user_id: 9, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: null, flow_id: null };
   const conn = transaction({
     async execute(statement, params) {
       calls.push({ type: 'execute', statement, params });
@@ -547,7 +572,7 @@ test('deletePendingImage stages R2/local cleanup, deletes, commits, then consume
 
 test('deletePendingImage rolls back a draft metadata update and file deletion when commit fails without running local cleanup', async () => {
   const calls = [];
-  const row = { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
+  const row = { id: 73, user_id: 9, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
   const conn = transaction({
     async execute(statement, params) {
       calls.push({ type: 'execute', statement, params });
