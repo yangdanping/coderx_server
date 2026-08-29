@@ -374,24 +374,129 @@ test('deletePendingImage is owner-scoped, idempotent for missing rows, and commi
 
   const result = await service.deletePendingImage(9, 73);
 
-  const lock = calls.find((call) => call.type === 'execute');
-  assert.match(lock.statement, /WHERE f\.id = \?\s+AND f\.user_id = \?/i);
-  assert.match(lock.statement, /FOR UPDATE OF f/i);
-  assert.deepEqual(lock.params, [73, 9]);
+  const probe = calls.find((call) => call.type === 'execute');
+  assert.match(probe.statement, /WHERE f\.id = \?\s+AND f\.user_id = \?/i);
+  assert.doesNotMatch(probe.statement, /FOR UPDATE/i);
+  assert.deepEqual(probe.params, [73, 9]);
   assert.deepEqual(result, { deleted: false });
   assert.equal(calls.filter((call) => call.type === 'commit').length, 1);
 });
 
-test('deletePendingImage rejects article, draft, or Flow associations while holding the owner row lock', async () => {
-  for (const row of [
+test('deletePendingImage deletes an active owned Flow draft image with draft-first locking and version-preserving metadata update', async () => {
+  const calls = [];
+  const row = { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
+  const conn = transaction({
+    async execute(statement, params) {
+      calls.push({ type: 'execute', statement, params });
+      if (/FROM file f/i.test(statement) && !/FOR UPDATE/i.test(statement)) return [[row], []];
+      if (/FROM draft/i.test(statement)) return [[{ id: 71 }], []];
+      if (/FROM file f/i.test(statement) && /FOR UPDATE OF f/i.test(statement)) return [[row], []];
+      return [{ affectedRows: 1 }, []];
+    },
+    async commit() {
+      calls.push({ type: 'commit' });
+    },
+  });
+  const service = createMediaImageService(testDependencies({ conn }));
+
+  assert.deepEqual(await service.deletePendingImage(9, 73), { deleted: true });
+
+  const statements = calls.filter((call) => call.type === 'execute');
+  const probeIndex = statements.findIndex((call) => /FROM file f/i.test(call.statement) && !/FOR UPDATE/i.test(call.statement));
+  const draftLockIndex = statements.findIndex((call) => /FROM draft/i.test(call.statement) && /FOR UPDATE/i.test(call.statement));
+  const fileLockIndex = statements.findIndex((call) => /FROM file f/i.test(call.statement) && /FOR UPDATE OF f/i.test(call.statement));
+  const metaUpdateIndex = statements.findIndex((call) => /^\s*UPDATE draft/i.test(call.statement));
+  const deleteIndex = statements.findIndex((call) => /^\s*DELETE FROM file/i.test(call.statement));
+  assert.ok(probeIndex < draftLockIndex);
+  assert.ok(draftLockIndex < fileLockIndex);
+  assert.ok(fileLockIndex < metaUpdateIndex);
+  assert.ok(metaUpdateIndex < deleteIndex);
+  assert.match(statements[draftLockIndex].statement, /id = \?[\s\S]*user_id = \?[\s\S]*draft_type = 'flow'[\s\S]*article_id IS NULL[\s\S]*status = 'active'[\s\S]*FOR UPDATE/i);
+  assert.deepEqual(statements[draftLockIndex].params, [71, 9]);
+  assert.match(statements[metaUpdateIndex].statement, /jsonb_set[\s\S]*imageIds[\s\S]*WITH ORDINALITY[\s\S]*jsonb_agg/i);
+  assert.doesNotMatch(statements[metaUpdateIndex].statement, /\bversion\b/i);
+  assert.deepEqual(statements[metaUpdateIndex].params, [73, 71, 9]);
+  assert.match(statements[deleteIndex].statement, /article_id IS NULL[\s\S]*draft_id = \?[\s\S]*NOT EXISTS[\s\S]*flow_post_media/i);
+  assert.deepEqual(statements[deleteIndex].params, [73, 9, 71]);
+});
+
+test('deletePendingImage rejects a missing, foreign, inactive, or article draft before locking the file', async () => {
+  for (const scenario of ['missing', 'foreign', 'inactive', 'article']) {
+    const calls = [];
+    const row = { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
+    const conn = transaction({
+      async execute(statement, params) {
+        calls.push({ statement, params });
+        if (/FROM file f/i.test(statement) && !/FOR UPDATE/i.test(statement)) return [[row], []];
+        if (/FROM draft/i.test(statement)) return [[], []];
+        throw new Error(`unexpected ${scenario} SQL`);
+      },
+    });
+    const service = createMediaImageService(testDependencies({ conn }));
+
+    await assert.rejects(() => service.deletePendingImage(9, 73), /图片不可删除/);
+
+    const draftLock = calls.find((call) => /FROM draft/i.test(call.statement));
+    assert.match(draftLock.statement, /id = \?/i);
+    assert.match(draftLock.statement, /user_id = \?/i);
+    assert.match(draftLock.statement, /draft_type = 'flow'/i);
+    assert.match(draftLock.statement, /article_id IS NULL/i);
+    assert.match(draftLock.statement, /status = 'active'/i);
+    assert.equal(calls.some((call) => /FROM file f/i.test(call.statement) && /FOR UPDATE/i.test(call.statement)), false);
+  }
+});
+
+test('deletePendingImage revalidates the locked draft image after a modeled concurrent autosave interleaving', async () => {
+  const calls = [];
+  const probed = { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
+  const changed = { ...probed, draft_id: 72 };
+  const conn = transaction({
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      if (/FROM file f/i.test(statement) && !/FOR UPDATE/i.test(statement)) return [[probed], []];
+      if (/FROM draft/i.test(statement)) return [[{ id: 71 }], []];
+      if (/FROM file f/i.test(statement) && /FOR UPDATE OF f/i.test(statement)) return [[changed], []];
+      throw new Error('metadata or deletion must not run');
+    },
+  });
+  const service = createMediaImageService(testDependencies({ conn }));
+
+  await assert.rejects(() => service.deletePendingImage(9, 73), /图片不可删除/);
+
+  const draftLockIndex = calls.findIndex((call) => /FROM draft/i.test(call.statement));
+  const fileLockIndex = calls.findIndex((call) => /FROM file f/i.test(call.statement) && /FOR UPDATE OF f/i.test(call.statement));
+  assert.notEqual(draftLockIndex, -1);
+  assert.notEqual(fileLockIndex, -1);
+  assert.ok(draftLockIndex < fileLockIndex);
+  assert.equal(calls.some((call) => /^\s*UPDATE draft/i.test(call.statement)), false);
+  assert.equal(calls.some((call) => /^\s*DELETE FROM file/i.test(call.statement)), false);
+});
+
+test('deletePendingImage rejects locked article-bound or published Flow media', async () => {
+  for (const lockedRow of [
     { id: 73, filename: 'a.webp', file_type: 'image', article_id: 5, draft_id: null, flow_id: null },
-    { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 6, flow_id: null },
     { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: null, flow_id: 7 },
   ]) {
-    const conn = transaction({ async execute() { return [[row], []]; } });
+    let selects = 0;
+    const conn = transaction({
+      async execute(statement) {
+        if (/FROM file f/i.test(statement)) {
+          selects += 1;
+          return [[lockedRow], []];
+        }
+        throw new Error('mutation must not run');
+      },
+    });
     const service = createMediaImageService(testDependencies({ conn }));
     await assert.rejects(() => service.deletePendingImage(9, 73), /图片不可删除/);
+    assert.equal(selects, 2);
   }
+});
+
+test('deletePendingImage treats a foreign owner like a missing owner-scoped image', async () => {
+  const conn = transaction({ async execute() { return [[], []]; } });
+  const service = createMediaImageService(testDependencies({ conn }));
+  assert.deepEqual(await service.deletePendingImage(9, 73), { deleted: false });
 });
 
 test('deletePendingImage stages R2/local cleanup, deletes, commits, then consumes local outbox', async () => {
@@ -438,4 +543,46 @@ test('deletePendingImage stages R2/local cleanup, deletes, commits, then consume
   assert.ok(index('enqueue') < deleteIndex);
   assert.ok(deleteIndex < index('commit'));
   assert.ok(index('commit') < index('process'));
+});
+
+test('deletePendingImage rolls back a draft metadata update and file deletion when commit fails without running local cleanup', async () => {
+  const calls = [];
+  const row = { id: 73, filename: 'a.webp', file_type: 'image', article_id: null, draft_id: 71, flow_id: null };
+  const conn = transaction({
+    async execute(statement, params) {
+      calls.push({ type: 'execute', statement, params });
+      if (/FROM file f/i.test(statement)) return [[row], []];
+      if (/FROM draft/i.test(statement)) return [[{ id: 71 }], []];
+      return [{ affectedRows: 1 }, []];
+    },
+    async commit() {
+      calls.push({ type: 'commit' });
+      throw new Error('database commit failed');
+    },
+    async rollback() {
+      calls.push({ type: 'rollback' });
+    },
+  });
+  const deps = testDependencies({ conn });
+  deps.localMediaCleanup = {
+    buildLocalCleanupEntries(rows) {
+      calls.push({ type: 'buildCleanup', rows });
+      return [{ storageArea: 'image', filename: 'a.webp' }];
+    },
+    async enqueueInTransaction(_transactionConnection, entries) {
+      calls.push({ type: 'enqueue', entries });
+      return [801];
+    },
+    async processPending(payload) {
+      calls.push({ type: 'process', payload });
+    },
+  };
+  const service = createMediaImageService(deps);
+
+  await assert.rejects(() => service.deletePendingImage(9, 73), /database commit failed/);
+
+  assert.equal(calls.filter((call) => call.type === 'rollback').length, 1);
+  assert.equal(calls.some((call) => call.type === 'process'), false);
+  assert.ok(calls.some((call) => call.type === 'execute' && /^\s*UPDATE draft/i.test(call.statement)));
+  assert.ok(calls.some((call) => call.type === 'execute' && /^\s*DELETE FROM file/i.test(call.statement)));
 });

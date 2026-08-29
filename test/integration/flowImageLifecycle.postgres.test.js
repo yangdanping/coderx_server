@@ -8,6 +8,7 @@ const config = require('../../src/app/config');
 const { buildPgPoolConfig } = require('../../src/app/database/pg.config');
 const { adaptPgResult, convertQuestionPlaceholders } = require('../../src/app/database/pg.utils');
 const { createFlowService } = require('../../src/service/flow.service');
+const { createMediaImageService } = require('../../src/service/mediaImage.service');
 const { LocalMediaCleanupService, buildLocalCleanupEntries } = require('../../src/service/localMediaCleanup.service');
 const { buildFindOrphanFilesSql } = require('../../src/tasks/cleanOrphanFiles.sql');
 
@@ -139,6 +140,95 @@ test('a pending image follows Flow publication, orphan exclusion, deletion, and 
       if (transactionActive) await client.query('ROLLBACK').catch(() => {});
       const rolledBack = await client.query('SELECT count(*)::int AS count FROM "user" WHERE id = $1', [userId]).catch(() => ({ rows: [{ count: -1 }] }));
       assert.equal(rolledBack.rows[0].count, 0, 'the lifecycle fixture must leave no committed rows');
+    } finally {
+      client.release();
+      await pool.end();
+    }
+  }
+});
+
+test('an active Flow draft image deletion mutates jsonb without changing version in one rollback-only fixture', async () => {
+  assertLocalDevelopmentDatabase();
+  const pool = new Pool(buildPgPoolConfig(config));
+  const client = await pool.connect();
+  const fixtureBase = 8_100_000_000_000 + process.pid * 10;
+  const userId = fixtureBase + 1;
+  const draftId = fixtureBase + 2;
+  const fileId = fixtureBase + 3;
+  const imageMetaId = fixtureBase + 4;
+  const username = `t7-${process.pid}-${Date.now()}`;
+  const filename = '33333333-3333-4333-8333-333333333333.webp';
+  const originalMeta = {
+    imageIds: [fileId + 20, fileId, fileId + 10],
+    videoIds: [fileId + 30],
+    coverImageId: fileId + 20,
+    preferences: { alignment: 'center' },
+  };
+  const cleanupCalls = [];
+  let transactionActive = false;
+
+  try {
+    await client.query('BEGIN');
+    transactionActive = true;
+    await client.query('INSERT INTO "user" (id, name) VALUES ($1, $2)', [userId, username]);
+    await client.query(
+      `INSERT INTO draft (id, user_id, draft_type, content, meta, version, status)
+       VALUES ($1, $2, 'flow', '{}'::jsonb, $3::jsonb, 7, 'active')`,
+      [draftId, userId, JSON.stringify(originalMeta)],
+    );
+    await client.query(
+      `INSERT INTO file (id, user_id, draft_id, filename, mimetype, size, file_type)
+       VALUES ($1, $2, $3, $4, 'image/webp', 1024, 'image')`,
+      [fileId, userId, draftId, filename],
+    );
+    await client.query('INSERT INTO image_meta (id, file_id, width, height) VALUES ($1, $2, 1200, 800)', [imageMetaId, fileId]);
+
+    const service = createMediaImageService({
+      database: createTransactionDatabase(client),
+      mediaRuntime: {
+        async deleteR2ObjectsForFiles(ids) {
+          cleanupCalls.push({ type: 'r2', ids });
+        },
+      },
+      localMediaCleanup: {
+        buildLocalCleanupEntries,
+        async enqueueInTransaction(_connection, entries) {
+          cleanupCalls.push({ type: 'enqueue', entries });
+          return [];
+        },
+        async processPending() {
+          cleanupCalls.push({ type: 'process' });
+        },
+      },
+    });
+
+    assert.deepEqual(await service.deletePendingImage(userId, fileId), { deleted: true });
+
+    const draft = (await client.query('SELECT meta, version FROM draft WHERE id = $1', [draftId])).rows[0];
+    assert.deepEqual(draft.meta, {
+      imageIds: [fileId + 20, fileId + 10],
+      videoIds: [fileId + 30],
+      coverImageId: fileId + 20,
+      preferences: { alignment: 'center' },
+    });
+    assert.equal(draft.version, 7);
+    assert.equal((await client.query('SELECT count(*)::int AS count FROM file WHERE id = $1', [fileId])).rows[0].count, 0);
+    assert.deepEqual(cleanupCalls.map((call) => call.type), ['r2', 'enqueue']);
+    assert.deepEqual(cleanupCalls[1].entries, [
+      { storageArea: 'image', filename },
+      { storageArea: 'image', filename: '33333333-3333-4333-8333-333333333333-small.webp' },
+    ]);
+  } finally {
+    try {
+      if (transactionActive) await client.query('ROLLBACK').catch(() => {});
+      const residue = await client.query(
+        `SELECT
+           (SELECT count(*)::int FROM "user" WHERE id = $1) AS users,
+           (SELECT count(*)::int FROM draft WHERE id = $2) AS drafts,
+           (SELECT count(*)::int FROM file WHERE id = $3) AS files`,
+        [userId, draftId, fileId],
+      ).catch(() => ({ rows: [{ users: -1, drafts: -1, files: -1 }] }));
+      assert.deepEqual(residue.rows[0], { users: 0, drafts: 0, files: 0 }, 'the draft image deletion fixture must leave no committed rows');
     } finally {
       client.release();
       await pool.end();
