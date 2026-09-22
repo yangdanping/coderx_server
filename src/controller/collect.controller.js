@@ -27,9 +27,24 @@ class collectController {
   removeCollectArticle = async (ctx, next) => {
     const { idList } = ctx.query;
     const { collectId } = ctx.params;
-    const userCollectedIds = JSON.parse(idList);
-    await collectService.removeCollectArticle(userCollectedIds);
-    const newCollectIds = await collectService.getCollectArticle(collectId);
+    if (!/^[1-9]\d*$/.test(collectId) || !Number.isSafeInteger(Number(collectId))) {
+      ctx.body = Result.fail('收藏夹 ID 参数错误');
+      return;
+    }
+    let userCollectedIds;
+    try {
+      userCollectedIds = JSON.parse(idList);
+    } catch {
+      ctx.body = Result.fail('文章 ID 参数错误');
+      return;
+    }
+    if (!Array.isArray(userCollectedIds) || !userCollectedIds.every((id) => Number.isSafeInteger(id) && id > 0)) {
+      ctx.body = Result.fail('文章 ID 参数错误');
+      return;
+    }
+    const parsedCollectId = Number(collectId);
+    await collectService.removeCollectArticle(parsedCollectId, userCollectedIds);
+    const newCollectIds = await collectService.getCollectArticle(parsedCollectId);
 
     ctx.body = Result.success(newCollectIds);
   };

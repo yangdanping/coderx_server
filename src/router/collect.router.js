@@ -20,6 +20,6 @@ collectRouter.patch('/:collectId', verifyAuth, verifyPermission, collectControll
 collectRouter.delete('/:collectId', verifyAuth, verifyPermission, collectController.removeCollect);
 
 /* ★<用户删除收藏夹下的文章>的实现---------------------------------- */
-collectRouter.delete('/:collectId/articles', verifyAuth, collectController.removeCollectArticle);
+collectRouter.delete('/:collectId/articles', verifyAuth, verifyPermission, collectController.removeCollectArticle);
 
 module.exports = collectRouter;

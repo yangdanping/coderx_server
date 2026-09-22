@@ -57,10 +57,10 @@ class CollectService {
     return { isCollected: true, action: 'collected' };
   };
 
-  removeCollectArticle = async (idList) => {
+  removeCollectArticle = async (collectId, idList) => {
     if (!idList || idList.length === 0) return null;
-    const statement = `DELETE FROM article_collect WHERE ${SqlUtils.queryIn('article_id', idList)};`;
-    const [result] = await connection.execute(statement, idList);
+    const statement = `DELETE FROM article_collect WHERE collect_id = ? AND${SqlUtils.queryIn('article_id', idList)};`;
+    const [result] = await connection.execute(statement, [collectId, ...idList]);
     return result;
   };
 

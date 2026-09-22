@@ -55,3 +55,26 @@ test('getCollectList: pg uses limit-first params and pg-safe aggregate SQL', asy
   assert.match(calls[0].statement, /LIMIT\s+\?\s+OFFSET\s+\?/i);
   assert.deepEqual(calls[0].params, [9, '10', '20']);
 });
+
+test('removeCollectArticle only deletes selected articles from the requested collection', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      return [{ affectedRows: 1 }, []];
+    },
+  });
+
+  await service.removeCollectArticle(7, [11, 12]);
+
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].statement, /DELETE FROM article_collect WHERE collect_id = \? AND article_id IN \(\?,\?\)/i);
+  assert.deepEqual(calls[0].params, [7, 11, 12]);
+});
+
+test('removeCollectArticle leaves the database untouched for an empty selection', async () => {
+  let called = false;
+  const service = loadServiceWithConnection({ async execute() { called = true; } });
+  assert.equal(await service.removeCollectArticle(7, []), null);
+  assert.equal(called, false);
+});
