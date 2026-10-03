@@ -156,7 +156,7 @@ test('a pending image follows Flow publication, orphan exclusion, deletion, and 
       },
     });
 
-    const published = await flowService.createFlow(userId, { clientRequestId, content, mediaIds: [fileId] });
+    const published = await flowService.createFlow(userId, { draft: { id: draftId, version: 1 }, clientRequestId, content, mediaIds: [fileId] });
     assert.equal(published.body, 'Task 9 lifecycle');
     assert.deepEqual(
       published.media.map((image) => image.id),

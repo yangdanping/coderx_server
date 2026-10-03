@@ -40,6 +40,7 @@ test('createFlow validates and forwards only the authenticated structured payloa
         clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf',
         content: { type: 'doc', content: [] },
         mediaIds: [42, 41],
+        draft: { id: 71, version: 3, content: 'untrusted extra field' },
         bodyHtml: '<img src=x onerror=alert(1)>',
       },
     },
@@ -54,6 +55,7 @@ test('createFlow validates and forwards only the authenticated structured payloa
         clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf',
         content: { type: 'doc', content: [] },
         mediaIds: [42, 41],
+        draft: { id: 71, version: 3 },
       },
     },
   ]);
@@ -62,14 +64,17 @@ test('createFlow validates and forwards only the authenticated structured payloa
 
 test('createFlow rejects malformed boundary inputs without calling the service', async (t) => {
   const invalidInputs = [
-    ['invalid UUID', { clientRequestId: 'not-a-uuid', content: { type: 'doc' }, mediaIds: [] }],
-    ['non-doc content', { clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'paragraph' }, mediaIds: [] }],
-    ['non-array media', { clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: '42' }],
-    ['too many media', { clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: Array.from({ length: 10 }, (_, index) => index + 1) }],
-    ['duplicate media', { clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: [4, 4] }],
-    ['unsafe media id', { clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: [Number.MAX_SAFE_INTEGER + 1] }],
-    ['string media id', { clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: ['4'] }],
-    ['non-positive media id', { clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: [0] }],
+    ['invalid UUID', { draft: null, clientRequestId: 'not-a-uuid', content: { type: 'doc' }, mediaIds: [] }],
+    ['non-doc content', { draft: null, clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'paragraph' }, mediaIds: [] }],
+    ['non-array media', { draft: null, clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: '42' }],
+    [
+      'too many media',
+      { draft: null, clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: Array.from({ length: 10 }, (_, index) => index + 1) },
+    ],
+    ['duplicate media', { draft: null, clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: [4, 4] }],
+    ['unsafe media id', { draft: null, clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: [Number.MAX_SAFE_INTEGER + 1] }],
+    ['string media id', { draft: null, clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: ['4'] }],
+    ['non-positive media id', { draft: null, clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: [0] }],
   ];
 
   for (const [name, body] of invalidInputs) {
@@ -87,6 +92,59 @@ test('createFlow rejects malformed boundary inputs without calling the service',
       assert.match(ctx.body.msg, /参数错误/);
     });
   }
+});
+
+test('createFlow requires an explicit null or positive integer draft identity at the boundary', async (t) => {
+  const invalidDrafts = [
+    ['missing', {}],
+    ['undefined', { draft: undefined }],
+    ['array', { draft: [] }],
+    ['array with fields', { draft: Object.assign([], { id: 71, version: 1 }) }],
+    ['string', { draft: '71' }],
+    ['empty object', { draft: {} }],
+    ['missing id', { draft: { version: 1 } }],
+    ['missing version', { draft: { id: 71 } }],
+    ['string id', { draft: { id: '71', version: 1 } }],
+    ['string version', { draft: { id: 71, version: '1' } }],
+    ['zero id', { draft: { id: 0, version: 1 } }],
+    ['zero version', { draft: { id: 71, version: 0 } }],
+    ['negative version', { draft: { id: 71, version: -1 } }],
+    ['fractional version', { draft: { id: 71, version: 1.5 } }],
+    ['unsafe id', { draft: { id: Number.MAX_SAFE_INTEGER + 1, version: 1 } }],
+    ['unsafe version', { draft: { id: 71, version: Number.MAX_SAFE_INTEGER + 1 } }],
+    ['infinite version', { draft: { id: 71, version: Infinity } }],
+  ];
+  for (const [name, draftFields] of invalidDrafts) {
+    await t.test(name, async () => {
+      let called = false;
+      const controller = loadController({
+        async createFlow() {
+          called = true;
+        },
+      });
+      const ctx = {
+        user: { id: 7 },
+        request: { body: { clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: [], ...draftFields } },
+      };
+      await controller.createFlow(ctx);
+      assert.equal(called, false);
+      assert.equal(ctx.body.code, -1);
+      assert.match(ctx.body.msg, /draft/);
+    });
+  }
+});
+
+test('createFlow forwards explicit null for an independent publication', async () => {
+  const calls = [];
+  const controller = loadController({
+    async createFlow(userId, input) {
+      calls.push({ userId, input });
+      return { id: 90 };
+    },
+  });
+  const body = { clientRequestId: '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf', content: { type: 'doc' }, mediaIds: [], draft: null };
+  await controller.createFlow({ user: { id: 7 }, request: { body } });
+  assert.deepEqual(calls, [{ userId: 7, input: body }]);
 });
 
 test('getFlowFeed validates page params and returns a stable page', async () => {
@@ -170,8 +228,9 @@ test('flow router keeps reads public, gates publish before auth, and does not sh
     },
   });
   const verifyAuth = async (ctx, next) => next();
+  const verifyStatus = async (ctx, next) => next();
   const mediaMutationMaintenance = async (ctx, next) => next();
-  injectCache(authPath, { verifyAuth });
+  injectCache(authPath, { verifyAuth, verifyStatus });
   injectCache(maintenancePath, mediaMutationMaintenance);
 
   const app = new Koa();
@@ -180,7 +239,7 @@ test('flow router keeps reads public, gates publish before auth, and does not sh
   const postLayer = flowRouter.stack.find((layer) => layer.methods.includes('POST'));
   const feedLayer = flowRouter.stack.find((layer) => layer.methods.includes('GET') && layer.path === '/flow');
   const detailLayer = flowRouter.stack.find((layer) => layer.methods.includes('GET') && layer.path instanceof RegExp);
-  assert.deepEqual(postLayer.stack.slice(0, 2), [mediaMutationMaintenance, verifyAuth]);
+  assert.deepEqual(postLayer.stack.slice(0, 3), [mediaMutationMaintenance, verifyAuth, verifyStatus]);
   assert.equal(feedLayer.stack.includes(verifyAuth), false);
   assert.equal(detailLayer.stack.includes(verifyAuth), false);
   app.use(flowRouter.routes()).use(flowDraftRouter.routes());

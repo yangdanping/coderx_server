@@ -38,7 +38,12 @@ test('flow SQL locks bare requested file rows before a fresh ownership and assoc
 });
 
 test('flow SQL locks the exact active Flow draft before files and clears only its submitted bindings', () => {
-  assert.match(flowSql.buildLockActiveFlowDraftSql(), /FROM draft[\s\S]*user_id = \?[\s\S]*draft_type = 'flow'[\s\S]*status = 'active'[\s\S]*FOR UPDATE/i);
+  const lockSql = flowSql.buildLockActiveFlowDraftSql();
+  assert.match(lockSql, /SELECT\s+id,\s*version\s+FROM draft/i);
+  assert.match(lockSql, /WHERE\s+id = \?\s+AND user_id = \?/i);
+  assert.match(lockSql, /draft_type = 'flow'[\s\S]*article_id IS NULL[\s\S]*status = 'active'[\s\S]*FOR UPDATE/i);
+  assert.doesNotMatch(lockSql, /ORDER BY|LIMIT/i);
+  assert.equal((lockSql.match(/\?/g) || []).length, 2);
   const clearSql = flowSql.buildClearFlowDraftMediaSql(2);
   assert.match(clearSql, /UPDATE file[\s\S]*SET draft_id = NULL/i);
   assert.match(clearSql, /draft_id = \?/i);

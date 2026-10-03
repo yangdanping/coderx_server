@@ -50,14 +50,13 @@ function buildValidateFlowMediaSql(count) {
 
 function buildLockActiveFlowDraftSql() {
   return `
-    SELECT id
+    SELECT id, version
     FROM draft
-    WHERE user_id = ?
+    WHERE id = ?
+      AND user_id = ?
       AND draft_type = 'flow'
       AND article_id IS NULL
       AND status = 'active'
-    ORDER BY update_at DESC, id DESC
-    LIMIT 1
     FOR UPDATE;
   `;
 }

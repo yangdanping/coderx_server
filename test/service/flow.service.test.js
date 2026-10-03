@@ -7,6 +7,7 @@ const BusinessError = require('@/errors/BusinessError');
 const { createFlowService } = require('@/service/flow.service');
 
 const REQUEST_ID = '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf';
+const DRAFT = { id: 71, version: 1 };
 const CONTENT = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'hello' }] }] };
 
 function noDatabase() {
@@ -46,7 +47,7 @@ test('createFlow rejects malformed Tiptap roots and recursively embedded media n
     { type: 'doc', content: [{ content: [] }] },
   ];
   for (const content of invalidDocs) {
-    await assert.rejects(service.createFlow(7, { clientRequestId: REQUEST_ID, content, mediaIds: [1] }), BusinessError);
+    await assert.rejects(service.createFlow(7, { draft: null, clientRequestId: REQUEST_ID, content, mediaIds: [1] }), BusinessError);
   }
 });
 
@@ -54,6 +55,7 @@ test('createFlow derives normalized text and rejects over 2000 chars or empty te
   const service = serviceWith();
   await assert.rejects(
     service.createFlow(7, {
+      draft: null,
       clientRequestId: REQUEST_ID,
       content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'x'.repeat(2001) }] }] },
       mediaIds: [],
@@ -61,7 +63,7 @@ test('createFlow derives normalized text and rejects over 2000 chars or empty te
     (error) => error instanceof BusinessError && /2000/.test(error.message),
   );
   await assert.rejects(
-    service.createFlow(7, { clientRequestId: REQUEST_ID, content: { type: 'doc', content: [] }, mediaIds: [] }),
+    service.createFlow(7, { draft: null, clientRequestId: REQUEST_ID, content: { type: 'doc', content: [] }, mediaIds: [] }),
     (error) => error instanceof BusinessError && /正文或图片/.test(error.message),
   );
 });
@@ -70,11 +72,50 @@ test('createFlow rejects duplicate, excessive, unsafe, string, and non-positive 
   const service = serviceWith();
   const invalidLists = [[1, 1], Array.from({ length: 10 }, (_, index) => index + 1), [0], [-1], ['1'], [1.5], [Number.MAX_SAFE_INTEGER + 1]];
   for (const mediaIds of invalidLists) {
-    await assert.rejects(service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds }), BusinessError);
+    await assert.rejects(service.createFlow(7, { draft: null, clientRequestId: REQUEST_ID, content: CONTENT, mediaIds }), BusinessError);
   }
 });
 
-function createAtomicDatabase({ lockedRows, validatedRows = lockedRows, activeDraftId = 71, insertId = 90, mediaInsertError = null, detailRow = null, existingImages = [] }) {
+test('createFlow independently rejects missing and malformed draft identities before touching the database', async (t) => {
+  const invalidDrafts = [
+    ['missing', {}],
+    ['undefined', { draft: undefined }],
+    ['array', { draft: [] }],
+    ['array with fields', { draft: Object.assign([], DRAFT) }],
+    ['boolean', { draft: false }],
+    ['string', { draft: '71' }],
+    ['missing id', { draft: { version: 1 } }],
+    ['missing version', { draft: { id: 71 } }],
+    ['string id', { draft: { id: '71', version: 1 } }],
+    ['string version', { draft: { id: 71, version: '1' } }],
+    ['zero id', { draft: { id: 0, version: 1 } }],
+    ['negative id', { draft: { id: -1, version: 1 } }],
+    ['zero version', { draft: { id: 71, version: 0 } }],
+    ['fractional version', { draft: { id: 71, version: 1.5 } }],
+    ['unsafe id', { draft: { id: Number.MAX_SAFE_INTEGER + 1, version: 1 } }],
+    ['unsafe version', { draft: { id: 71, version: Number.MAX_SAFE_INTEGER + 1 } }],
+    ['NaN version', { draft: { id: 71, version: NaN } }],
+  ];
+  for (const [name, draftFields] of invalidDrafts) {
+    await t.test(name, async () => {
+      await assert.rejects(
+        serviceWith().createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [], ...draftFields }),
+        (error) => error instanceof BusinessError && error.httpStatus === 400 && /draft/.test(error.message),
+      );
+    });
+  }
+});
+
+function createAtomicDatabase({
+  lockedRows,
+  validatedRows = lockedRows,
+  activeDraftId = 71,
+  activeDraftVersion = 1,
+  insertId = 90,
+  mediaInsertError = null,
+  detailRow = null,
+  existingImages = [],
+}) {
   const events = [];
   const conn = {
     async beginTransaction() {
@@ -87,7 +128,7 @@ function createAtomicDatabase({ lockedRows, validatedRows = lockedRows, activeDr
       }
       if (/FROM draft/i.test(sql) && /FOR UPDATE/i.test(sql)) {
         events.push({ type: 'lock-draft', params });
-        return [activeDraftId ? [{ id: activeDraftId }] : []];
+        return [activeDraftId ? [{ id: activeDraftId, version: activeDraftVersion }] : []];
       }
       if (/FROM file f/i.test(sql) && /FOR UPDATE OF f/i.test(sql)) {
         events.push({ type: 'lock-media', params });
@@ -95,11 +136,11 @@ function createAtomicDatabase({ lockedRows, validatedRows = lockedRows, activeDr
       }
       if (/INNER JOIN image_meta/i.test(sql)) {
         events.push({ type: 'validate-media', params });
-        return [validatedRows];
+        return [typeof validatedRows === 'function' ? validatedRows(params) : validatedRows];
       }
       if (/UPDATE file/i.test(sql) && /SET draft_id = NULL/i.test(sql)) {
         events.push({ type: 'clear-draft-binding', params });
-        return [{ affectedRows: validatedRows.length }];
+        return [{ affectedRows: lockedRows.length }];
       }
       if (/INSERT INTO flow_post_media/i.test(sql)) {
         events.push({ type: 'insert-media', params });
@@ -156,6 +197,83 @@ function createAtomicDatabase({ lockedRows, validatedRows = lockedRows, activeDr
   return { database, events };
 }
 
+test('createFlow rejects a newer version of the same draft before locking images or consuming it', async () => {
+  const { database, events } = createAtomicDatabase({ lockedRows: [{ id: 41 }], activeDraftVersion: 2 });
+  await assert.rejects(
+    serviceWith({ database }).createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41], draft: DRAFT }),
+    (error) => error instanceof BusinessError && error.httpStatus === 409 && /草稿已发生变更.*重新打开编辑器/.test(error.message),
+  );
+  assert.deepEqual(events.find((event) => event.type === 'lock-draft').params, [71, 7]);
+  assert.equal(
+    events.some((event) => ['lock-media', 'insert-media', 'consume-draft'].includes(event.type)),
+    false,
+  );
+  assert.equal(events.includes('commit'), false);
+  assert.ok(events.includes('rollback'));
+});
+
+test('createFlow rejects an unavailable requested draft and never substitutes a newer draft', async (t) => {
+  for (const [name, activeDraftId] of [
+    ['unavailable requested draft', null],
+    ['newer draft instead of requested id', 72],
+  ]) {
+    await t.test(name, async () => {
+      const { database, events } = createAtomicDatabase({ lockedRows: [], activeDraftId });
+      await assert.rejects(
+        serviceWith({ database }).createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [], draft: DRAFT }),
+        (error) => error instanceof BusinessError && error.httpStatus === 409 && /草稿已发生变更/.test(error.message),
+      );
+      assert.deepEqual(events.find((event) => event.type === 'lock-draft').params, [71, 7]);
+      assert.equal(
+        events.some((event) => event.type === 'consume-draft'),
+        false,
+      );
+      assert.equal(events.includes('commit'), false);
+      assert.ok(events.includes('rollback'));
+    });
+  }
+});
+
+test('createFlow with draft null publishes unattached images while preserving every active draft', async () => {
+  const { database, events } = createAtomicDatabase({ lockedRows: [{ id: 41 }], activeDraftId: 72, activeDraftVersion: 4 });
+  await serviceWith({ database }).createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41], draft: null });
+  assert.deepEqual(events.find((event) => event.type === 'validate-media').params, [7, null, 41]);
+  assert.equal(
+    events.some((event) => ['lock-draft', 'clear-draft-binding', 'consume-draft'].includes(event.type)),
+    false,
+  );
+  assert.ok(events.includes('commit'));
+});
+
+test('createFlow with draft null rejects media still bound to an unreferenced draft', async () => {
+  const { database, events } = createAtomicDatabase({
+    lockedRows: [{ id: 41 }],
+    activeDraftId: 72,
+    validatedRows(params) {
+      return params[1] === 72 ? [{ id: 41 }] : [];
+    },
+  });
+  await assert.rejects(
+    serviceWith({ database }).createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41], draft: null }),
+    (error) => error instanceof BusinessError && error.httpStatus === 409,
+  );
+  assert.deepEqual(events.find((event) => event.type === 'validate-media').params, [7, null, 41]);
+  assert.equal(
+    events.some((event) => ['lock-draft', 'clear-draft-binding', 'insert-media', 'consume-draft'].includes(event.type)),
+    false,
+  );
+  assert.ok(events.includes('rollback'));
+});
+
+test('createFlow accepts unsaved body edits over a matching saved draft version', async () => {
+  const editedContent = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'unsaved editor changes' }] }] };
+  const { database, events } = createAtomicDatabase({ lockedRows: [] });
+  await serviceWith({ database }).createFlow(7, { clientRequestId: REQUEST_ID, content: editedContent, mediaIds: [], draft: DRAFT });
+  assert.deepEqual(events.find((event) => event.type === 'insert-flow').params, [7, REQUEST_ID, JSON.stringify(editedContent), 'unsaved editor changes']);
+  assert.deepEqual(events.find((event) => event.type === 'consume-draft').params, [71, 7, null]);
+  assert.ok(events.includes('commit'));
+});
+
 test('createFlow locks and binds only current-user unattached images in submitted order, consumes the Flow draft, commits, then promotes neutrally', async () => {
   const lockedRows = [
     { id: 41, filename: '41.webp', mimetype: 'image/webp' },
@@ -174,7 +292,7 @@ test('createFlow locks and binds only current-user unattached images in submitte
   };
   const service = serviceWith({ database, mediaRuntime });
 
-  const result = await service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [42, 41], bodyHtml: '<script>x</script>' });
+  const result = await service.createFlow(7, { draft: DRAFT, clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [42, 41], bodyHtml: '<script>x</script>' });
 
   const insertFlow = events.find((event) => event.type === 'insert-flow');
   assert.deepEqual(insertFlow.params, [7, REQUEST_ID, JSON.stringify(CONTENT), 'hello']);
@@ -210,7 +328,7 @@ test('createFlow locks the active Flow draft before files, accepts its safe-uplo
       if (/INSERT INTO flow_post \(/i.test(sql)) return [{ insertId: 90, affectedRows: 1 }];
       if (/FROM draft/i.test(sql) && /FOR UPDATE/i.test(sql)) {
         events.push({ type: 'lock-draft', params });
-        return [[{ id: 71 }]];
+        return [[{ id: 71, version: 1 }]];
       }
       if (/FROM file f/i.test(sql) && /FOR UPDATE OF f/i.test(sql)) {
         events.push({ type: 'lock-files', params, sql });
@@ -254,11 +372,11 @@ test('createFlow locks the active Flow draft before files, accepts its safe-uplo
   };
   const service = serviceWith({ database });
 
-  await service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
+  await service.createFlow(7, { draft: DRAFT, clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
 
   const orderedEvents = events.filter((event) => typeof event === 'object').map((event) => event.type);
   assert.deepEqual(orderedEvents, ['lock-draft', 'lock-files', 'validate-files', 'clear-draft-binding', 'consume-draft']);
-  assert.deepEqual(events.find((event) => event.type === 'lock-draft').params, [7]);
+  assert.deepEqual(events.find((event) => event.type === 'lock-draft').params, [71, 7]);
   assert.deepEqual(events.find((event) => event.type === 'lock-files').params, [7, 41]);
   assert.deepEqual(events.find((event) => event.type === 'validate-files').params, [7, 71, 41]);
   assert.deepEqual(events.find((event) => event.type === 'clear-draft-binding').params, [71, 41]);
@@ -270,7 +388,7 @@ test('createFlow rejects a locked row that fails safe-upload provenance validati
   const service = serviceWith({ database });
 
   await assert.rejects(
-    service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] }),
+    service.createFlow(7, { draft: DRAFT, clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] }),
     (error) => error instanceof BusinessError && error.httpStatus === 409,
   );
   assert.ok(events.includes('rollback'));
@@ -294,7 +412,7 @@ test('createFlow rolls back atomically when any media association fails', async 
     },
   });
 
-  await assert.rejects(service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] }), /association failed/);
+  await assert.rejects(service.createFlow(7, { draft: DRAFT, clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] }), /association failed/);
 
   assert.ok(events.includes('rollback'));
   assert.equal(events.includes('commit'), false);
@@ -311,7 +429,7 @@ test('createFlow rejects missing, foreign, attached, and non-image IDs when the 
       const { database, events } = createAtomicDatabase({ lockedRows: [] });
       const service = serviceWith({ database });
       await assert.rejects(
-        service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] }),
+        service.createFlow(7, { draft: DRAFT, clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] }),
         (error) => error instanceof BusinessError && error.httpStatus === 409,
       );
       assert.ok(events.includes('rollback'));
@@ -325,7 +443,7 @@ test('createFlow rejects missing, foreign, attached, and non-image IDs when the 
 
 test('idempotent retry rolls back before selecting outside the transaction, re-promotes existing media, and never consumes a newer draft', async () => {
   const existingImages = [{ id: 41, filename: '41.webp', mimetype: 'image/webp' }];
-  const { database, events } = createAtomicDatabase({ lockedRows: [], insertId: 0, existingImages });
+  const { database, events } = createAtomicDatabase({ lockedRows: [], activeDraftId: 72, activeDraftVersion: 2, insertId: 0, existingImages });
   const promotionCalls = [];
   const service = serviceWith({
     database,
@@ -339,7 +457,7 @@ test('idempotent retry rolls back before selecting outside the transaction, re-p
     },
   });
 
-  const result = await service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
+  const result = await service.createFlow(7, { draft: DRAFT, clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
 
   assert.equal(result.id, 90);
   assert.deepEqual(
@@ -359,7 +477,7 @@ test('idempotent retry rolls back before selecting outside the transaction, re-p
 
 test('idempotent Flow retry re-enters neutral promotion so a repaired failed reservation can become ready', async () => {
   const existingImages = [{ id: 41, filename: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.webp', mimetype: 'image/webp' }];
-  const { database, events } = createAtomicDatabase({ lockedRows: [], insertId: 0, existingImages });
+  const { database, events } = createAtomicDatabase({ lockedRows: [], activeDraftId: 72, activeDraftVersion: 2, insertId: 0, existingImages });
   let reservationStatus = 'failed';
   const service = serviceWith({
     database,
@@ -376,7 +494,7 @@ test('idempotent Flow retry re-enters neutral promotion so a repaired failed res
     },
   });
 
-  const result = await service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
+  const result = await service.createFlow(7, { draft: DRAFT, clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
 
   assert.equal(result.id, 90);
   assert.equal(reservationStatus, 'ready');
@@ -412,7 +530,7 @@ test('promotion failure is contained after commit and cannot roll back the publi
     },
   });
 
-  const result = await service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
+  const result = await service.createFlow(7, { draft: DRAFT, clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
 
   assert.equal(result.id, 90);
   assert.ok(events.indexOf('commit') < events.indexOf('promote'));
@@ -442,7 +560,7 @@ test('promotion state-machine failure summaries are logged without rolling back 
     },
   });
 
-  const result = await service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
+  const result = await service.createFlow(7, { draft: DRAFT, clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [41] });
 
   assert.equal(result.id, 90);
   assert.equal(events.includes('rollback'), false);
@@ -465,7 +583,7 @@ test('zero-media text-only Flow is committed without a lock, media insert, or pr
       },
     },
   });
-  const result = await service.createFlow(7, { clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [] });
+  const result = await service.createFlow(7, { draft: null, clientRequestId: REQUEST_ID, content: CONTENT, mediaIds: [] });
   assert.equal(result.id, 90);
   assert.equal(
     events.some((event) => event.type === 'lock-media'),
