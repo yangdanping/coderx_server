@@ -20,6 +20,7 @@ const {
 } = require('./sql/flow.sql');
 
 const MAX_MEDIA = 9;
+const DRAFT_CONFLICT_MESSAGE = 'Flow 草稿已发生变更，请重新打开编辑器后再发布';
 
 function positiveSafeInteger(value, name) {
   const normalized = Number(value);
@@ -48,6 +49,16 @@ function validateCreateInput(input) {
   if (new Set(input.mediaIds).size !== input.mediaIds.length) {
     throw new BusinessError('参数错误: mediaIds 不能重复', 400);
   }
+  const draft = input.draft;
+  if (
+    draft !== null &&
+    (!draft ||
+      typeof draft !== 'object' ||
+      Array.isArray(draft) ||
+      ![draft.id, draft.version].every((value) => typeof value === 'number' && Number.isSafeInteger(value) && value > 0))
+  ) {
+    throw new BusinessError('参数错误: draft 必须是 null 或包含正安全整数 id 和 version 的对象', 400);
+  }
   const derived = deriveFlowContent(input.content);
   if (!derived.bodyText && input.mediaIds.length === 0) {
     throw new BusinessError('Flow 必须包含正文或图片', 400);
@@ -55,6 +66,7 @@ function validateCreateInput(input) {
   return {
     clientRequestId: input.clientRequestId,
     mediaIds: input.mediaIds.slice(),
+    draft: draft === null ? null : { id: draft.id, version: draft.version },
     ...derived,
   };
 }
@@ -190,8 +202,15 @@ class FlowService {
         transactionActive = false;
         idempotentConflict = true;
       } else {
-        const [activeDraftRows] = await conn.execute(buildLockActiveFlowDraftSql(), [normalizedUserId]);
-        const lockedDraftId = activeDraftRows[0] ? positiveSafeInteger(activeDraftRows[0].id, 'draft.id') : null;
+        let lockedDraftId = null;
+        if (normalized.draft !== null) {
+          const [activeDraftRows] = await conn.execute(buildLockActiveFlowDraftSql(), [normalized.draft.id, normalizedUserId]);
+          const activeDraft = activeDraftRows[0];
+          if (!activeDraft || Number(activeDraft.id) !== normalized.draft.id || Number(activeDraft.version) !== normalized.draft.version) {
+            throw new BusinessError(DRAFT_CONFLICT_MESSAGE, 409);
+          }
+          lockedDraftId = normalized.draft.id;
+        }
 
         if (normalized.mediaIds.length) {
           const [lockedRows] = await conn.execute(buildLockFlowMediaSql(normalized.mediaIds.length), [normalizedUserId, ...normalized.mediaIds]);
@@ -219,7 +238,7 @@ class FlowService {
         if (lockedDraftId) {
           const [consumedRows] = await conn.execute(buildConsumeDraftSql(DRAFT_TYPE.FLOW), [lockedDraftId, normalizedUserId, null]);
           const consumedCount = Array.isArray(consumedRows) ? consumedRows.length : Number(consumedRows?.affectedRows || 0);
-          if (consumedCount !== 1) throw new BusinessError('Flow 草稿已发生变更', 409);
+          if (consumedCount !== 1) throw new BusinessError(DRAFT_CONFLICT_MESSAGE, 409);
         }
         await conn.commit();
         transactionActive = false;

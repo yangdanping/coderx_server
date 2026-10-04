@@ -169,7 +169,7 @@ function twoFileLockGate(admin) {
   };
 }
 
-test('Flow publishing enforces safe provenance, exact draft handoff, idempotency, and cross-binder ownership under PostgreSQL concurrency', async () => {
+test('Flow publishing enforces safe provenance, exact draft handoff, idempotency, and cross-binder ownership under PostgreSQL concurrency', async (t) => {
   assertLocalDevelopmentDatabase();
   const pool = new Pool(buildPgPoolConfig(config));
   const admin = await pool.connect();
@@ -214,6 +214,114 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
     await admin.query(`CREATE TABLE image_meta (file_id BIGINT PRIMARY KEY REFERENCES file(id), width INTEGER, height INTEGER, is_cover BOOLEAN NOT NULL DEFAULT FALSE)`);
     await admin.query(migration);
 
+    let regressionRequestNumber = 0;
+    const nextRegressionRequestId = () => `70000000-0000-4000-8000-${String(++regressionRequestNumber).padStart(12, '0')}`;
+    const createRegressionUser = async (name) => (await admin.query(`INSERT INTO "user" (name) VALUES ($1) RETURNING id`, [name])).rows[0].id;
+    const regressionService = flowService(scopedDatabase(pool));
+
+    await t.test('a newer version of the requested draft rejects publication and retains its media', async () => {
+      const ownerId = await createRegressionUser('stale-version');
+      const draftId = await createActiveFlowDraft(admin, ownerId, 2);
+      const mediaId = await insertSafeImage(admin, ownerId, 100, { draftId });
+      await assert.rejects(
+        regressionService.createFlow(ownerId, { clientRequestId: nextRegressionRequestId(), content: CONTENT, mediaIds: [mediaId], draft: { id: draftId, version: 1 } }),
+        (error) => error instanceof BusinessError && error.httpStatus === 409 && /重新打开编辑器/.test(error.message),
+      );
+      assert.deepEqual((await admin.query(`SELECT status, version FROM draft WHERE id = $1`, [draftId])).rows[0], { status: 'active', version: 2 });
+      assert.equal((await admin.query(`SELECT draft_id FROM file WHERE id = $1`, [mediaId])).rows[0].draft_id, draftId);
+      assert.equal((await admin.query(`SELECT count(*)::int AS count FROM flow_post WHERE user_id = $1`, [ownerId])).rows[0].count, 0);
+    });
+
+    await t.test('unavailable draft identities never select the current active draft as a replacement', async (subtest) => {
+      for (const reason of ['missing', 'foreign', 'consumed', 'discarded', 'article']) {
+        await subtest.test(reason, async () => {
+          const ownerId = await createRegressionUser(`unavailable-${reason}`);
+          const activeDraftId = await createActiveFlowDraft(admin, ownerId, 5);
+          let requestedDraftId;
+          if (reason === 'missing') {
+            requestedDraftId = Number.MAX_SAFE_INTEGER;
+          } else if (reason === 'foreign') {
+            requestedDraftId = await createActiveFlowDraft(admin, await createRegressionUser('foreign-draft'));
+          } else {
+            const type = reason === 'article' ? 'article' : 'flow';
+            const status = reason === 'article' ? 'active' : reason;
+            requestedDraftId = (await admin.query(`INSERT INTO draft (user_id, draft_type, version, status) VALUES ($1, $2, 1, $3) RETURNING id`, [ownerId, type, status])).rows[0]
+              .id;
+          }
+          await assert.rejects(
+            regressionService.createFlow(ownerId, { clientRequestId: nextRegressionRequestId(), content: CONTENT, mediaIds: [], draft: { id: requestedDraftId, version: 1 } }),
+            (error) => error instanceof BusinessError && error.httpStatus === 409 && /草稿已发生变更/.test(error.message),
+          );
+          assert.deepEqual((await admin.query(`SELECT status, version FROM draft WHERE id = $1`, [activeDraftId])).rows[0], { status: 'active', version: 5 });
+          assert.equal((await admin.query(`SELECT count(*)::int AS count FROM flow_post WHERE user_id = $1`, [ownerId])).rows[0].count, 0);
+        });
+      }
+    });
+
+    await t.test('null publishes independently and refuses images attached to the unreferenced draft', async () => {
+      const ownerId = await createRegressionUser('independent-publication');
+      const draftId = await createActiveFlowDraft(admin, ownerId, 4);
+      const attachedImageId = await insertSafeImage(admin, ownerId, 101, { draftId });
+      const unattachedImageId = await insertSafeImage(admin, ownerId, 102);
+      const draftBefore = (await admin.query(`SELECT * FROM draft WHERE id = $1`, [draftId])).rows[0];
+      await regressionService.createFlow(ownerId, { clientRequestId: nextRegressionRequestId(), content: CONTENT, mediaIds: [unattachedImageId], draft: null });
+      await assert.rejects(
+        regressionService.createFlow(ownerId, { clientRequestId: nextRegressionRequestId(), content: CONTENT, mediaIds: [attachedImageId], draft: null }),
+        (error) => error instanceof BusinessError && error.httpStatus === 409,
+      );
+      assert.deepEqual((await admin.query(`SELECT * FROM draft WHERE id = $1`, [draftId])).rows[0], draftBefore);
+      assert.equal((await admin.query(`SELECT draft_id FROM file WHERE id = $1`, [attachedImageId])).rows[0].draft_id, draftId);
+      assert.equal((await admin.query(`SELECT count(*)::int AS count FROM flow_post WHERE user_id = $1`, [ownerId])).rows[0].count, 1);
+    });
+
+    await t.test('an autosave that holds the draft lock makes the waiting publication reject its stale version', async () => {
+      const ownerId = await createRegressionUser('concurrent-autosave');
+      const draftId = await createActiveFlowDraft(admin, ownerId, 3);
+      const autosave = await pool.connect();
+      let publication;
+      try {
+        await autosave.query(`SET search_path TO ${quotedSchema}`);
+        await autosave.query('BEGIN');
+        await autosave.query(`UPDATE draft SET version = 4 WHERE id = $1`, [draftId]);
+        const waitingDatabase = scopedDatabase(pool, async (sql, _params, { processId }) => {
+          if (!/FROM draft/i.test(sql) || !/FOR UPDATE/i.test(sql)) return;
+          await waitForBackendLock(admin, processId);
+          await autosave.query('COMMIT');
+        });
+        publication = flowService(waitingDatabase).createFlow(ownerId, {
+          clientRequestId: nextRegressionRequestId(),
+          content: CONTENT,
+          mediaIds: [],
+          draft: { id: draftId, version: 3 },
+        });
+        await assert.rejects(publication, (error) => error instanceof BusinessError && error.httpStatus === 409 && /草稿已发生变更/.test(error.message));
+        assert.deepEqual((await admin.query(`SELECT status, version FROM draft WHERE id = $1`, [draftId])).rows[0], { status: 'active', version: 4 });
+        assert.equal((await admin.query(`SELECT count(*)::int AS count FROM flow_post WHERE user_id = $1`, [ownerId])).rows[0].count, 0);
+      } finally {
+        await autosave.query('ROLLBACK').catch(() => {});
+        await Promise.allSettled([publication].filter(Boolean));
+        autosave.release();
+      }
+    });
+
+    await t.test('matching identity publishes unsaved edits and consumes only the referenced draft', async () => {
+      const ownerId = await createRegressionUser('matching-version');
+      const draftId = await createActiveFlowDraft(admin, ownerId, 3);
+      const mediaId = await insertSafeImage(admin, ownerId, 103, { draftId });
+      const articleDraftId = (await admin.query(`INSERT INTO draft (user_id, draft_type, version) VALUES ($1, 'article', 1) RETURNING id`, [ownerId])).rows[0].id;
+      const editedContent = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'unsaved changes' }] }] };
+      const requestId = nextRegressionRequestId();
+      const created = await regressionService.createFlow(ownerId, { clientRequestId: requestId, content: editedContent, mediaIds: [mediaId], draft: { id: draftId, version: 3 } });
+      assert.equal(created.body, 'unsaved changes');
+      assert.equal((await admin.query(`SELECT status FROM draft WHERE id = $1`, [draftId])).rows[0].status, 'consumed');
+      assert.equal((await admin.query(`SELECT status FROM draft WHERE id = $1`, [articleDraftId])).rows[0].status, 'active');
+      const newerDraftId = await createActiveFlowDraft(admin, ownerId, 1);
+      const newerBefore = (await admin.query(`SELECT * FROM draft WHERE id = $1`, [newerDraftId])).rows[0];
+      const retried = await regressionService.createFlow(ownerId, { clientRequestId: requestId, content: editedContent, mediaIds: [mediaId], draft: { id: draftId, version: 3 } });
+      assert.equal(retried.id, created.id);
+      assert.deepEqual((await admin.query(`SELECT * FROM draft WHERE id = $1`, [newerDraftId])).rows[0], newerBefore);
+    });
+
     const userId = (await admin.query(`INSERT INTO "user" (name) VALUES ('account') RETURNING id`)).rows[0].id;
     const foreignUserId = (await admin.query(`INSERT INTO "user" (name) VALUES ('foreign') RETURNING id`)).rows[0].id;
     await admin.query(`INSERT INTO profile (user_id, nickname, avatar_url) VALUES ($1, 'Display', NULL)`, [userId]);
@@ -223,7 +331,7 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
     const media1 = await insertSafeImage(admin, userId, 1, { draftId: draft1 });
     const service = flowService(scopedDatabase(pool));
     const requestId = '4f95672f-4f8e-4cc1-9953-7ba4c2d5f4cf';
-    const first = await service.createFlow(userId, { clientRequestId: requestId, content: CONTENT, mediaIds: [media1] });
+    const first = await service.createFlow(userId, { draft: { id: draft1, version: 1 }, clientRequestId: requestId, content: CONTENT, mediaIds: [media1] });
     const consumed1 = (await admin.query(`SELECT status, consumed_at, discarded_at, consumed_article_id FROM draft WHERE id = $1`, [draft1])).rows[0];
     assert.equal(consumed1.status, 'consumed');
     assert.ok(consumed1.consumed_at instanceof Date);
@@ -232,7 +340,7 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
     assert.equal((await admin.query(`SELECT draft_id FROM file WHERE id = $1`, [media1])).rows[0].draft_id, null);
 
     const draft2 = await createActiveFlowDraft(admin, userId);
-    const retry = await service.createFlow(userId, { clientRequestId: requestId, content: CONTENT, mediaIds: [media1] });
+    const retry = await service.createFlow(userId, { draft: { id: draft1, version: 1 }, clientRequestId: requestId, content: CONTENT, mediaIds: [media1] });
     assert.equal(retry.id, first.id);
     assert.equal((await admin.query(`SELECT status FROM draft WHERE id = $1`, [draft2])).rows[0].status, 'active');
     await admin.query(`UPDATE draft SET status = 'discarded', discarded_at = NOW() WHERE id = $1`, [draft2]);
@@ -247,7 +355,7 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
     ];
     for (const [index, mediaId] of invalidCases.entries()) {
       await assert.rejects(
-        service.createFlow(userId, { clientRequestId: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, content: CONTENT, mediaIds: [mediaId] }),
+        service.createFlow(userId, { draft: null, clientRequestId: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, content: CONTENT, mediaIds: [mediaId] }),
         (error) => error instanceof BusinessError && error.httpStatus === 409,
       );
     }
@@ -266,8 +374,8 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
     });
     const flowRaceService = flowService(flowRaceDatabase);
     const flowRace = await Promise.allSettled([
-      flowRaceService.createFlow(userId, { clientRequestId: '21111111-1111-4111-8111-111111111111', content: CONTENT, mediaIds: [flowRaceMedia] }),
-      flowRaceService.createFlow(userId, { clientRequestId: '22222222-2222-4222-8222-222222222222', content: CONTENT, mediaIds: [flowRaceMedia] }),
+      flowRaceService.createFlow(userId, { draft: null, clientRequestId: '21111111-1111-4111-8111-111111111111', content: CONTENT, mediaIds: [flowRaceMedia] }),
+      flowRaceService.createFlow(userId, { draft: null, clientRequestId: '22222222-2222-4222-8222-222222222222', content: CONTENT, mediaIds: [flowRaceMedia] }),
     ]);
     fileBlocker.release();
     assert.equal(flowRace.filter((result) => result.status === 'fulfilled').length, 1);
@@ -288,7 +396,12 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
     });
     const imageService = loadBinderService(servicePaths.image, articleRaceDatabase);
     const articleRace = await Promise.allSettled([
-      flowService(articleRaceDatabase).createFlow(userId, { clientRequestId: '31111111-1111-4111-8111-111111111111', content: CONTENT, mediaIds: [crossArticleMedia] }),
+      flowService(articleRaceDatabase).createFlow(userId, {
+        draft: null,
+        clientRequestId: '31111111-1111-4111-8111-111111111111',
+        content: CONTENT,
+        mediaIds: [crossArticleMedia],
+      }),
       imageService.updateImageArticle(userId, articleId, [crossArticleMedia], null),
     ]);
     articleBlocker.release();
@@ -320,6 +433,7 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
       },
     );
     const staleFlowPromise = flowService(staleFlowDatabase).createFlow(userId, {
+      draft: { id: staleDraft, version: 3 },
       clientRequestId: '41111111-1111-4111-8111-111111111111',
       content: CONTENT,
       mediaIds: [staleMedia],
@@ -358,6 +472,7 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
     const articleUnionPromise = loadBinderService(servicePaths.image, articleUnionDatabase).updateImageArticle(userId, articleId, [articleNewMedia], null);
     await articleUnionGate.firstStarted;
     const articleUnionFlowPromise = flowService(articleUnionDatabase).createFlow(userId, {
+      draft: null,
       clientRequestId: '51111111-1111-4111-8111-111111111111',
       content: CONTENT,
       mediaIds: [articleOldMedia, articleNewMedia],
@@ -406,6 +521,7 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
     });
     await draftUnionGate.firstStarted;
     const draftUnionFlowPromise = flowService(draftUnionDatabase).createFlow(userId, {
+      draft: null,
       clientRequestId: '61111111-1111-4111-8111-111111111111',
       content: CONTENT,
       mediaIds: [draftOldMedia, draftNewMedia],
@@ -434,7 +550,12 @@ test('Flow publishing enforces safe provenance, exact draft handoff, idempotency
   } finally {
     await admin.query('RESET search_path').catch(() => {});
     await admin.query(`DROP SCHEMA IF EXISTS ${quotedSchema} CASCADE`).catch(() => {});
-    admin.release();
-    await pool.end();
+    try {
+      const residue = await admin.query(`SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = $1) AS present`, [schema]);
+      assert.equal(residue.rows[0].present, false, 'the Flow integration fixture must remove its temporary schema');
+    } finally {
+      admin.release();
+      await pool.end();
+    }
   }
 });

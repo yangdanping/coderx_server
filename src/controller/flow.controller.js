@@ -42,10 +42,22 @@ class FlowController {
       invalid(ctx, 'mediaIds 不能重复');
       return;
     }
+    const draft = body.draft;
+    if (
+      draft !== null &&
+      (!draft ||
+        typeof draft !== 'object' ||
+        Array.isArray(draft) ||
+        ![draft.id, draft.version].every((value) => typeof value === 'number' && Number.isSafeInteger(value) && value > 0))
+    ) {
+      invalid(ctx, 'draft 必须是 null 或包含正安全整数 id 和 version 的对象');
+      return;
+    }
     const result = await flowService.createFlow(ctx.user.id, {
       clientRequestId: body.clientRequestId,
       content: body.content,
       mediaIds: body.mediaIds,
+      draft: draft === null ? null : { id: draft.id, version: draft.version },
     });
     ctx.body = Result.success(result);
   };
