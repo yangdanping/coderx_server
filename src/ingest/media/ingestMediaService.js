@@ -61,6 +61,7 @@ function createIngestMediaService({
         `,
           [`ingest-${candidateId}-%`],
         );
+        let deletedInTransaction = 0;
         for (const row of rows) {
           summary.retired += 1;
           if (row.hasR2 && (!canMutateR2 || !deletion)) {
@@ -81,9 +82,10 @@ function createIngestMediaService({
             [row.id],
           );
           if (removed.affectedRows !== 1) throw new Error(`Retired ingest file ${row.id} changed before deletion`);
-          summary.deleted += 1;
+          deletedInTransaction += 1;
         }
         await conn.commit();
+        summary.deleted += deletedInTransaction;
         // Also recover tombstones left by a previous committed cleanup, scoped to
         // this candidate's immutable names; never drain unrelated cleanup work.
         await conn.beginTransaction();

@@ -129,3 +129,40 @@ test('mutation pause prevents all registration, upload and cleanup writes', asyn
   assert.equal(f.database.rows.size, 0);
   assert.equal(f.promoted.length, 0);
 });
+
+test('retirement reports only committed file deletions when a later row fails', async (t) => {
+  let enqueued = 0;
+  const f = await setup(t, {
+    localCleanup: {
+      async enqueueInTransaction() {
+        if (++enqueued === 2) throw new Error('queue unavailable');
+        return [1];
+      },
+      async processPending() {
+        throw new Error('must not process rolled-back tombstones');
+      },
+    },
+  });
+  const getConnection = f.database.getConnection;
+  f.database.getConnection = async () => {
+    const conn = await getConnection();
+    const execute = conn.execute;
+    conn.execute = async (sql, params) => {
+      if (/FROM file f/i.test(sql))
+        return [
+          [
+            { id: 90, filename: 'ingest-3-retired-a.jpg', file_type: 'image' },
+            { id: 91, filename: 'ingest-3-retired-b.jpg', file_type: 'image' },
+          ],
+          [],
+        ];
+      if (/SELECT id FROM file/i.test(sql)) return [[], []];
+      return execute(sql, params);
+    };
+    return conn;
+  };
+  const result = await f.service.synchronizeArticle({ articleId: 100 });
+  assert.equal(result.status, 'retry_required');
+  assert.equal(result.cleanup.deleted, 0, 'the candidate cleanup transaction rolled back');
+  assert.equal(result.cleanup.failures[0].message, 'queue unavailable');
+});
