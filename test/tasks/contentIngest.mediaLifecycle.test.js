@@ -147,3 +147,68 @@ test('temporary asset cleanup failure still returns committed article and media 
   assert.equal(result.articles[0].cleanupWarnings[0], 'temporary cleanup failed');
   assert.equal(await fs.readFile(path.join(f.root, 'ingest-3-1-1234567890.jpg'), 'utf8'), 'original');
 });
+
+for (const rich of [false, true]) {
+  test(`${rich ? 'rich' : 'raw'} holds the candidate connection across public copies and persistence`, async (t) => {
+    const f = await fixture(t, { rich });
+    const borrowed = {};
+    let locked = false;
+    const trace = [];
+    f.args.repository.withMediaLifecycleLock = async (candidateId, callback) => {
+      assert.equal(candidateId, 3);
+      locked = true;
+      trace.push('lock');
+      try {
+        return await callback(borrowed);
+      } finally {
+        locked = false;
+        trace.push('release');
+      }
+    };
+    const { promoteArticleAssets } = require('@/ingest/pipeline/backfillRichArticles');
+    f.args.promoteAssets = async (...args) => {
+      assert.equal(locked, true);
+      trace.push('copy');
+      return promoteArticleAssets(...args);
+    };
+    for (const method of ['publishRawArticle', 'replacePublishedArticle']) {
+      const persist = f.args.repository[method];
+      f.args.repository[method] = async (input) => {
+        assert.equal(locked, true);
+        assert.equal(input.mediaConnection, borrowed);
+        trace.push('commit');
+        return persist(input);
+      };
+    }
+    f.args.synchronizeMedia = async () => {
+      assert.equal(locked, false);
+      trace.push('sync');
+      return { status: 'ready' };
+    };
+    const result = await f.run(f.args);
+    assert.equal(result.failed, 0, JSON.stringify(result.failures));
+    assert.deepEqual(trace, ['lock', 'copy', 'commit', 'release', 'sync']);
+  });
+}
+
+test('precommit copy compensation finishes before candidate lock release', async (t) => {
+  const f = await fixture(t, { failPersistence: true });
+  let locked = false;
+  f.args.repository.withMediaLifecycleLock = async (_candidateId, callback) => {
+    locked = true;
+    try {
+      return await callback({});
+    } finally {
+      locked = false;
+    }
+  };
+  const remove = f.args.deleteStoredFiles;
+  f.args.deleteStoredFiles = async (files) => {
+    if (files.length) assert.equal(locked, true);
+    return remove(files);
+  };
+  const result = await f.run(f.args);
+  assert.equal(result.failed, 1);
+  assert.equal(f.removed.length, 2);
+  assert.equal(locked, false);
+});

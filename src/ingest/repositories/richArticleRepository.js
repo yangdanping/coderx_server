@@ -101,7 +101,24 @@ function createRichArticleRepository(database) {
     return rows;
   }
 
-  async function publishRawArticle({ candidateId, authorId, createAt, tagName, title, excerpt, assets, buildContent }) {
+  async function withMediaLifecycleLock(candidateId, callback) {
+    const connection = await database.getConnection();
+    const key = `coderx:ingest-media:${candidateId}`;
+    let locked = false;
+    try {
+      await connection.execute('SELECT pg_advisory_lock(hashtextextended(?::text, 0));', [key]);
+      locked = true;
+      return await callback(connection);
+    } finally {
+      try {
+        if (locked) await connection.execute('SELECT pg_advisory_unlock(hashtextextended(?::text, 0));', [key]);
+      } finally {
+        connection.release();
+      }
+    }
+  }
+
+  async function publishRawArticle({ candidateId, authorId, createAt, tagName, title, excerpt, assets, buildContent, mediaConnection }) {
     if (!Number.isSafeInteger(candidateId) || candidateId <= 0) throw new Error('candidateId must be a positive integer');
     if (!Number.isSafeInteger(authorId) || authorId <= 0) throw new Error('authorId must be a positive integer');
     if (!(createAt instanceof Date) || Number.isNaN(createAt.getTime())) throw new Error('createAt must be a valid Date');
@@ -110,7 +127,7 @@ function createRichArticleRepository(database) {
     if (!Array.isArray(assets) || assets.length === 0) throw new Error('assets are required');
     if (typeof buildContent !== 'function') throw new Error('buildContent is required');
 
-    const connection = await database.getConnection();
+    const connection = mediaConnection || (await database.getConnection());
     try {
       await connection.beginTransaction();
 
@@ -266,11 +283,11 @@ function createRichArticleRepository(database) {
       await connection.rollback();
       throw error;
     } finally {
-      connection.release();
+      if (!mediaConnection) connection.release();
     }
   }
 
-  async function replacePublishedArticle({ articleId, candidateId, authorId, createAt, title, excerpt, assets, buildContent }) {
+  async function replacePublishedArticle({ articleId, candidateId, authorId, createAt, title, excerpt, assets, buildContent, mediaConnection }) {
     if (!Number.isSafeInteger(articleId) || articleId <= 0) throw new Error('articleId must be a positive integer');
     if (!Number.isSafeInteger(candidateId) || candidateId <= 0) throw new Error('candidateId must be a positive integer');
     if (!Number.isSafeInteger(authorId) || authorId <= 0) throw new Error('authorId must be a positive integer');
@@ -279,7 +296,7 @@ function createRichArticleRepository(database) {
     if (!Array.isArray(assets) || assets.length === 0) throw new Error('assets are required');
     if (typeof buildContent !== 'function') throw new Error('buildContent is required');
 
-    const connection = await database.getConnection();
+    const connection = mediaConnection || (await database.getConnection());
     try {
       await connection.beginTransaction();
       const [articleRows] = await connection.execute(
@@ -398,7 +415,7 @@ function createRichArticleRepository(database) {
       await connection.rollback();
       throw error;
     } finally {
-      connection.release();
+      if (!mediaConnection) connection.release();
     }
   }
 
@@ -465,6 +482,7 @@ function createRichArticleRepository(database) {
     listPlaceholderArticles,
     publishRawArticle,
     replacePublishedArticle,
+    withMediaLifecycleLock,
   };
 }
 

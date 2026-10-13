@@ -61,6 +61,23 @@ async function removeArticleFiles(files, { outputDir }) {
   await Promise.all([...new Set(paths)].map((filePath) => fs.rm(filePath, { force: true })));
 }
 
+// Public copy, database commit/rollback and precommit compensation share the
+// candidate lock used by generic cleanup, including calls outside the CLI.
+async function persistArticleAssets({ repository, candidateId, assets, outputDir, publicBaseURL, promoteAssets, deleteStoredFiles, writeArticle }) {
+  async function copyAndPersist(mediaConnection) {
+    let promoted;
+    try {
+      promoted = await promoteAssets(assets, { outputDir, publicBaseURL });
+      const persistence = await writeArticle(promoted.assets, mediaConnection);
+      return { promoted, persistence };
+    } catch (error) {
+      if (promoted?.copiedPaths?.length) await deleteStoredFiles(promoted.copiedPaths, { outputDir });
+      throw error;
+    }
+  }
+  return typeof repository.withMediaLifecycleLock === 'function' ? repository.withMediaLifecycleLock(candidateId, copyAndPersist) : copyAndPersist();
+}
+
 // Persistence and media synchronization have separate outcomes. A postcommit error
 // must never enter the compensation path for newly copied published files.
 async function synchronizeCommittedMedia({ persistence, promoted, synchronizeMedia, deleteStoredFiles, outputDir }) {
@@ -157,31 +174,39 @@ async function backfillRichArticles({
         images: page.images,
         outputDir: temporaryDir,
       });
-      promoted = await promoteAssets(localized.assets, {
-        outputDir,
-        publicBaseURL,
-      });
       const authorId = authorAssignments.get(candidate.id);
       const createAt = dateAssignments.get(candidate.id);
-      const replacement = await repository.replacePublishedArticle({
-        articleId: candidate.articleId,
+      const { persistence: replacement, promoted: copied } = await persistArticleAssets({
+        repository,
         candidateId: candidate.id,
-        authorId,
-        createAt,
-        title: Array.from(article.titleZh).slice(0, 50).join(''),
-        excerpt: article.lead,
-        assets: promoted.assets,
-        buildContent: (images) =>
-          buildRichArticleContent({
-            article,
-            source: {
-              name: candidate.sourceName,
-              canonicalUrl: candidate.canonicalUrl,
-              publishedAt: candidate.sourcePublishedAt,
-            },
-            images,
+        assets: localized.assets,
+        outputDir,
+        publicBaseURL,
+        promoteAssets,
+        deleteStoredFiles,
+        writeArticle: (assets, mediaConnection) =>
+          repository.replacePublishedArticle({
+            articleId: candidate.articleId,
+            candidateId: candidate.id,
+            authorId,
+            createAt,
+            title: Array.from(article.titleZh).slice(0, 50).join(''),
+            excerpt: article.lead,
+            assets,
+            mediaConnection,
+            buildContent: (images) =>
+              buildRichArticleContent({
+                article,
+                source: {
+                  name: candidate.sourceName,
+                  canonicalUrl: candidate.canonicalUrl,
+                  publishedAt: candidate.sourcePublishedAt,
+                },
+                images,
+              }),
           }),
       });
+      promoted = copied;
       const media = await synchronizeCommittedMedia({ persistence: replacement, promoted, synchronizeMedia, deleteStoredFiles, outputDir });
       result.updated += 1;
       result.articles.push({
@@ -193,9 +218,6 @@ async function backfillRichArticles({
         media,
       });
     } catch (error) {
-      if (promoted?.copiedPaths?.length) {
-        await deleteStoredFiles(promoted.copiedPaths, { outputDir });
-      }
       result.failed += 1;
       result.failures.push({
         candidateId: candidate.id,
@@ -216,4 +238,5 @@ module.exports = {
   removeArticleFiles,
   synchronizeCommittedMedia,
   cleanupTemporaryAssets,
+  persistArticleAssets,
 };

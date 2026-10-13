@@ -149,3 +149,86 @@ test('processPending treats an already-missing file as successful idempotent cle
     true,
   );
 });
+
+test('generic cleanup locks ingest candidates before tombstones and preserves live original/small owners', async () => {
+  const events = [];
+  const rows = [
+    { id: 1, storageArea: 'image', filename: 'ingest-3-a.jpg' },
+    { id: 2, storageArea: 'image', filename: 'ingest-3-a-small.jpg' },
+  ];
+  const service = new LocalMediaCleanupService({
+    roots: { image: '/tmp/images', video: '/tmp/videos' },
+    fsPromises: {
+      async unlink() {
+        events.push('unlink');
+      },
+    },
+    database: {
+      async getConnection() {
+        return {
+          async beginTransaction() {},
+          async commit() {},
+          async rollback() {},
+          release() {},
+          async execute(sql, params) {
+            if (/pg_advisory_xact_lock/i.test(sql)) {
+              events.push('candidate');
+              assert.deepEqual(params, ['coderx:ingest-media:3']);
+              return [[{}], []];
+            }
+            if (/SELECT[\s\S]*FROM media_local_cleanup/i.test(sql)) {
+              events.push(/FOR UPDATE/i.test(sql) ? 'tombstone' : 'discover');
+              return [rows, []];
+            }
+            if (/FROM file/i.test(sql)) {
+              events.push('owner');
+              assert.match(sql, /regexp_replace/);
+              return [[{ id: 9 }], []];
+            }
+            if (/DELETE FROM media_local_cleanup/i.test(sql)) {
+              events.push('cancel');
+              return [{ affectedRows: 1 }, []];
+            }
+            return [{ affectedRows: 1 }, []];
+          },
+        };
+      },
+    },
+  });
+  const result = await service.processPending();
+  assert.equal(result.deleted, 0);
+  assert.deepEqual(events, ['discover', 'candidate', 'tombstone', 'owner', 'cancel', 'owner', 'cancel']);
+});
+
+test('cleanup with a borrowed transaction never owns its transaction or connection', async () => {
+  const conn = {
+    async execute() {
+      return [[], []];
+    },
+    async beginTransaction() {
+      throw new Error('must not begin');
+    },
+    async commit() {
+      throw new Error('must not commit');
+    },
+    async rollback() {
+      throw new Error('must not rollback');
+    },
+    release() {
+      throw new Error('must not release');
+    },
+  };
+  const service = new LocalMediaCleanupService({
+    database: {
+      async getConnection() {
+        throw new Error('must not acquire');
+      },
+    },
+    fsPromises: { async unlink() {} },
+  });
+  assert.equal((await service.processPending({ conn })).examined, 0);
+  conn.execute = async () => {
+    throw new Error('borrowed SQL failure');
+  };
+  await assert.rejects(service.processPending({ conn }), /borrowed SQL failure/);
+});

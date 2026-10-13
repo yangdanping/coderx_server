@@ -234,6 +234,128 @@ test('ingest lifecycle preserves identities and recovers partial promotion, reti
     );
     assert.equal((await admin.query('SELECT article_id FROM file')).rows[0].article_id, articleId);
     assert.equal(await count('media_object'), 4);
+
+    // Generic startup/cron cleanup must wait across public copy -> article commit.
+    stem = 'eee';
+    failUnlinkName = 'bbb';
+    assert.equal((await backfillRawArticles(args)).articles[0].media.status, 'retry_required');
+    assert.equal(await count('media_local_cleanup'), 2);
+    let lockRequested;
+    const requested = new Promise((resolve) => {
+      lockRequested = resolve;
+    });
+    let cleanupPid;
+    const genericDatabase = {
+      async getConnection() {
+        const conn = await database.getConnection();
+        cleanupPid = (await conn.execute('SELECT pg_backend_pid() AS pid;'))[0][0].pid;
+        const execute = conn.execute.bind(conn);
+        conn.execute = async (sql, params) => {
+          if (/pg_advisory_xact_lock/i.test(sql)) lockRequested();
+          return execute(sql, params);
+        };
+        return conn;
+      },
+    };
+    const unlinked = [];
+    const genericCleanup = new LocalMediaCleanupService({
+      database: genericDatabase,
+      roots: { image: root, video: root },
+      fsPromises: {
+        async unlink(filename) {
+          unlinked.push(path.basename(filename));
+          return fs.unlink(filename);
+        },
+      },
+    });
+    const { promoteArticleAssets } = require('@/ingest/pipeline/backfillRichArticles');
+    let background;
+    stem = 'bbb';
+    const raced = await backfillRawArticles({
+      ...args,
+      async promoteAssets(...input) {
+        const copied = await promoteArticleAssets(...input);
+        background = genericCleanup.processPending();
+        const state = await Promise.race([requested.then(() => 'candidate_lock_requested'), background.then(() => 'unlink_finished')]);
+        assert.equal(state, 'candidate_lock_requested', 'generic cleanup must lock before unlinking restored original/small');
+        const deadline = Date.now() + 2000;
+        let waiting = false;
+        while (Date.now() < deadline) {
+          const wait = await admin.query('SELECT wait_event FROM pg_stat_activity WHERE pid = $1', [cleanupPid]);
+          if (wait.rows[0]?.wait_event === 'advisory') {
+            waiting = true;
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 2));
+        }
+        assert.equal(waiting, true, 'background must wait on the writer candidate lock, without holding tombstone row locks');
+        assert.deepEqual(unlinked, []);
+        return copied;
+      },
+    });
+    if (background) await background;
+    assert.equal(raced.updated, 1, JSON.stringify(raced));
+    assert.equal(raced.articles[0].media.status, 'ready');
+    assert.deepEqual(unlinked, []);
+    assert.equal(await fs.readFile(path.join(root, 'ingest-3-1-bbb.jpg'), 'utf8'), 'original-bbb');
+    assert.equal(await fs.readFile(path.join(root, 'ingest-3-1-bbb-small.jpg'), 'utf8'), 'small-bbb');
+    assert.equal(await count('media_local_cleanup'), 0);
+    // Stale tombstones created independently still cannot delete any live owner.
+    for (const filename of ['ingest-3-1-bbb.jpg', 'ingest-3-1-bbb-small.jpg']) {
+      await admin.query("INSERT INTO media_local_cleanup (storage_area, filename) VALUES ('image', $1)", [filename]);
+    }
+    assert.equal((await genericCleanup.processPending()).deleted, 0);
+    assert.equal(await count('media_local_cleanup'), 0);
+    // Once its article file is gone, generic cleanup must still reclaim both variants.
+    for (const filename of ['ingest-3-1-bbb.jpg', 'ingest-3-1-bbb-small.jpg']) {
+      await admin.query("INSERT INTO media_local_cleanup (storage_area, filename) VALUES ('image', $1)", [filename]);
+    }
+    await admin.query('DELETE FROM file');
+    // Reverse order: cleanup holds the candidate lock first; restoration waits
+    // until both obsolete variants are removed, then recopies them before commit.
+    let releaseUnlink;
+    const unlinkGate = new Promise((resolve) => {
+      releaseUnlink = resolve;
+    });
+    let unlinkStarted;
+    const started = new Promise((resolve) => {
+      unlinkStarted = resolve;
+    });
+    const cleanupFirst = new LocalMediaCleanupService({
+      database,
+      roots: { image: root, video: root },
+      fsPromises: {
+        async unlink(filename) {
+          unlinkStarted();
+          await unlinkGate;
+          unlinked.push(path.basename(filename));
+          return fs.unlink(filename);
+        },
+      },
+    });
+    const cleaning = cleanupFirst.processPending();
+    await started;
+    const restoring = backfillRichArticles(args);
+    try {
+      const deadline = Date.now() + 2000;
+      let waiting = false;
+      while (Date.now() < deadline) {
+        const wait = await admin.query("SELECT pid FROM pg_stat_activity WHERE wait_event = 'advisory' AND query LIKE 'SELECT pg_advisory_lock%'");
+        if (wait.rowCount > 0) {
+          waiting = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2));
+      }
+      assert.equal(waiting, true, 'restoration must wait for generic cleanup before copying');
+    } finally {
+      releaseUnlink();
+    }
+    assert.equal((await cleaning).deleted, 2);
+    assert.equal((await restoring).articles[0].media.status, 'ready');
+    assert.deepEqual(unlinked.sort(), ['ingest-3-1-bbb-small.jpg', 'ingest-3-1-bbb.jpg']);
+    assert.equal(await fs.readFile(path.join(root, 'ingest-3-1-bbb.jpg'), 'utf8'), 'original-bbb');
+    assert.equal(await fs.readFile(path.join(root, 'ingest-3-1-bbb-small.jpg'), 'utf8'), 'small-bbb');
   } finally {
     await admin.query('RESET search_path').catch(() => {});
     await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`).catch(() => {});

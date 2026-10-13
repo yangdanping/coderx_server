@@ -97,7 +97,7 @@ function createIngestMediaService({
               regexp_replace(f.filename, '(\\.[^.]+)$', '-small\\1')));`,
           [`ingest-${candidateId}-%`],
         );
-        const processed = await localCleanup.processPending({ ids: pending.map((row) => Number(row.id)), limit: Math.max(1, Math.min(pending.length, 1000)) });
+        const processed = await localCleanup.processPending({ conn, ids: pending.map((row) => Number(row.id)), limit: Math.max(1, Math.min(pending.length, 1000)) });
         if (pending.length > processed.examined) summary.deferred += pending.length - processed.examined;
         await conn.commit();
         if (processed.failed > 0) summary.failures.push({ code: 'LOCAL_CLEANUP_RETRY_REQUIRED', message: `${processed.failed} local files require cleanup retry` });

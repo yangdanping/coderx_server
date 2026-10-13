@@ -3,7 +3,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { assignAuthors, assignBackfillDates } = require('@/ingest/domain/assignBackfillMetadata');
 const { buildRawArticleContent, rawArticleExcerpt } = require('@/ingest/domain/buildRawArticleContent');
-const { promoteArticleAssets, removeArticleFiles, synchronizeCommittedMedia, cleanupTemporaryAssets } = require('@/ingest/pipeline/backfillRichArticles');
+const { promoteArticleAssets, removeArticleFiles, synchronizeCommittedMedia, cleanupTemporaryAssets, persistArticleAssets } = require('@/ingest/pipeline/backfillRichArticles');
 
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
@@ -82,40 +82,49 @@ async function backfillRawArticles({
         images: page.images,
         outputDir: temporaryDir,
       });
-      promoted = await promoteAssets(localized.assets, {
-        outputDir,
-        publicBaseURL,
-      });
       const authorId = authorAssignments.get(candidate.id);
       const createAt = dateAssignments.get(candidate.id);
-      const writeInput = {
-        candidateId: candidate.id,
-        authorId,
-        createAt,
-        title: Array.from(page.title).slice(0, 50).join(''),
-        excerpt,
-        assets: promoted.assets,
-        buildContent: (images) =>
-          buildRawArticleContent({
-            page,
-            source: {
-              name: candidate.sourceName,
-              canonicalUrl: page.canonicalUrl || candidate.canonicalUrl,
-              publishedAt: page.publishedAt || candidate.sourcePublishedAt,
-            },
-            images,
-          }),
-      };
       const isPending = candidate.status === 'pending' && candidate.articleId == null;
-      const persistence = isPending
-        ? await repository.publishRawArticle({
-            ...writeInput,
-            tagName,
-          })
-        : await repository.replacePublishedArticle({
-            ...writeInput,
-            articleId: candidate.articleId,
-          });
+      const { persistence, promoted: copied } = await persistArticleAssets({
+        repository,
+        candidateId: candidate.id,
+        assets: localized.assets,
+        outputDir,
+        publicBaseURL,
+        promoteAssets,
+        deleteStoredFiles,
+        writeArticle: async (assets, mediaConnection) => {
+          const writeInput = {
+            candidateId: candidate.id,
+            authorId,
+            createAt,
+            title: Array.from(page.title).slice(0, 50).join(''),
+            excerpt,
+            assets,
+            mediaConnection,
+            buildContent: (images) =>
+              buildRawArticleContent({
+                page,
+                source: {
+                  name: candidate.sourceName,
+                  canonicalUrl: page.canonicalUrl || candidate.canonicalUrl,
+                  publishedAt: page.publishedAt || candidate.sourcePublishedAt,
+                },
+                images,
+              }),
+          };
+          return isPending
+            ? await repository.publishRawArticle({
+                ...writeInput,
+                tagName,
+              })
+            : await repository.replacePublishedArticle({
+                ...writeInput,
+                articleId: candidate.articleId,
+              });
+        },
+      });
+      promoted = copied;
       const media = await synchronizeCommittedMedia({ persistence, promoted, synchronizeMedia, deleteStoredFiles, outputDir });
       const operation = isPending ? 'created' : 'updated';
       result[operation] += 1;
@@ -129,9 +138,6 @@ async function backfillRawArticles({
         media,
       });
     } catch (error) {
-      if (promoted?.copiedPaths?.length) {
-        await deleteStoredFiles(promoted.copiedPaths, { outputDir });
-      }
       result.failed += 1;
       result.failures.push({
         candidateId: candidate.id,

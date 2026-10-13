@@ -91,7 +91,7 @@ class LocalMediaCleanupService {
     return ids;
   }
 
-  async processPending({ ids = null, limit = 100 } = {}) {
+  async processPending({ ids = null, limit = 100, conn: borrowedConnection = null } = {}) {
     const normalizedIds = normalizeIds(ids);
     const normalizedLimit = Number(limit);
     if (!Number.isSafeInteger(normalizedLimit) || normalizedLimit <= 0 || normalizedLimit > 1000) {
@@ -101,10 +101,10 @@ class LocalMediaCleanupService {
       return { examined: 0, deleted: 0, missing: 0, failed: 0, pendingIds: [] };
     }
 
-    const conn = await this.database.getConnection();
+    const conn = borrowedConnection || (await this.database.getConnection());
     const summary = { examined: 0, deleted: 0, missing: 0, failed: 0, pendingIds: [] };
     try {
-      await conn.beginTransaction();
+      if (!borrowedConnection) await conn.beginTransaction();
       const params = [];
       let idClause = '';
       if (normalizedIds) {
@@ -112,7 +112,7 @@ class LocalMediaCleanupService {
         params.push(normalizedIds);
       }
       params.push(normalizedLimit);
-      const [rows] = await conn.execute(
+      const [discovered] = await conn.execute(
         `
           SELECT id,
                  storage_area AS "storageArea",
@@ -121,11 +121,36 @@ class LocalMediaCleanupService {
           FROM media_local_cleanup
           ${idClause}
           ORDER BY updated_at, id
-          LIMIT ?
-          FOR UPDATE SKIP LOCKED;
+          LIMIT ?;
         `,
         params,
       );
+
+      // Discover before taking tombstone row locks. Writers cancel tombstones
+      // while holding the same candidate lock, so the opposite order deadlocks.
+      const candidateIds = [
+        ...new Set(
+          discovered
+            .filter((row) => row.storageArea === 'image')
+            .map((row) => /^ingest-([1-9][0-9]*)-/.exec(row.filename)?.[1])
+            .filter(Boolean),
+        ),
+      ].sort();
+      for (const candidateId of candidateIds) {
+        await conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(?::text, 0));', [`coderx:ingest-media:${candidateId}`]);
+      }
+      const [rows] = discovered.length
+        ? await conn.execute(
+            `
+        SELECT id, storage_area AS "storageArea", filename, attempt_count AS "attemptCount"
+        FROM media_local_cleanup
+        WHERE id = ANY(?::bigint[])
+        ORDER BY updated_at, id
+        FOR UPDATE SKIP LOCKED;
+      `,
+            [discovered.map((row) => Number(row.id))],
+          )
+        : [[], []];
 
       for (const row of rows) {
         summary.examined += 1;
@@ -134,6 +159,17 @@ class LocalMediaCleanupService {
         const localPath = path.resolve(root, entry.filename);
         if (path.dirname(localPath) !== root) {
           throw new TypeError('cleanup path escaped its configured root');
+        }
+        if (entry.storageArea === 'image' && /^ingest-[1-9][0-9]*-/.test(entry.filename)) {
+          const [owners] = await conn.execute(
+            `SELECT id FROM file
+            WHERE ? IN (filename, regexp_replace(filename, '(\\.[^.]+)$', '-small\\1')) LIMIT 1;`,
+            [entry.filename],
+          );
+          if (owners.length > 0) {
+            await conn.execute('DELETE FROM media_local_cleanup WHERE id = ?;', [row.id]);
+            continue;
+          }
         }
         try {
           await this.fs.unlink(localPath);
@@ -159,13 +195,13 @@ class LocalMediaCleanupService {
           );
         }
       }
-      await conn.commit();
+      if (!borrowedConnection) await conn.commit();
       return summary;
     } catch (error) {
-      await conn.rollback();
+      if (!borrowedConnection) await conn.rollback();
       throw error;
     } finally {
-      conn.release();
+      if (!borrowedConnection) conn.release();
     }
   }
 }
