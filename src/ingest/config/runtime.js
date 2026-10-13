@@ -65,6 +65,17 @@ function loadRuntimeConfig(env = process.env) {
     ollamaBaseURL: String(env.INGEST_OLLAMA_BASE_URL || '').trim() || `http://${ollamaHost}:${ollamaPort}/v1`,
     ollamaModel: String(env.INGEST_OLLAMA_MODEL || 'qwen2.5:7b').trim(),
     database,
+    media: Object.freeze({
+      writeMode: env.MEDIA_WRITE_MODE || 'local',
+      writePaused: parseBoolean(env.MEDIA_R2_WRITE_PAUSED),
+      mutationsPaused: parseBoolean(env.MEDIA_MUTATIONS_PAUSED),
+      hardLimitBytes: parsePositiveInteger(env.R2_HARD_LIMIT_BYTES, 7_000_000_000),
+      accountId: env.R2_ACCOUNT_ID || '',
+      accessKeyId: env.R2_ACCESS_KEY_ID || '',
+      secretAccessKey: env.R2_SECRET_ACCESS_KEY || '',
+      bucket: env.R2_BUCKET || 'coderx-media-public',
+      publicBaseUrl: env.MEDIA_CDN_BASE_URL || 'https://media.ydp321.asia',
+    }),
   });
 }
 

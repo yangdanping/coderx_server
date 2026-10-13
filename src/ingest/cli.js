@@ -3,7 +3,7 @@ require('module-alias/register');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const KNOWN_COMMANDS = new Set(['collect', 'enrich', 'list', 'approve', 'publish', 'backfill-rich', 'backfill-raw', 'purge-placeholders', 'run']);
+const KNOWN_COMMANDS = new Set(['collect', 'enrich', 'list', 'approve', 'publish', 'backfill-rich', 'backfill-raw', 'retry-media', 'purge-placeholders', 'run']);
 const KNOWN_STATUSES = new Set(['pending', 'enriched', 'approved', 'rejected', 'published', 'failed']);
 
 function positiveInteger(value, optionName) {
@@ -64,7 +64,7 @@ function parseCliArgs(argv) {
     }
   }
 
-  if (command === 'backfill-rich' || command === 'backfill-raw') {
+  if (command === 'backfill-rich' || command === 'backfill-raw' || command === 'retry-media') {
     if (!options.ids?.length) throw new Error(`${command} requires --ids`);
     if (options.ids.length > 5) throw new Error(`${command} accepts at most 5 IDs`);
     if (new Set(options.ids).size !== options.ids.length) throw new Error(`${command} does not accept duplicate IDs`);
@@ -112,7 +112,7 @@ async function runCli(argv, { actions, config, write = process.stdout.write.bind
   return result;
 }
 
-function createDefaultActions(config) {
+function createDefaultActions(config, dependencies = {}) {
   const sources = require('@/ingest/config/sources');
   const { collectFeed } = require('@/ingest/collectors/rssCollector');
   const { createIngestDatabase } = require('@/ingest/database');
@@ -120,7 +120,7 @@ function createDefaultActions(config) {
   const { createRichArticleEnricher } = require('@/ingest/enrichment/createRichArticleEnricher');
   const { safeRemoteFetch } = require('@/ingest/extraction/safeRemoteFetch');
   const { extractArticlePage } = require('@/ingest/extraction/extractArticlePage');
-  const { IMG_PATH } = require('@/constants/filePaths');
+  const { IMG_PATH, VIDEO_PATH } = require('@/constants/filePaths');
   const { localizeArticleImages } = require('@/ingest/media/localizeArticleImages');
   const { backfillRawArticles } = require('@/ingest/pipeline/backfillRawArticles');
   const { backfillRichArticles } = require('@/ingest/pipeline/backfillRichArticles');
@@ -131,9 +131,37 @@ function createDefaultActions(config) {
   const { runWithLock } = require('@/ingest/pipeline/runWithLock');
   const { createIngestRepository } = require('@/ingest/repositories/ingestRepository');
   const { createRichArticleRepository } = require('@/ingest/repositories/richArticleRepository');
-  const database = createIngestDatabase(config.database);
+  const { createIngestMediaService } = require('@/ingest/media/ingestMediaService');
+  const { createR2Client, createR2MediaStore } = require('@/storage/r2MediaStore');
+  const database = dependencies.database || createIngestDatabase(config.database);
   const repository = createIngestRepository(database);
   const richRepository = createRichArticleRepository(database);
+  const mediaConfig = config.media || {};
+  let store;
+  function getStore() {
+    if (!store) store = createR2MediaStore({ client: createR2Client(mediaConfig), bucket: mediaConfig.bucket, publicBaseUrl: mediaConfig.publicBaseUrl });
+    return store;
+  }
+  const mediaService = (dependencies.createMediaService || createIngestMediaService)({
+    database,
+    imageRoot: path.resolve(IMG_PATH),
+    videoRoot: path.resolve(VIDEO_PATH),
+    ...mediaConfig,
+    r2Store: {
+      put(payload) {
+        return getStore().put(payload);
+      },
+      head(key) {
+        return getStore().head(key);
+      },
+      delete(key) {
+        return getStore().delete(key);
+      },
+    },
+  });
+  function assertMediaMutationsEnabled() {
+    if (mediaConfig.mutationsPaused) throw new Error('Media mutations are paused');
+  }
 
   return {
     async collect(options) {
@@ -183,53 +211,74 @@ function createDefaultActions(config) {
       });
     },
     async 'backfill-rich'(options) {
+      assertMediaMutationsEnabled();
       const ids = options.ids.slice(0, options.limit || options.ids.length);
       const enricher = createRichArticleEnricher({
         baseURL: config.ollamaBaseURL,
         model: config.ollamaModel,
       });
-      return await backfillRichArticles({
-        repository: richRepository,
-        ids,
-        authorIds: config.authorIds,
-        days: options.days || 30,
-        outputDir: path.resolve(IMG_PATH),
-        publicBaseURL: config.publicBaseURL,
-        enricher,
-        extractor: async (candidate) => {
-          const response = await safeRemoteFetch(candidate.canonicalUrl, {
-            timeoutMs: config.timeoutMs,
-            maxBytes: 2 * 1024 * 1024,
-          });
-          return extractArticlePage({
-            canonicalUrl: response.url,
-            html: response.buffer.toString('utf8'),
-          });
-        },
-        localizeImages: localizeArticleImages,
-      });
+      return await runWithLock(repository, () =>
+        backfillRichArticles({
+          repository: richRepository,
+          ids,
+          authorIds: config.authorIds,
+          days: options.days || 30,
+          outputDir: path.resolve(IMG_PATH),
+          publicBaseURL: config.publicBaseURL,
+          enricher,
+          extractor: async (candidate) => {
+            const response = await safeRemoteFetch(candidate.canonicalUrl, {
+              timeoutMs: config.timeoutMs,
+              maxBytes: 2 * 1024 * 1024,
+            });
+            return extractArticlePage({
+              canonicalUrl: response.url,
+              html: response.buffer.toString('utf8'),
+            });
+          },
+          localizeImages: localizeArticleImages,
+          synchronizeMedia: (payload) => mediaService.synchronizeArticle(payload),
+        }),
+      );
     },
     async 'backfill-raw'(options) {
+      assertMediaMutationsEnabled();
       const ids = options.ids.slice(0, options.limit || options.ids.length);
-      return await backfillRawArticles({
-        repository: richRepository,
-        ids,
-        authorIds: config.authorIds,
-        tagName: config.tagName,
-        days: options.days || 30,
-        outputDir: path.resolve(IMG_PATH),
-        publicBaseURL: config.publicBaseURL,
-        extractor: async (candidate) => {
-          const response = await safeRemoteFetch(candidate.canonicalUrl, {
-            timeoutMs: config.timeoutMs,
-            maxBytes: 2 * 1024 * 1024,
-          });
-          return extractArticlePage({
-            canonicalUrl: response.url,
-            html: response.buffer.toString('utf8'),
-          });
-        },
-        localizeImages: localizeArticleImages,
+      return await runWithLock(repository, () =>
+        backfillRawArticles({
+          repository: richRepository,
+          ids,
+          authorIds: config.authorIds,
+          tagName: config.tagName,
+          days: options.days || 30,
+          outputDir: path.resolve(IMG_PATH),
+          publicBaseURL: config.publicBaseURL,
+          extractor: async (candidate) => {
+            const response = await safeRemoteFetch(candidate.canonicalUrl, {
+              timeoutMs: config.timeoutMs,
+              maxBytes: 2 * 1024 * 1024,
+            });
+            return extractArticlePage({
+              canonicalUrl: response.url,
+              html: response.buffer.toString('utf8'),
+            });
+          },
+          localizeImages: localizeArticleImages,
+          synchronizeMedia: (payload) => mediaService.synchronizeArticle(payload),
+        }),
+      );
+    },
+    async 'retry-media'(options) {
+      return await runWithLock(repository, async () => {
+        const articles = [];
+        for (const articleId of options.ids.slice(0, options.limit || options.ids.length)) {
+          try {
+            articles.push({ articleId, media: await mediaService.synchronizeArticle({ articleId }) });
+          } catch (error) {
+            articles.push({ articleId, media: { status: 'retry_required', reason: String(error?.message || error) } });
+          }
+        }
+        return { attempted: articles.length, articles };
       });
     },
     async 'purge-placeholders'(options) {

@@ -276,3 +276,36 @@ test('list can write a JSON review snapshot without shell redirection', async ()
   assert.equal(files[0].filePath, 'data/ingest-batches/batch.json');
   assert.deepEqual(JSON.parse(files[0].content), rows);
 });
+
+test('retry-media accepts persisted article IDs and runs without extraction or publication', async () => {
+  assert.deepEqual(parseCliArgs(['retry-media', '--ids', '100,101']), { command: 'retry-media', options: { ids: [100, 101] } });
+  assert.throws(() => parseCliArgs(['retry-media']), /requires --ids/);
+  assert.throws(() => parseCliArgs(['retry-media', '--ids', '100,100']), /duplicate/);
+  const database = { async execute() {}, async getConnection() {}, async end() {} };
+  const synchronized = [];
+  const actions = createDefaultActions(loadRuntimeConfig({}), {
+    database,
+    createMediaService(options) {
+      assert.equal(options.database, database);
+      return {
+        async synchronizeArticle(payload) {
+          synchronized.push(payload.articleId);
+          return { status: 'ready' };
+        },
+      };
+    },
+  });
+  database.getConnection = async () => ({
+    async execute() {
+      return [[{ acquired: true }], []];
+    },
+    release() {},
+  });
+  const result = await actions['retry-media']({ ids: [100, 101] });
+  assert.equal(result.attempted, 2);
+  assert.deepEqual(synchronized, [100, 101]);
+  assert.deepEqual(
+    result.articles.map((article) => article.media.status),
+    ['ready', 'ready'],
+  );
+});

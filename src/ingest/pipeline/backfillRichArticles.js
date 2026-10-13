@@ -4,6 +4,7 @@ const path = require('node:path');
 const { assignAuthors, assignBackfillDates } = require('@/ingest/domain/assignBackfillMetadata');
 const { buildRichArticleContent } = require('@/ingest/domain/buildRichArticleContent');
 const { smallFilename } = require('@/ingest/media/localizeArticleImages');
+const { inspectLocalFile } = require('@/service/mediaPromotion.service');
 
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
@@ -13,37 +14,39 @@ function publicImageUrl(baseURL, filename) {
   return `${String(baseURL).replace(/\/+$/, '')}/article/images/${encodeURIComponent(filename)}`;
 }
 
-async function pathExists(filePath) {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function promoteArticleAssets(assets, { outputDir, publicBaseURL }) {
   await fs.mkdir(outputDir, { recursive: true });
   const copiedPaths = [];
   const promotedAssets = [];
-
-  for (const asset of assets) {
-    const fullDestination = path.resolve(outputDir, asset.filename);
-    const smallDestination = path.resolve(outputDir, asset.smallFilename);
-    if (!(await pathExists(fullDestination))) {
-      await fs.copyFile(asset.temporaryPath, fullDestination);
-      copiedPaths.push(fullDestination);
+  async function copyImmutable(source, filename) {
+    if (!filename || filename !== path.basename(filename) || filename.includes('\\')) throw new Error('image filename must not contain a path');
+    const destination = path.resolve(outputDir, filename);
+    const inspected = await inspectLocalFile(source);
+    try {
+      await fs.copyFile(source, destination, require('node:fs').constants.COPYFILE_EXCL);
+      copiedPaths.push(destination);
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      const stats = await fs.lstat(destination);
+      if (!stats.isFile() || stats.isSymbolicLink()) throw new Error(`Ingest image ${filename} is not a regular immutable file`);
     }
-    if (!(await pathExists(smallDestination))) {
-      await fs.copyFile(asset.smallTemporaryPath, smallDestination);
-      copiedPaths.push(smallDestination);
+    const existing = await inspectLocalFile(destination);
+    if (existing.sizeBytes !== inspected.sizeBytes || existing.sha256 !== inspected.sha256) {
+      throw new Error(`Ingest image ${filename} contains different immutable content`);
     }
-    promotedAssets.push({
-      ...asset,
-      src: publicImageUrl(publicBaseURL, asset.filename),
-    });
+    return inspected;
   }
-  return { assets: promotedAssets, copiedPaths };
+  try {
+    for (const asset of assets) {
+      const original = await copyImmutable(asset.temporaryPath, asset.filename);
+      await copyImmutable(asset.smallTemporaryPath, asset.smallFilename);
+      promotedAssets.push({ ...asset, sha256: original.sha256, src: publicImageUrl(publicBaseURL, asset.filename) });
+    }
+    return { assets: promotedAssets, copiedPaths };
+  } catch (error) {
+    await Promise.all(copiedPaths.map((filePath) => fs.rm(filePath, { force: true })));
+    throw error;
+  }
 }
 
 async function removeArticleFiles(files, { outputDir }) {
@@ -56,6 +59,41 @@ async function removeArticleFiles(files, { outputDir }) {
     paths.push(path.resolve(outputDir, file), path.resolve(outputDir, smallFilename(file)));
   }
   await Promise.all([...new Set(paths)].map((filePath) => fs.rm(filePath, { force: true })));
+}
+
+// Persistence and media synchronization have separate outcomes. A postcommit error
+// must never enter the compensation path for newly copied published files.
+async function synchronizeCommittedMedia({ persistence, promoted, synchronizeMedia, deleteStoredFiles, outputDir }) {
+  try {
+    if (!persistence.mediaCleanupManaged) {
+      const currentFilenames = new Set(promoted.assets.map((asset) => asset.filename));
+      await deleteStoredFiles(
+        (persistence.oldFilenames || []).filter((filename) => !currentFilenames.has(filename)),
+        { outputDir },
+      );
+    }
+    if (typeof synchronizeMedia !== 'function') {
+      return { status: 'retry_required', reason: 'media_synchronization_unavailable' };
+    }
+    return await synchronizeMedia({ articleId: persistence.articleId });
+  } catch (error) {
+    return { status: 'retry_required', reason: errorMessage(error) };
+  }
+}
+
+async function cleanupTemporaryAssets(localized, temporaryDir) {
+  const warnings = [];
+  try {
+    if (localized?.cleanup) await localized.cleanup();
+  } catch (error) {
+    warnings.push(errorMessage(error));
+  }
+  try {
+    await fs.rm(temporaryDir, { recursive: true, force: true });
+  } catch (error) {
+    warnings.push(errorMessage(error));
+  }
+  return warnings;
 }
 
 async function backfillRichArticles({
@@ -71,6 +109,7 @@ async function backfillRichArticles({
   publicBaseURL,
   promoteAssets = promoteArticleAssets,
   deleteStoredFiles = removeArticleFiles,
+  synchronizeMedia,
 }) {
   const safeIds = Array.isArray(ids) ? ids.map(Number) : [];
   if (safeIds.length === 0 || safeIds.length > 5 || safeIds.some((id) => !Number.isSafeInteger(id) || id <= 0) || new Set(safeIds).size !== safeIds.length) {
@@ -143,11 +182,7 @@ async function backfillRichArticles({
             images,
           }),
       });
-      const currentFilenames = new Set(promoted.assets.map((asset) => asset.filename));
-      await deleteStoredFiles(
-        replacement.oldFilenames.filter((filename) => !currentFilenames.has(filename)),
-        { outputDir },
-      );
+      const media = await synchronizeCommittedMedia({ persistence: replacement, promoted, synchronizeMedia, deleteStoredFiles, outputDir });
       result.updated += 1;
       result.articles.push({
         candidateId: candidate.id,
@@ -155,6 +190,7 @@ async function backfillRichArticles({
         authorId,
         createAt,
         imageCount: replacement.images.length,
+        media,
       });
     } catch (error) {
       if (promoted?.copiedPaths?.length) {
@@ -166,8 +202,9 @@ async function backfillRichArticles({
         reason: errorMessage(error),
       });
     } finally {
-      if (localized?.cleanup) await localized.cleanup();
-      await fs.rm(temporaryDir, { recursive: true, force: true });
+      const warnings = await cleanupTemporaryAssets(localized, temporaryDir);
+      const outcome = result.articles.find((article) => article.candidateId === candidate.id) || result.failures.find((entry) => entry.candidateId === candidate.id);
+      if (warnings.length && outcome) outcome.cleanupWarnings = warnings;
     }
   }
   return result;
@@ -177,4 +214,6 @@ module.exports = {
   backfillRichArticles,
   promoteArticleAssets,
   removeArticleFiles,
+  synchronizeCommittedMedia,
+  cleanupTemporaryAssets,
 };

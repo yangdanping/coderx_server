@@ -5,7 +5,7 @@ require('module-alias/register');
 
 const { createRichArticleRepository } = require('@/ingest/repositories/richArticleRepository');
 
-function createDatabase({ failOn, articleRows = [{ articleId: 143 }], authorRows = [{ id: 1 }] } = {}) {
+function createDatabase({ failOn, articleRows = [{ articleId: 143 }], authorRows = [{ id: 1 }], oldImages = [{ id: 490, filename: 'ingest-70-old.jpg' }] } = {}) {
   const calls = [];
   let nextImageId = 501;
   const connection = {
@@ -18,7 +18,7 @@ function createDatabase({ failOn, articleRows = [{ articleId: 143 }], authorRows
       if (/FROM article_source/i.test(statement)) return [articleRows, []];
       if (/FROM "user"/i.test(statement)) return [authorRows, []];
       if (/SELECT f\.id,\s*f\.filename/i.test(statement)) {
-        return [[{ id: 490, filename: 'ingest-70-old.jpg' }], []];
+        return [oldImages, []];
       }
       if (/INSERT INTO file/i.test(statement)) {
         return [{ affectedRows: 1, insertId: nextImageId++ }, []];
@@ -352,19 +352,23 @@ test('replacePublishedArticle atomically replaces ingest images, author, content
   const statements = database.calls.filter((call) => call.statement);
   assert.match(statements[0].statement, /FROM article_source[\s\S]*FOR UPDATE/i);
   assert.match(statements[1].statement, /FROM "user"[\s\S]*profile/i);
-  assert.match(statements[2].statement, /SELECT f\.id,\s*f\.filename/i);
-  assert.match(statements[3].statement, /DELETE FROM file/i);
-  assert.match(statements[4].statement, /INSERT INTO file/i);
-  assert.match(statements[5].statement, /INSERT INTO image_meta/i);
-  assert.match(statements[8].statement, /UPDATE article/i);
-  assert.deepEqual(statements[4].params, [1, 143, 'ingest-70-cover.jpg', 'image/jpeg', 1000]);
-  assert.deepEqual(statements[5].params, [501, 1200, 675, true]);
-  assert.equal(statements[8].params[0], 1);
-  assert.equal(statements[8].params[1], '生产级人工智能系统的可靠性实践');
-  assert.match(statements[8].params[2], /"imageId":501/);
-  assert.equal(statements[8].params[3], '一段用于列表展示的中文导语。');
-  assert.equal(statements[8].params[4].toISOString(), '2026-07-10T10:00:00.000Z');
-  assert.equal(statements[8].params[5], 143);
+  assert.ok(statements.some((call) => /SELECT f\.id,\s*f\.filename/i.test(call.statement)));
+  assert.equal(
+    statements.some((call) => /DELETE FROM file/i.test(call.statement)),
+    false,
+  );
+  assert.ok(statements.some((call) => /UPDATE file[\s\S]*article_id = NULL/i.test(call.statement)));
+  const insertedFile = statements.find((call) => /INSERT INTO file/i.test(call.statement));
+  const insertedMeta = statements.find((call) => /INSERT INTO image_meta/i.test(call.statement));
+  const updatedArticle = statements.find((call) => /UPDATE article\s/i.test(call.statement));
+  assert.deepEqual(insertedFile.params, [1, 143, 'ingest-70-cover.jpg', 'image/jpeg', 1000]);
+  assert.deepEqual(insertedMeta.params, [501, 1200, 675, true]);
+  assert.equal(updatedArticle.params[0], 1);
+  assert.equal(updatedArticle.params[1], '生产级人工智能系统的可靠性实践');
+  assert.match(updatedArticle.params[2], /"imageId":501/);
+  assert.equal(updatedArticle.params[3], '一段用于列表展示的中文导语。');
+  assert.equal(updatedArticle.params[4].toISOString(), '2026-07-10T10:00:00.000Z');
+  assert.equal(updatedArticle.params[5], 143);
   assert.deepEqual(
     database.calls.filter((call) => call.op !== 'execute').map((call) => call.op),
     ['getConnection', 'begin', 'commit', 'release'],
@@ -439,7 +443,10 @@ test('listPlaceholderArticles returns only exact candidate-linked placeholder do
 
   const rows = await repository.listPlaceholderArticles();
 
-  assert.deepEqual(rows.map((row) => row.articleId), [144]);
+  assert.deepEqual(
+    rows.map((row) => row.articleId),
+    [144],
+  );
 });
 
 test('deletePlaceholderArticles rechecks locked rows and rejects their candidates transactionally', async () => {
@@ -482,7 +489,10 @@ test('deletePlaceholderArticles rechecks locked rows and rejects their candidate
 
   const rows = await repository.deletePlaceholderArticles([144]);
 
-  assert.deepEqual(rows.map((row) => row.articleId), [144]);
+  assert.deepEqual(
+    rows.map((row) => row.articleId),
+    [144],
+  );
   const statements = database.calls.filter((call) => call.statement);
   assert.match(statements[0].statement, /FOR UPDATE OF a/i);
   assert.match(statements[1].statement, /DELETE FROM article/i);
@@ -492,5 +502,39 @@ test('deletePlaceholderArticles rechecks locked rows and rejects their candidate
   assert.deepEqual(
     database.calls.filter((call) => call.op !== 'execute' && call.op !== 'getConnection').map((call) => call.op),
     ['begin', 'commit', 'release'],
+  );
+});
+
+test('replacement retains unchanged file IDs and media identity, retiring only removed files', async () => {
+  const input = buildInput({ buildContent: (images) => ({ type: 'doc', content: images.map((image) => ({ type: 'image', attrs: { imageId: image.id } })) }) });
+  const database = createDatabase({
+    oldImages: [
+      { id: 480, filename: input.assets[0].filename, size: 1000, mimetype: 'image/jpeg' },
+      { id: 490, filename: 'ingest-70-old.jpg', size: 300, mimetype: 'image/jpeg' },
+    ],
+  });
+  const result = await createRichArticleRepository(database).replacePublishedArticle(input);
+  assert.deepEqual(
+    result.images.map((image) => image.id),
+    [480, 501],
+  );
+  assert.equal(result.mediaCleanupManaged, true);
+  assert.deepEqual(result.retiredFileIds, [490]);
+  const calls = database.calls.filter((call) => call.statement);
+  assert.equal(
+    calls.some((call) => /DELETE FROM file/i.test(call.statement)),
+    false,
+  );
+  const detach = calls.find((call) => /UPDATE file[\s\S]*article_id = NULL/i.test(call.statement));
+  assert.deepEqual(detach.params, [[490]]);
+});
+
+test('replacement rejects conflicting content identity for an unchanged filename', async () => {
+  const input = buildInput();
+  const database = createDatabase({ oldImages: [{ id: 480, filename: input.assets[0].filename, size: 99, mimetype: 'image/jpeg' }] });
+  await assert.rejects(createRichArticleRepository(database).replacePublishedArticle(input), /immutable content/i);
+  assert.equal(
+    database.calls.some((call) => call.op === 'commit'),
+    false,
   );
 });

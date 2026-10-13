@@ -24,3 +24,18 @@ test('loadRuntimeConfig exposes rich-backfill author IDs without enabling public
   assert.equal(config.enabled, false);
   assert.equal(config.autoPublish, false);
 });
+
+test('ingest runtime carries media flags and credentials without web config or a second database', () => {
+  const config = loadRuntimeConfig({
+    MEDIA_WRITE_MODE: 'r2_on_publish',
+    MEDIA_R2_WRITE_PAUSED: 'true',
+    MEDIA_MUTATIONS_PAUSED: 'true',
+    R2_HARD_LIMIT_BYTES: '9999',
+    R2_ACCOUNT_ID: 'test-account',
+  });
+  assert.equal(config.media.writeMode, 'r2_on_publish');
+  assert.equal(config.media.writePaused, true);
+  assert.equal(config.media.mutationsPaused, true);
+  assert.equal(config.media.hardLimitBytes, 9999);
+  assert.equal(config.media.accountId, 'test-account');
+});

@@ -1,6 +1,5 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const connection = require('@/app/database');
 const { IMG_PATH, VIDEO_PATH } = require('@/constants/filePaths');
 
 const STORAGE_AREAS = new Set(['image', 'video']);
@@ -171,11 +170,25 @@ class LocalMediaCleanupService {
   }
 }
 
-const localMediaCleanupService = new LocalMediaCleanupService({
-  database: connection,
-  roots: { image: IMG_PATH, video: VIDEO_PATH },
-});
+// Importing the injectable class must not initialize the application pool.
+let localMediaCleanupService;
+function getDefaultService() {
+  if (!localMediaCleanupService) {
+    localMediaCleanupService = new LocalMediaCleanupService({
+      database: require('@/app/database'),
+      roots: { image: IMG_PATH, video: VIDEO_PATH },
+    });
+  }
+  return localMediaCleanupService;
+}
 
-module.exports = localMediaCleanupService;
-module.exports.LocalMediaCleanupService = LocalMediaCleanupService;
-module.exports.buildLocalCleanupEntries = buildLocalCleanupEntries;
+module.exports = {
+  enqueueInTransaction(...args) {
+    return getDefaultService().enqueueInTransaction(...args);
+  },
+  processPending(...args) {
+    return getDefaultService().processPending(...args);
+  },
+  LocalMediaCleanupService,
+  buildLocalCleanupEntries,
+};

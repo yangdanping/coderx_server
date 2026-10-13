@@ -1,3 +1,4 @@
+const { smallFilename } = require('@/tasks/mediaCatalog');
 const { isPlaceholderArticle } = require('@/ingest/domain/isPlaceholderArticle');
 
 function createRichArticleRepository(database) {
@@ -52,11 +53,7 @@ function createRichArticleRepository(database) {
 
   async function listRawCandidatesByIds(ids) {
     const safeIds = Array.isArray(ids) ? ids.map(Number) : [];
-    if (
-      safeIds.length === 0 ||
-      safeIds.some((id) => !Number.isSafeInteger(id) || id <= 0) ||
-      new Set(safeIds).size !== safeIds.length
-    ) {
+    if (safeIds.length === 0 || safeIds.some((id) => !Number.isSafeInteger(id) || id <= 0) || new Set(safeIds).size !== safeIds.length) {
       throw new Error('ids must be unique positive integers');
     }
     const [rows] = await database.execute(
@@ -240,16 +237,7 @@ function createRichArticleRepository(database) {
           )
           VALUES (?, ?, ?, ?, ?, ?, ?, ?);
         `,
-        [
-          articleId,
-          candidateId,
-          candidate.sourceId,
-          candidate.canonicalUrl,
-          candidate.titleOriginal,
-          candidate.sourcePublishedAt,
-          candidate.contentMode,
-          candidate.licenseCode,
-        ],
+        [articleId, candidateId, candidate.sourceId, candidate.canonicalUrl, candidate.titleOriginal, candidate.sourcePublishedAt, candidate.contentMode, candidate.licenseCode],
       );
       const [candidateResult] = await connection.execute(
         `
@@ -321,50 +309,67 @@ function createRichArticleRepository(database) {
       );
       if (!authorRows[0]) throw new Error(`Approved existing author not found: ${authorId}`);
 
+      // Serialize replacement with its detached-media cleanup. Retired files keep
+      // their media identities until remote deletion has succeeded after commit.
+      await connection.execute('SELECT pg_advisory_xact_lock(hashtextextended(?::text, 0));', [`coderx:ingest-media:${candidateId}`]);
       const ingestPrefix = `ingest-${candidateId}-%`;
       const [oldImages] = await connection.execute(
         `
           SELECT f.id,
-                 f.filename
+                 f.filename,
+                 f.article_id AS "articleId",
+                 f.size,
+                 f.mimetype,
+                 (SELECT m.sha256 FROM media_object m WHERE m.file_id = f.id AND m.variant = 'original' ORDER BY m.provider LIMIT 1) AS sha256,
+                 EXISTS (SELECT 1 FROM media_object m WHERE m.file_id = f.id AND m.status = 'deleting') AS "hasDeletingMedia"
           FROM file f
-          WHERE f.article_id = ?
+          WHERE (f.article_id = ? OR (f.article_id IS NULL AND f.draft_id IS NULL))
             AND f.file_type = 'image'
             AND f.filename LIKE ?
-          FOR UPDATE;
+            AND NOT EXISTS (SELECT 1 FROM flow_post_media fm WHERE fm.file_id = f.id)
+          FOR UPDATE OF f;
         `,
         [articleId, ingestPrefix],
       );
-      if (oldImages.length > 0) {
-        await connection.execute(
-          `
-            DELETE FROM file
-            WHERE id = ANY(?::bigint[]);
-          `,
-          [oldImages.map((image) => image.id)],
-        );
-      }
-
+      const byFilename = new Map(oldImages.map((image) => [image.filename, image]));
+      const retainedIds = new Set();
       const imageRows = [];
       for (const asset of assets) {
-        const [fileResult] = await connection.execute(
-          `
-            INSERT INTO file (user_id, article_id, filename, mimetype, size, file_type)
-            VALUES (?, ?, ?, ?, ?, 'image')
-            RETURNING id;
-          `,
-          [authorId, articleId, asset.filename, asset.mimetype, asset.size],
-        );
-        const imageId = fileResult.insertId;
-        await connection.execute(
-          `
-            INSERT INTO image_meta (file_id, width, height, is_cover)
-            VALUES (?, ?, ?, ?);
-          `,
-          [imageId, asset.width, asset.height, asset.isCover === true],
-        );
+        const existing = byFilename.get(asset.filename);
+        let imageId;
+        if (existing) {
+          if (Number(existing.size) !== Number(asset.size) || existing.mimetype !== asset.mimetype || (existing.sha256 && asset.sha256 && existing.sha256 !== asset.sha256)) {
+            throw new Error(`Ingest image ${asset.filename} contains different immutable content`);
+          }
+          if (existing.hasDeletingMedia) throw new Error(`Ingest image ${asset.filename} requires deletion retry before reuse`);
+          imageId = Number(existing.id);
+          retainedIds.add(imageId);
+          await connection.execute('UPDATE file SET user_id = ?, article_id = ? WHERE id = ?;', [authorId, articleId, imageId]);
+          await connection.execute('UPDATE image_meta SET width = ?, height = ?, is_cover = ? WHERE file_id = ?;', [asset.width, asset.height, asset.isCover === true, imageId]);
+        } else {
+          const [fileResult] = await connection.execute(
+            `
+              INSERT INTO file (user_id, article_id, filename, mimetype, size, file_type)
+              VALUES (?, ?, ?, ?, ?, 'image')
+              RETURNING id;
+            `,
+            [authorId, articleId, asset.filename, asset.mimetype, asset.size],
+          );
+          imageId = fileResult.insertId;
+          await connection.execute(`INSERT INTO image_meta (file_id, width, height, is_cover) VALUES (?, ?, ?, ?);`, [imageId, asset.width, asset.height, asset.isCover === true]);
+        }
         imageRows.push({ ...asset, id: imageId });
       }
+      const retiredImages = oldImages.filter((image) => !retainedIds.has(Number(image.id)));
+      if (retiredImages.length > 0) {
+        await connection.execute('UPDATE file SET article_id = NULL WHERE id = ANY(?::bigint[]);', [retiredImages.map((image) => image.id)]);
+      }
 
+      // Restoring a previously retired immutable name must cancel a committed
+      // unlink tombstone before the restored file becomes visible.
+      await connection.execute(`DELETE FROM media_local_cleanup WHERE storage_area = 'image' AND filename = ANY(?::text[]);`, [
+        assets.flatMap((asset) => [asset.filename, smallFilename(asset.filename)]),
+      ]);
       const content = buildContent(imageRows);
       const [updateResult] = await connection.execute(
         `
@@ -385,7 +390,9 @@ function createRichArticleRepository(database) {
       return {
         articleId,
         images: imageRows,
-        oldFilenames: oldImages.map((image) => image.filename),
+        oldFilenames: retiredImages.map((image) => image.filename),
+        retiredFileIds: retiredImages.map((image) => Number(image.id)),
+        mediaCleanupManaged: true,
       };
     } catch (error) {
       await connection.rollback();

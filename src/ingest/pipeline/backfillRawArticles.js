@@ -3,7 +3,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { assignAuthors, assignBackfillDates } = require('@/ingest/domain/assignBackfillMetadata');
 const { buildRawArticleContent, rawArticleExcerpt } = require('@/ingest/domain/buildRawArticleContent');
-const { promoteArticleAssets, removeArticleFiles } = require('@/ingest/pipeline/backfillRichArticles');
+const { promoteArticleAssets, removeArticleFiles, synchronizeCommittedMedia, cleanupTemporaryAssets } = require('@/ingest/pipeline/backfillRichArticles');
 
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
@@ -22,6 +22,7 @@ async function backfillRawArticles({
   publicBaseURL,
   promoteAssets = promoteArticleAssets,
   deleteStoredFiles = removeArticleFiles,
+  synchronizeMedia,
 }) {
   const safeIds = Array.isArray(ids) ? ids.map(Number) : [];
   if (safeIds.length === 0 || safeIds.length > 5 || safeIds.some((id) => !Number.isSafeInteger(id) || id <= 0) || new Set(safeIds).size !== safeIds.length) {
@@ -115,11 +116,7 @@ async function backfillRawArticles({
             ...writeInput,
             articleId: candidate.articleId,
           });
-      const currentFilenames = new Set(promoted.assets.map((asset) => asset.filename));
-      await deleteStoredFiles(
-        persistence.oldFilenames.filter((filename) => !currentFilenames.has(filename)),
-        { outputDir },
-      );
+      const media = await synchronizeCommittedMedia({ persistence, promoted, synchronizeMedia, deleteStoredFiles, outputDir });
       const operation = isPending ? 'created' : 'updated';
       result[operation] += 1;
       result.articles.push({
@@ -129,6 +126,7 @@ async function backfillRawArticles({
         authorId,
         createAt,
         imageCount: persistence.images.length,
+        media,
       });
     } catch (error) {
       if (promoted?.copiedPaths?.length) {
@@ -140,8 +138,9 @@ async function backfillRawArticles({
         reason: errorMessage(error),
       });
     } finally {
-      if (localized?.cleanup) await localized.cleanup();
-      await fs.rm(temporaryDir, { recursive: true, force: true });
+      const warnings = await cleanupTemporaryAssets(localized, temporaryDir);
+      const outcome = result.articles.find((article) => article.candidateId === candidate.id) || result.failures.find((entry) => entry.candidateId === candidate.id);
+      if (warnings.length && outcome) outcome.cleanupWarnings = warnings;
     }
   }
 
