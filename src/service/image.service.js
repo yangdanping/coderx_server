@@ -2,7 +2,7 @@ const connection = require('@/app/database');
 const mediaRuntime = require('@/service/mediaRuntime.service');
 const localMediaCleanup = require('@/service/localMediaCleanup.service');
 const BusinessError = require('@/errors/BusinessError');
-const { buildAddImageFileSql } = require('./sql/image.sql');
+const { buildAddImageFileSql, buildArticleImageDraftScope } = require('./sql/image.sql');
 
 function normalizePositiveId(value, name) {
   const normalized = Number(value);
@@ -153,7 +153,7 @@ class ImageService {
               AND f.user_id = ?
               AND f.file_type = 'image'
               AND (f.article_id IS NULL OR f.article_id = ?)
-              AND f.draft_id IS NULL
+              AND ${buildArticleImageDraftScope()}
               AND NOT EXISTS (
                 SELECT 1
                 FROM flow_post_media fm
@@ -161,7 +161,7 @@ class ImageService {
               )
             ORDER BY f.id;
           `,
-          [uniqueImageIds, normalizedUserId, normalizedArticleId],
+          [uniqueImageIds, normalizedUserId, normalizedArticleId, normalizedArticleId],
         );
         if (selectedImages.length !== uniqueImageIds.length) {
           throw new BusinessError('部分图片已被其他内容关联', 409);
@@ -198,20 +198,20 @@ class ImageService {
       // 4. 关联新的图片到该文章
       if (uniqueImageIds.length > 0) {
         const updateArticleStatement = `
-          UPDATE file
+          UPDATE file AS f
           SET article_id = ?, draft_id = NULL
           WHERE id = ANY(?::bigint[])
             AND user_id = ?
             AND file_type = 'image'
             AND (article_id IS NULL OR article_id = ?)
-            AND draft_id IS NULL
+            AND ${buildArticleImageDraftScope()}
             AND NOT EXISTS (
               SELECT 1
               FROM flow_post_media fm
-              WHERE fm.file_id = file.id
+              WHERE fm.file_id = f.id
             );
         `;
-        const [result4] = await conn.execute(updateArticleStatement, [normalizedArticleId, uniqueImageIds, normalizedUserId, normalizedArticleId]);
+        const [result4] = await conn.execute(updateArticleStatement, [normalizedArticleId, uniqueImageIds, normalizedUserId, normalizedArticleId, normalizedArticleId]);
         if (result4.affectedRows !== uniqueImageIds.length) {
           throw new BusinessError('部分图片已被其他内容关联', 409);
         }

@@ -155,7 +155,7 @@ test('updateImageArticle: pg uses update-from SQL for cover reset and cover set'
     assert.match(selectedImagesExecute.statement, /f\.user_id = \?/i);
     assert.match(selectedImagesExecute.statement, /f\.draft_id IS NULL/i);
     assert.doesNotMatch(selectedImagesExecute.statement, /FOR UPDATE/i);
-    assert.deepEqual(selectedImagesExecute.params, [[5, 6], 7, 9]);
+    assert.deepEqual(selectedImagesExecute.params, [[5, 6], 7, 9, 9]);
 
     const clearCoverExecute = executeCalls.find((call) => /SET is_cover = FALSE/i.test(call.statement));
     assert.ok(clearCoverExecute, 'Expected clear-cover update statement');
@@ -174,7 +174,7 @@ test('updateImageArticle: pg uses update-from SQL for cover reset and cover set'
     const bindImagesExecute = executeCalls.find((call) => /SET article_id = \?,\s*draft_id = NULL/i.test(call.statement));
     assert.ok(bindImagesExecute, 'Expected image binding SQL to clear draft_id');
     assert.match(bindImagesExecute.statement, /\buser_id = \?/i);
-    assert.deepEqual(bindImagesExecute.params, [9, [5, 6], 7, 9]);
+    assert.deepEqual(bindImagesExecute.params, [9, [5, 6], 7, 9, 9]);
   } finally {
     console.log = originalConsoleLog;
   }
@@ -214,7 +214,7 @@ test('updateImageArticle: reads old IDs then locks one owner-filtered sorted uni
   assert.deepEqual(calls[fileLockIndex].params, [7, [1, 2]]);
   assert.equal(calls.filter((call) => /FROM file/i.test(call.statement) && /FOR UPDATE/i.test(call.statement)).length, 1);
   const bind = calls.find((call) => /SET article_id = \?,\s*draft_id = NULL/i.test(call.statement));
-  assert.match(bind.statement, /NOT EXISTS[\s\S]*FROM flow_post_media fm[\s\S]*fm\.file_id = file\.id/i);
+  assert.match(bind.statement, /NOT EXISTS[\s\S]*FROM flow_post_media fm[\s\S]*fm\.file_id = f\.id/i);
 });
 
 test('updateImageArticle: a lost final guarded bind is an exposed 409 instead of a raw database error', async () => {
