@@ -14,6 +14,8 @@ repos:
 
       # 检查YAML文件格式
       - id: check-yaml
+        # pnpm 12 writes package-manager and project lock data as separate YAML documents.
+        args: ['--allow-multiple-documents']
         exclude: ^\.pre-commit-config\.yaml$
 
       # 检查JSON文件格式

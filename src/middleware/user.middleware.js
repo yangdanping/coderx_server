@@ -9,7 +9,7 @@ const verifyUserRegister = async (ctx, next) => {
   const { name, password } = ctx.request.body;
   // 2.判断用户名/密码不能为空(null/undefined/空字符串取反都是true,都会进到这里面来)
   if (!name || !password) {
-    console.log(`verifyUserRegister<用户名/密码>校验---用户名${name ? name : '为空'},用户密码${password ? password : '为空'}`);
+    console.log('verifyUserRegister<用户名/密码>校验---缺少用户名或密码');
     return Utils.emitErrMsg(ctx, errorTypes.NAME_OR_PWD_IS_INCORRECT); // emit错误信息,在另外一个地方通过ctx.app.on拿到这个错误信息,而且return后,后续的代码都不会执行了
   } else {
     console.log('verifyUserRegister<用户名/密码>校验---用户名/密码不为空,可进行用户<存在>校验');
@@ -38,18 +38,15 @@ const encryptUserPwd = async (ctx, next) => {
 const verifyUserLogin = async (ctx, next) => {
   // 1.获取用户名/密码,对其进行校验
   const { name, password } = ctx.request.body;
-  console.log(name, password);
-  // console.log(name, password);
   // 2.判断用户名/密码是否为空,一旦为空,后面的校验也就不用再进行,直接退出函数
   if (!name || !password) {
-    console.log(`verifyUserLogin<用户名/密码>校验---用户名${name ? name : '为空'},用户密码${password ? password : '为空'}`);
+    console.log('verifyUserLogin<用户名/密码>校验---缺少用户名或密码');
     return Utils.emitErrMsg(ctx, errorTypes.NAME_OR_PWD_IS_INCORRECT);
   } else {
     console.log('verifyUserLogin<用户名/密码>校验---用户名/密码不为空,可进行用户<存在>校验');
   }
   // 3.判断用户是否存在,用户不存在,后面的校验也就不用再进行,直接退出函数(此处逻辑与user中间件相反)
   const user = await userService.getUserByName(name); //拿到result是个数组,加[]取第一个元素,即该用户在数据库中的完整数据(包含所有字段)
-  console.log(user);
   if (!user) {
     console.log('verifyUserLogin<存在>校验---该用户不存在,登陆失败');
     return Utils.emitErrMsg(ctx, errorTypes.USER_DOES_NOT_EXISTS);

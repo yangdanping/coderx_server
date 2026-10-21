@@ -435,3 +435,22 @@ test('toggleFollow: publish failure does not roll back committed follow and noti
   assert.equal(calls.some((call) => call.type === 'commit'), true);
   assert.equal(calls.some((call) => call.type === 'rollback'), false);
 });
+
+test('addUser: does not log database errors containing the registration password hash', async (t) => {
+  const messages = [];
+  t.mock.method(console, 'error', (...args) => messages.push(require('node:util').inspect(args, { depth: null })));
+  const hash = 'registration-hash-error-sentinel'; // pragma: allowlist secret
+  const failure = Object.assign(new Error('registration insert failed'), { detail: `Failing row contains ${hash}` });
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return {
+        async beginTransaction() {},
+        async execute() { throw failure; },
+        async rollback() {},
+        release() {},
+      };
+    },
+  });
+  await assert.rejects(service.addUser({ name: 'alice', password: hash }), (error) => error === failure);
+  assert.ok(!messages.join('\n').includes(hash), 'registration logger received password hash from database error details');
+});

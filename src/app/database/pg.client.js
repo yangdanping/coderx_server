@@ -34,16 +34,18 @@ pool.on('error', (error) => {
 
 const executeWithLogging = async (client, sql, params = []) => {
   const startTime = Date.now();
+  // Registration writes include a password hash; neither parameters nor driver errors are safe to log.
+  const credentialQuery = /\bpassword\b/i.test(sql);
 
   try {
-    sqlLogger.debug(`执行SQL: ${sql.trim()} | 参数: ${JSON.stringify(params)}`);
+    sqlLogger.debug(`执行SQL: ${sql.trim()} | 参数: ${credentialQuery ? '[REDACTED]' : JSON.stringify(params)}`);
     const result = await client.execute(sql, params);
     const duration = Date.now() - startTime;
     sqlLogger.info(`✓ SQL执行成功 (${duration}ms)`);
     return result;
   } catch (error) {
     const duration = Date.now() - startTime;
-    sqlLogger.error(`✗ SQL执行失败 (${duration}ms): ${error.message}`);
+    sqlLogger.error(`✗ SQL执行失败 (${duration}ms): ${credentialQuery ? 'credential query failed' : error.message}`);
     throw error;
   }
 };

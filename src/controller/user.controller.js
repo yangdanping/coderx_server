@@ -24,12 +24,10 @@ class UserContoller {
     // 3.向客户端返回id,name,token(过期时间会自动添加到 Payload ,也就是jwt的第二个部分)
     // ctx.body = token ? Result.success({ id, name }, 0, token) : Result.fail('生成token失败');
     const data = { id, name, token };
-    console.log('userLogin data', data);
     ctx.body = token ? Result.success(data) : Result.fail('生成token失败'); // 将token放入data中
   };
   addUser = async (ctx, next) => {
     const user = ctx.request.body;
-    console.log('addUser', user);
     const result = await userService.addUser(user);
     ctx.body = Result.success(result);
   };

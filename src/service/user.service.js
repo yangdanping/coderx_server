@@ -60,7 +60,6 @@ class UserService {
     } catch (error) {
       // 回滚事务：撤销所有操作
       await conn.rollback();
-      console.error('添加用户失败:', error);
       throw error; // 抛出错误让上层处理
     } finally {
       // 释放连接回连接池

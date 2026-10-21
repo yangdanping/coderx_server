@@ -5,6 +5,8 @@ const md = new MarkdownIt({
   linkify: true,
   typographer: true,
 });
+// markdown-it 15 / linkify-it 6 changed these defaults; retain legacy article links.
+md.linkify.set({ fuzzyLink: true, urlAuth: true });
 
 class MdUtils {
   /**

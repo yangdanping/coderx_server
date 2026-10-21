@@ -1,0 +1,4 @@
+# Upstream packages pin vulnerable ranges; retain their current majors with patched children.
+overrides:
+  'socket.io-adapter>ws': ^8.21.0
+  'concurrently>shell-quote': ^1.11.0
