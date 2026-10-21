@@ -102,11 +102,14 @@ Google OAuth、R2 媒体存储和内容采集均为可选功能。媒体默认�
 | `pnpm dev:socket`       | 开发模式启动 Socket.IO             |
 | `pnpm test`             | 运行服务、任务和控制器测试         |
 | `pnpm test:media-db`    | 运行需要 PostgreSQL 的媒体集成测试 |
+| `pnpm test:video-media` | 使用真实 FFmpeg 验证短视频和普通视频封面 |
 | `pnpm ingest <command>` | 运行内容采集 CLI                   |
 | `pnpm media:migrate`    | 运行媒体迁移任务                   |
 | `pnpm start`            | 生产模式启动 HTTP API              |
 | `pnpm start:socket`     | 生产模式启动 Socket.IO             |
 | `pnpm start:ingest`     | 生产模式启动内容采集 Worker        |
+
+`pnpm test:video-media` 需要本机已安装 FFmpeg，使用临时文件验证 0.2 秒和 3 秒视频能生成封面，结束后自动清理；不会向数据库写入。
 
 `pnpm test` 不包含 PostgreSQL 集成测试。`test:media-db` 中部分测试会修改应用表，只能连接专用的可丢弃测试数据库，并使用临时 JWT 密钥、本地测试媒体；不要连接开发或生产业务库。
 

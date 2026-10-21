@@ -14,7 +14,8 @@
     "test": "node --test --test-concurrency=1 \"test/service/*.test.js\" \"test/tasks/*.test.js\" \"test/controller/*.test.js\"",
     "test:media-db": "node --test \"test/integration/*.postgres.test.js\"",
     "prettier": "prettier --write .",
-    "update:prettier": "git fetch https://github.com/yangdanping/prettier_config_repo.git main && git checkout FETCH_HEAD -- .prettierrc .prettierignore"
+    "update:prettier": "git fetch https://github.com/yangdanping/prettier_config_repo.git main && git checkout FETCH_HEAD -- .prettierrc .prettierignore",
+    "test:video-media": "node --test test/integration/videoPoster.ffmpeg.test.js"
   },
   "keywords": [],
   "author": "",

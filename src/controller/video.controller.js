@@ -182,7 +182,7 @@ class VideoController {
   /**
    * 使用 ffmpeg 生成视频封面截图（只负责产出物理文件，不再直接写库）
    *
-   * 等价命令：ffmpeg -y -ss 1 -i <videoPath> -frames:v 1 -vf scale=640:-2 <posterPath>
+   * 等价命令：ffmpeg -y -ss 0 -i <videoPath> -frames:v 1 -vf scale=640:-2 <posterPath>
    *
    * @param {string} videoPath - 视频文件路径
    * @param {string} posterFilename - 封面文件名
@@ -195,8 +195,9 @@ class VideoController {
       console.log(`⏳ [视频 ${videoId}] 开始生成封面...`);
 
       const posterPath = path.join(outputFolder, posterFilename);
-      // -ss 放在 -i 前是快速 seek；-vf scale=640:-2 让高度保持偶数，编码友好
-      const args = ['-y', '-ss', '1', '-i', videoPath, '-frames:v', '1', '-vf', 'scale=640:-2', posterPath];
+      // 从首帧截取，避免短于或等于 1 秒的视频因 seek 越过末尾而失败。
+      // -vf scale=640:-2 让高度保持偶数，编码友好
+      const args = ['-y', '-ss', '0', '-i', videoPath, '-frames:v', '1', '-vf', 'scale=640:-2', posterPath];
 
       console.log(`🎯 [视频 ${videoId}] FFmpeg 命令:`, 'ffmpeg', args.join(' '));
 
