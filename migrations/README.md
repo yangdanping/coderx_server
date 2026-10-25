@@ -25,6 +25,12 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/001_fix_file_size_bigint.s
 
 草稿脚本会替换文章草稿唯一索引，旧代码不能继续写入迁移后的数据库。停写、备份和回退边界见 [Flow 发布说明](../FLOW_PUBLICATION.md)。
 
+## 2026-10-21 核对记录
+
+当次本地与生产 232 个列定义一致，关键 Flow 约束已存在；本地 112 个索引、生产 106 个，差异包括 6 个非唯一草稿查询/清理索引及 `file_draft_id_idx` 的谓词。本轮仅补收录历史前置 SQL，没有新增编号迁移，也没有对业务库执行 DDL。索引差异尚未统一，不能称为两个环境 Schema 完全相同。
+
+这些是该次只读快照，不替代下一次部署前的结构核对；代码同步和生产部署边界见 [Flow 发布说明](../FLOW_PUBLICATION.md)。
+
 ## 约定
 
 - 文件名格式：`NNN_snake_case_description.sql`（NNN 自增三位数）

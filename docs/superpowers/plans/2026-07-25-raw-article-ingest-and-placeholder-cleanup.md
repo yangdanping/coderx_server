@@ -1,5 +1,7 @@
 # Raw Article Ingest and Placeholder Cleanup Implementation Plan
 
+> 历史设计/实施快照：保留当时的步骤、版本和勾选状态，不代表当前待办；不要直接重放其中的安装、迁移或发布命令。当前入口见[文档导航](../../README.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Import editable source-language articles with local images and remove the fixed-format placeholder articles from the local database.

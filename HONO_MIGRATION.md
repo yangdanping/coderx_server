@@ -1,14 +1,14 @@
 # Hono migration evaluation — deferred
 
-> Last updated: 2026-08-11
+> Last reviewed: 2026-10-25 (original decision: 2026-08-11)
 >
 > Status: not scheduled; do not implement without a new user decision
 >
-> Learning prototype: `/Users/yangdanping/Desktop/personal_project/learn/learn_hono`
+> Learning prototype: maintainer-local `learn_hono`, outside this repository and not required to run CoderX.
 
 ## Current decision
 
-CoderX Server continues to use Koa 3 and CommonJS. No Hono bootstrap, dependency installation, parallel HTTP process, route cutover, Nginx change, or production migration belongs to the current Flow work.
+CoderX Server continues to use Koa 3 and CommonJS. No Hono bootstrap, dependency installation, parallel HTTP process, route cutover, Nginx change, or production migration is part of the current repository maintenance work.
 
 Hono remains only a possible future direction. The user will decide whether and when to start a separate migration project. Until that decision is explicit, new work follows the current Koa architecture and existing deployment model.
 

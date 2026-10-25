@@ -1,5 +1,7 @@
 # Ingest Media Implementation Plan
 
+> 历史设计/实施快照：保留当时的步骤、版本和勾选状态，不代表当前待办；不要直接重放其中的安装、迁移或发布命令。当前入口见[文档导航](../../README.md)。
+
 > **For agentic workers:** Use superpowers:subagent-driven-development for the application task; the parent performs the dependent production operations.
 
 **Goal:** 修复导入媒体链路并补齐 12 个已发布文件的 24 个变体。

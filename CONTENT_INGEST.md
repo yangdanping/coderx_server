@@ -1,6 +1,6 @@
 # AI 内容采集与回填
 
-内容采集流水线从公开 RSS/Atom 来源建立候选，经过评分、去重和人工审批后发布。抓取、审批与发布都通过独立 CLI/Worker 运行，不依赖 Koa 登录态。
+内容采集流水线从公开 RSS/Atom 来源建立候选，经过评分、去重和人工审核后发布。默认采用保留原文的 `backfill-raw`，不调用模型；旧的审批/模型增强流程单列在后文。抓取、审批与发布都通过独立 CLI/Worker 运行，不依赖 Koa 登录态。
 
 ## 安全边界
 
@@ -61,28 +61,18 @@ pnpm ingest collect --days 30 --limit 100 --per-source-limit 20
 
 日常采集默认遵循各来源的 `dailyLimit`，再按总分选出全局前 10 条。`--per-source-limit` 主要用于首次回填。
 
-### 2. 查看和审批
+### 2. 人工审核原文候选
 
 ```bash
-pnpm ingest list --status pending,enriched --limit 60
-pnpm ingest list --status pending,enriched --limit 60 --json
-pnpm ingest list --status pending,enriched --limit 60 --json \
+pnpm ingest list --status pending,published --limit 60
+pnpm ingest list --status pending,published --limit 60 --json
+pnpm ingest list --status pending,published --limit 60 --json \
   --output data/ingest-batches/review.json
-
-pnpm ingest approve --ids 31,32 --limit 2
 ```
 
-`approve` 不传 `--ids` 时会按评分审批指定数量。生产操作优先传明确 ID。
+本步骤是人工审核列表并选择明确 ID，不执行 `approve`。原文入口只接受未映射的 `pending` 或已有文章映射的 `published` 候选；不要先走 `enrich → approve`；前者会把候选变成 `enriched`，后者只审批 `enriched` 候选并改为 `approved`，均不属于原文新建的 `pending` 状态。
 
-### 3. 发布已审批候选
-
-```bash
-pnpm ingest publish --limit 10
-```
-
-发布使用 `INGEST_AUTHOR_NAME` 对应的现有用户和 `INGEST_TAG_NAME` 对应的现有标签，不会自动创建用户或标签。
-
-### 4. 原文发布或回填（默认方式）
+### 3. 原文发布或回填（默认方式）
 
 ```bash
 INGEST_AUTHOR_IDS=1,2,3,4,5 \
@@ -91,7 +81,7 @@ pnpm ingest backfill-raw --ids 72,3,35,23,55 --limit 5
 
 `backfill-raw` 不调用模型。未映射的 `pending` 候选会发布为新文章；已映射的 `published` 候选会原位更新。正文转换为可编辑的 Tiptap JSON，合格图片保存到本站，原图和缩略图登记到 `media_object`；使用 R2 写模式时继续执行上传与校验。正文事务提交与媒体同步结果分开报告，提交后媒体失败不会回滚已发布文章或删除其新图片。
 
-### 5. 重试已提交文章的媒体同步
+### 4. 重试已提交文章的媒体同步
 
 ```bash
 # 此处为正式文章 ID，不是候选 ID；单次最多 5 个，不接受重复 ID
@@ -100,7 +90,9 @@ pnpm ingest retry-media --ids 301,302 --limit 2
 
 原文/富媒体命令结果中的 `media.status` 可能为 `ready`、`local_ready` 或 `retry_required`。后者需要检查 `registration`、`promotion`、`cleanup` 与 `reason`；修复文件或 R2 配置后按返回的 `articleId` 执行 `retry-media`，不必重新发布文章。`MEDIA_MUTATIONS_PAUSED=true` 禁止回填媒体写入；暂停时重试返回 `retry_required`。
 
-### 6. 模型增强（可选旧流程）
+## 可选旧流程：模型增强与审批发布
+
+以下命令仍保留在代码中，只有明确需要中文增强或旧模板发布时才使用，不属于上述原文流程：
 
 ```bash
 pnpm ingest enrich --limit 60
@@ -113,7 +105,17 @@ pnpm ingest backfill-rich --ids 70,21,54,149,60 --limit 5
 
 `enrich` 生成中文标题、摘要和推荐理由；`backfill-rich` 生成中文重写稿。两者不是默认发布路径。
 
-### 7. 清理旧占位文章
+旧模板流程使用 `enrich → approve → publish`，不是 `backfill-raw` 的前置步骤：
+
+```bash
+pnpm ingest list --status pending,enriched --limit 60
+pnpm ingest approve --ids 31,32 --limit 2
+pnpm ingest publish --limit 10
+```
+
+`approve` 只接受 `enriched` 候选；不传 `--ids` 时按评分审批指定数量。`publish` 使用 `INGEST_AUTHOR_NAME` 和 `INGEST_TAG_NAME` 对应的现有用户、标签，不会自动创建。生产操作需先核对明确的候选范围。
+
+## 清理旧占位文章
 
 ```bash
 # 只输出审核清单
@@ -130,18 +132,18 @@ pnpm ingest purge-placeholders --apply
 `pnpm ingest` 脚本固定使用 `NODE_ENV=development`，即使外部设置 `NODE_ENV=production` 也会覆盖。生产手动操作应明确运行 CLI，使它读取 `.env.production`：
 
 ```bash
-NODE_ENV=production node src/ingest/cli.js list --status pending,enriched --limit 60 --json
+NODE_ENV=production node src/ingest/cli.js list --status pending,published --limit 60 --json
 ```
 
 所有示例中的 ID 都是占位示例；对实际目标库审批、发布、回填或清理前需核对候选与作者。
 
-## 定时 Worker
+## 定时 Worker（包含模型增强，非默认原文路径）
 
 ```bash
 pnpm start:ingest
 ```
 
-`run` 依次执行 `collect` 和 `enrich`。只有显式设置 `INGEST_AUTO_PUBLISH=true` 时才会继续发布已审批候选。
+原文采集默认保持 `INGEST_ENABLED=false`；不要为运行原文批次启用当前 Worker。`run` 依次执行 `collect` 和 `enrich`。只有显式设置 `INGEST_AUTO_PUBLISH=true` 时才会继续发布已审批候选。
 
 PM2 中的 `coderx_ingest_worker` 固定为一个 fork 实例；node-cron 使用 `noOverlap`，采集入口再使用 PostgreSQL advisory lock，避免手动任务和定时任务同时写库。
 

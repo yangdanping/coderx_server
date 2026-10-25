@@ -1,5 +1,7 @@
 # Raw Article Ingest and Placeholder Cleanup Design
 
+> 历史设计/实施快照：保留当时的步骤、版本和勾选状态，不代表当前待办；不要直接重放其中的安装、迁移或发布命令。当前入口见[文档导航](../../README.md)。
+
 ## Goal
 
 Change the AI-content supply path from model-generated Chinese summaries to editable source-language articles. The service will fetch a public source page, retain its readable headings and paragraphs, download related images into CoderX storage, and write a normal Tiptap document that the user can translate manually.
