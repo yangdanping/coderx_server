@@ -1,0 +1,111 @@
+import {
+  buildDeleteConsumedDraftsSql as buildDeleteConsumedDraftsSqlFromDraftSql,
+  buildDeleteDiscardedDraftsSql as buildDeleteDiscardedDraftsSqlFromDraftSql,
+  buildDeleteExpiredActiveDraftsSql as buildDeleteExpiredActiveDraftsSqlFromDraftSql,
+} from '../service/sql/draft.sql.js';
+
+type ThresholdUnit = 'SECOND' | 'HOUR' | 'DAY';
+
+function normalizeThresholdUnit(unit: string): ThresholdUnit {
+  const normalized = String(unit || '').toUpperCase();
+  if (normalized !== 'SECOND' && normalized !== 'HOUR' && normalized !== 'DAY') {
+    throw new Error(`Unsupported threshold unit: ${unit}`);
+  }
+  return normalized;
+}
+
+function buildAgeExpression(unit: ThresholdUnit) {
+  switch (unit) {
+    case 'SECOND':
+      return 'FLOOR(EXTRACT(EPOCH FROM (NOW() - f.create_at)))::integer';
+    case 'HOUR':
+      return 'FLOOR(EXTRACT(EPOCH FROM (NOW() - f.create_at)) / 3600)::integer';
+    case 'DAY':
+      return 'FLOOR(EXTRACT(EPOCH FROM (NOW() - f.create_at)) / 86400)::integer';
+    default:
+      throw new Error(`Unsupported threshold unit: ${unit}`);
+  }
+}
+
+function buildCutoffExpression(unit: ThresholdUnit) {
+  switch (unit) {
+    case 'SECOND':
+      return "NOW() - (? * INTERVAL '1 second')";
+    case 'HOUR':
+      return "NOW() - (? * INTERVAL '1 hour')";
+    case 'DAY':
+      return "NOW() - (? * INTERVAL '1 day')";
+    default:
+      throw new Error(`Unsupported threshold unit: ${unit}`);
+  }
+}
+
+export function buildFindOrphanFilesSql(fileType: string, unit: string) {
+  const normalizedUnit = normalizeThresholdUnit(unit);
+  const ageExpression = `${buildAgeExpression(normalizedUnit)} as age_in_units`;
+  const cutoffExpression = buildCutoffExpression(normalizedUnit);
+
+  if (fileType === 'image') {
+    return `
+        SELECT
+          f.id,
+          f.filename,
+          f.file_type,
+          f.mimetype,
+          f.size,
+          f.create_at as createTime,
+          ${ageExpression}
+        FROM file f
+        LEFT JOIN video_meta vm ON f.filename = vm.poster
+        WHERE f.article_id IS NULL
+          AND f.draft_id IS NULL
+          AND NOT EXISTS (SELECT 1 FROM flow_post_media fm WHERE fm.file_id = f.id)
+          AND vm.poster IS NULL
+          AND f.file_type = ?
+          AND f.create_at < ${cutoffExpression}
+        ORDER BY f.create_at ASC
+        FOR UPDATE OF f SKIP LOCKED
+        `;
+  }
+
+  if (fileType === 'video') {
+    // 通过 LEFT JOIN video_meta 把封面文件名带出来，下游直接按 DB 字段删物理文件，
+    // 不再依赖 "<name>-poster.jpg" 的命名约定（未来若引入多分辨率封面也能扛住）
+    return `
+        SELECT
+          f.id,
+          f.filename,
+          f.file_type,
+          f.mimetype,
+          f.size,
+          f.create_at as createTime,
+          vm.poster,
+          vm.transcode_status,
+          ${ageExpression}
+        FROM file f
+        LEFT JOIN video_meta vm ON f.id = vm.file_id
+        WHERE f.article_id IS NULL
+          AND f.draft_id IS NULL
+          AND NOT EXISTS (SELECT 1 FROM flow_post_media fm WHERE fm.file_id = f.id)
+          AND f.file_type = ?
+          AND vm.transcode_status NOT IN ('pending', 'processing')
+          AND f.create_at < ${cutoffExpression}
+        ORDER BY f.create_at ASC
+        FOR UPDATE OF f SKIP LOCKED
+        `;
+  }
+
+  throw new Error(`不支持的文件类型: ${fileType}`);
+}
+
+export function buildDeleteConsumedDraftsSql(unit = 'DAY') {
+  return buildDeleteConsumedDraftsSqlFromDraftSql('?', unit);
+}
+
+export function buildDeleteDiscardedDraftsSql(unit = 'DAY') {
+  return buildDeleteDiscardedDraftsSqlFromDraftSql('?', unit);
+}
+
+export function buildDeleteExpiredActiveDraftsSql(unit = 'DAY') {
+  return buildDeleteExpiredActiveDraftsSqlFromDraftSql('?', unit);
+}

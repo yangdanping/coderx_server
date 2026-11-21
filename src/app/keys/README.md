@@ -1,6 +1,6 @@
 # JWT 密钥管理
 
-更新：2026-10-25。API 和 Socket 使用本环境同一对 RSA 密钥。配置在 [src/app/config.js](../config.js) 启动时读取密钥；普通代码更新应保留原密钥。
+更新：2026-10-25。API 和 Socket 使用本环境同一对 RSA 密钥。HTTP 和 Socket 启动时读取 JWT_PRIVATE_KEY_PATH 和 JWT_PUBLIC_KEY_PATH 指向的密钥；普通代码更新应保留原密钥。
 
 ## 首次生成
 
@@ -8,11 +8,11 @@
 
 ```bash
 if [ ! -e src/app/keys/private.key ] && [ ! -e src/app/keys/public.key ]; then
-  node src/app/keys/generate-keys.js
+  pnpm exec tsx src/app/keys/generate-keys.ts
 fi
 ```
 
-[生成脚本](./generate-keys.js) 始终写入它所在的 `src/app/keys/`，与调用时的工作目录无关。它会覆盖现有同名文件，因此已有环境不要直接重跑 `node .../generate-keys.js`、`just generate-keys` 或 `just deploy-first-time`。
+[生成脚本](./generate-keys.ts) 将密钥写入脚本所在的目录，按上述源码命令执行时写入 `src/app/keys/`。它会覆盖现有同名文件，因此已有环境不要直接重跑 `pnpm exec tsx .../generate-keys.ts`、`just generate-keys` 或 `just deploy-first-time`。
 
 - `private.key` 用于签名，`public.key` 用于校验；两个文件必须匹配。
 - 当前格式为 RSA 2048 位、PEM 编码，私钥 PKCS#8、公钥 SPKI。
@@ -24,7 +24,7 @@ fi
 1. 确认轮换范围和影响：服务读取新密钥后，旧 JWT 将无法通过校验，用户需要重新登录。
 2. 按运维策略将匹配的旧密钥对存到仓库之外的受保护备份位置；不要在工作区创建未被忽略的 `*.key.backup`。
 3. 在维护窗口生成并安装新的匹配密钥对，确保所有 API 与 Socket 实例使用一致的版本和正确的文件权限。
-4. 从项目根目录重启相关服务（PM2 配置为 `pm2 restart ecosystem.config.js --update-env`），验证新登录、受保护 API 与 Socket 认证。
+4. 从项目根目录重启相关服务（PM2 配置为 `pm2 restart ecosystem.config.cjs --update-env`），验证新登录、受保护 API 与 Socket 认证。
 5. 记录环境、轮换时间和验证结果；备份按保留策略处理。若旧私钥已泄露，不能回退到泄露密钥。
 
 ## 故障排查

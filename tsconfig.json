@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "types": ["node"],
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/http/**/*.ts",
+    "test/controller/**/*.ts",
+    "test/support/**/*.ts",
+    "test/support/**/*.cts",
+    "test/tasks/backgroundJobs.test.ts",
+    "test/tasks/cleanOrphanFiles.sql.test.ts",
+    "test/tasks/cleanOrphanFiles.test.ts",
+    "test/tasks/cleanup.worker.test.ts",
+    "test/tasks/contentIngest.entries.test.ts",
+    "test/tasks/deployConfig.test.ts",
+    "test/tasks/generateKeys.test.ts",
+    "test/tasks/mediaInventory.test.ts",
+    "test/tasks/mediaLocalBackfill.test.ts",
+    "test/tasks/mediaMigration.cli.test.ts",
+    "test/tasks/mediaMigration.test.ts",
+    "test/tasks/mediaObject.migration.test.ts",
+    "test/tasks/mediaReconciliation.test.ts",
+    "test/integration/multipartMemory.test.ts",
+    "test/integration/videoPoster.ffmpeg.test.ts"
+  ],
+  "exclude": ["node_modules", "dist", "docs"]
+}

@@ -8,7 +8,7 @@ i:
 
 # 在服务器上生成JWT密钥对
 generate-keys:
-    cd src/app/keys && node generate-keys.js
+    pnpm exec tsx ./src/app/keys/generate-keys.ts
     @echo "✅ JWT密钥对已生成"
 
 # 推送环境配置到 MacBook
@@ -30,6 +30,7 @@ pull-env-from-macbook:
 # 服务器部署
 deploy:
     #!/bin/bash
+    set -e
     output=$(git pull)
     echo "$output"
     if echo "$output" | grep -q "Already up to date"; then
@@ -38,8 +39,9 @@ deploy:
       echo "📦 检测到代码更新，开始安装依赖..."
       # SSH/非交互环境必须设置 CI，否则 pnpm 可能因无 TTY 中止并破坏 node_modules
       CI=true pnpm i
+      pnpm build
       echo "🔄 重启服务..."
-      pm2 restart ecosystem.config.js
+      pm2 restart ecosystem.config.cjs
       echo "✅ 部署完成"
     fi
 
@@ -86,13 +88,15 @@ start-socket:
 # 首次部署（包含密钥生成）
 deploy-first-time:
     #!/bin/bash
+    set -e
     echo "🚀 开始首次部署..."
     git pull
     pnpm i
+    pnpm build
     echo "🔑 生成JWT密钥对..."
-    cd src/app/keys && node generate-keys.js && cd ../../..
+    pnpm exec tsx ./src/app/keys/generate-keys.ts
     echo "▶️  启动服务..."
-    pm2 start ecosystem.config.js
+    pm2 start ecosystem.config.cjs
     echo "🎉 首次部署完成！"
 
 # 完整部署流程（推送配置 + 代码部署）
@@ -100,3 +104,16 @@ deploy-full:
     just push-env
     ssh aws "cd /root/coderx_server && just deploy"
     @echo "🎉 完整部署完成！"
+
+# 启动已构建的独立 Hono 候选。配置、健康检查和恢复步骤见 deploy/README.md。
+deploy-hono:
+    #!/bin/bash
+    set -eu
+    : "${CODERX_HONO_RELEASE_DIR:?Set CODERX_HONO_RELEASE_DIR to the absolute release directory}"
+    : "${APP_ENV_FILE:?Set APP_ENV_FILE to the absolute config file}"
+    : "${APP_PORT:?Set APP_PORT to the candidate port}"
+    if [[ "$CODERX_HONO_RELEASE_DIR" != /* || "$APP_ENV_FILE" != /* ]]; then
+      echo "CODERX_HONO_RELEASE_DIR and APP_ENV_FILE must be absolute paths" >&2
+      exit 1
+    fi
+    pm2 start "$CODERX_HONO_RELEASE_DIR/deploy/ecosystem.hono.config.cjs" --only coderx_hono_candidate
