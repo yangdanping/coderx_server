@@ -87,7 +87,7 @@ curl http://127.0.0.1:8001/health
 
 ### 独立媒体清理 Worker
 
-`pnpm dev:cleanup` 运行源码入口，`pnpm start:cleanup` 运行编译后的入口。Worker 默认关闭，仅在其进程配置中显式设置 `CLEANUP_WORKER_ENABLED=true` 后启动。旧发布版的 Koa 进程仍可能负责清理。切换时先停止旧调度并等待在途任务退出，保持 Hono 的 `BACKGROUND_JOBS_ENABLED=false`，再启用独立 Worker。
+`pnpm dev:cleanup` 运行源码入口，`pnpm start:cleanup` 运行编译后的入口。Worker 默认关闭，仅在其进程配置中显式设置 `CLEANUP_WORKER_ENABLED=true` 后启动。生产环境的调度归属和交接步骤见[迁移收尾交接](./HONO_MIGRATION.md)。
 
 ## 核心环境变量
 
@@ -170,11 +170,11 @@ HTTP 请求由 `router` 进入 `controller`，再交给 `service` 完成业务�
 
 `ecosystem.config.cjs` 记录 HTTP、Socket.IO 和单实例内容采集 Worker 的 PM2 进程布局。部署前先构建，独立发布目录使用 `dist`、运行时依赖与明确的环境文件、媒体目录和 JWT 密钥路径。
 
-独立 Hono 候选使用 `deploy/ecosystem.hono.config.cjs`、`deploy/nginx.hono.example` 和 `just deploy-hono`。制品构建、环境取值、就绪检查、启停恢复及切流回滚见[候选发布手册](./deploy/README.md)。生产操作按[迁移计划](./docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md)单独授权。已有环境的 JWT 密钥由原环境配置提供。
+2026-11-25 起，AWS 上的 `coderx_hono_candidate` 承接正式业务 HTTP。它由独立 PM2 实例管理，旧版 Socket.IO 和采集进程继续运行。Hono 的发布材料包括 `deploy/ecosystem.hono.config.cjs`、`deploy/nginx.hono.example` 和 `just deploy-hono`。[生产运行与回滚手册](./deploy/README.md)
 
 数据库按[迁移说明](./migrations/README.md)逐项核对；本轮同步未新增业务 DDL，不要重放已应用脚本。
 
-Hono 迁移已完成本地最终验收。Node 22.22.2 和 26.13.1 均通过完整回归与无源码制品验证。数据库、通知和视频处理的隔离实测，以及目标环境待验项目，见[本地验收记录](./docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#2026-11-20-task-11-本地最终验收与交接)。
+Koa → Hono 的阶段进度与剩余三项工作见[迁移收尾交接](./HONO_MIGRATION.md)。
 
 ## 常见问题
 
@@ -198,7 +198,6 @@ Hono 迁移已完成本地最终验收。Node 22.22.2 和 26.13.1 均通过完�
 - [数据库迁移](./migrations/README.md)
 - [JWT 密钥管理](./src/app/keys/README.md)
 - [AI 内容采集与回填](./CONTENT_INGEST.md)
-- [Hono 迁移决定与历史评估](./HONO_MIGRATION.md)
 
 ## License
 

@@ -1,10 +1,18 @@
-# Hono 候选发布手册
+# Hono HTTP 发布与回滚手册
 
-候选由独立 release 内的 `dist/main.js` 提供 HTTP。PM2 只管理 `coderx_hono_candidate`，监听 `127.0.0.1`，应用内清理调度关闭。Socket.IO、采集和独立清理 Worker 各有自己的进程。现有环境的进程、配置和流量变更遵循经授权的发布窗口。 [迁移计划与发布窗口](../docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md)
+## 生产运行状态（2026-11-25）
 
-## 本地验收与目标环境核对
+AWS 上的 `coderx_hono_candidate` 使用独立 release 的 `dist/main.js`，在 `127.0.0.1:18080` 承接两个 Nginx 入口的正式 HTTP。独立 PM2 的 `PM2_HOME` 为 `/opt/coderx-hono/pm2`，由已启用开机启动的 `coderx-hono-candidate.service` 管理。公网 `/health/live` 返回版本号，源站回环 `/health/ready` 检查数据库就绪。
 
-Node 22.22.2 和 26.13.1 均通过完整回归与无源码制品启动验证。独立 PostgreSQL 实测就绪和认证失败，独立 Redis 实测 Socket.IO 通知，FFmpeg 和 ffprobe 实测视频处理。R2 使用 S3 客户端替身，AI 使用本地流式夹具，Google/GitHub 使用 OAuth 替身。目标机版本、实测负载下的排空期限、实际提供方、正式数据库结构和新旧版本共用媒体的兼容性，在获授权的 Task 12 验证。正式发布制品由已批准的提交构建。 [本地验收记录](../docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#2026-11-20-task-11-本地最终验收与交接)
+root 默认 PM2 里的旧 Koa 在 `/root/coderx_server` 运行（端口 8000），仍负责清理并可接回 HTTP。正式媒体、环境文件和 JWT 密钥都引用这个目录中的路径，退休旧进程时需要保留。Socket.IO（端口 8001）与采集各自独立运行。旧 Koa 退役前须核对新旧媒体可读、排空在途工作，交接后仅启用一个独立清理 Worker。若交接后需要回滚，先停并排空新清理 Worker，恢复旧 Koa 及其调度并验证旧端口，再恢复旧 HTTP 上游。[正式切流及回滚记录](../docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#2026-11-25-12b-正式切流与首轮观察)
+
+维护者可在 AWS 上用以下只读命令核对正在服务的版本与进程。检查 Hono 的 PM2 列表前，先确认 systemd 服务处于 active 状态。
+
+```sh
+systemctl is-active coderx-hono-candidate.service
+curl -fsS http://127.0.0.1:18080/health/ready
+sudo -n env PM2_HOME=/opt/coderx-hono/pm2 /opt/coderx-hono/runtime/bin/node /usr/local/bin/pm2 ls
+```
 
 ## 制作和展开制品
 

@@ -1,6 +1,6 @@
 # Flow 发布与草稿版本
 
-更新：2026-10-25。本文维护当前协议与部署边界。
+本文记录 Flow 发布协议、权限和回归测试。
 
 `POST /flow` 必须显式提供 `draft`，与 `clientRequestId`、`content`、`mediaIds` 一起提交：
 
@@ -23,7 +23,7 @@
 
 前端的草稿缓存读写、清理共用同名 [Web Locks](https://www.w3.org/TR/web-locks/) 锁。浏览器无法提供该锁时，发布成功后保留共享缓存并提示清理失败，编辑器仍可继续使用。上线后刷新已有页面，以让所有标签页使用同一缓存协议。
 
-数据库回归：`node --test test/integration/flowMedia.postgres.test.js`。此测试只允许本机 PostgreSQL，在临时 schema 中建表并在结束时删除该 schema。不要将完整 `test:media-db` 当作这项修复的隔离验证，它还包含其他使用应用表的测试。
+对 Flow 数据库回归，先将连接配置指向本机可丢弃的专用测试库，库名须含独立的 `test` 段（如 `coderx_test`）。运行 `node --import=tsx --test test/integration/flowMedia.postgres.test.ts`，测试在临时 schema 内建表并清理。
 
 ## 发布权限（2026-09-30）
 
@@ -31,9 +31,9 @@
 
 封禁响应沿用文章的业务格式：HTTP 200，`{"code":-1,"msg":"您已被封禁"}`。客户端应检查 `code` 并展示 `msg`，保留当前正文和附件。`GET /flow` 与 `GET /flow/:id` 继续公开读取。
 
-权限回归：`node --test --test-concurrency=1 test/controller/flow.router.test.js`。测试使用真实 Koa 路由、RSA JWT 和认证/封禁中间件，仅替换账号状态查询与创建操作，不连接业务表。
+运行 `node --require ./test/support/runtime-guard.cjs --import=tsx --test --test-concurrency=1 test/http/task5d-flow.test.ts` 可验证 Hono 的 Flow 路由、RSA JWT、封禁响应及发布幂等性。
 
-## 当前验收与部署边界（2026-10-21）
+## 2026-10-21 Flow 验收记录
 
 - 首版已于 2026-10-05 配套上线；当前协议继续使用明确草稿引用、版本冲突和幂等请求 ID。
 - 本轮验收源码为后端 `23cdb97`：763 项单元测试、21 项 PostgreSQL 集成测试、真实 FFmpeg 封面回归通过；依赖审计为 0 漏洞。这是当次结果，后续变更需重新验证。
