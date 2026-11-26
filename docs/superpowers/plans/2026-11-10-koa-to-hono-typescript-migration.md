@@ -66,6 +66,14 @@ AWS 隔离目录为 `/home/admin/coderx-12a-ab0d2b5.GOiodXlb`，当次结束时�
 - 当前 Nginx 的两条业务入口均走 Hono。切流后的旧 Koa 应用访问日志仅有本轮回环读请求，抽查时旧端口没有在途连接，也未见 FFmpeg 或 FFprobe。8000 从维护者机器仍可直连，停机前需再次检查连接和日志。
 - 12A AWS 临时目录仍在，约 648 MiB，进程检查未见该目录下的测试服务。12B 测试文章 `182`、媒体 `572` 和 `573` 以及两个专用账号暂留用于复核。
 
+### 2026-11-26 12C 清理交接与旧 HTTP 退役
+
+- 维护者批准立即执行。维护窗口内复核两条 Nginx 业务入口均走 Hono。连续三次抽查旧端口无业务连接，旧请求日志无新增；未见 FFmpeg 或 FFprobe，在处理视频和持久化清理队列均为 0。旧清理任务当日 02:00 的最后一次运行已结束。
+- 15:11:15，旧 Koa 在 root PM2 下收到 `SIGINT` 后以状态 0 退出，旧 PID 退出且 8000 停止监听。PM2 主、备开机恢复清单均只含独立 Socket 和采集进程。交接前的清单、启动配置和单元文件保存在 root 专用目录 `/opt/coderx-hono/cleanup-handoff.QZHG0qxl`。Nginx 切流配置及原回滚配置的校验值复核通过。
+- 15:11:17，`coderx-hono-cleanup.service` 从正式 release 启动并读取本地媒体清理队列，收到 `SIGTERM` 后正常退出。15:11:19，再次启动并重新执行启动扫描。复核时服务为 `active`、`enabled`，`Restart=always`，自动重启计数 0，Hono HTTP 的 `BACKGROUND_JOBS_ENABLED=false`。生产清理按北京时间每天 02:00 调度，首次定时触发的计划时间为 27 日 02:00。
+- 交接后 Hono HTTP、Socket 和采集 PID 及重启计数与交接前一致。两条源站 Nginx HTTP 路径和 Socket 握手通过，公网 liveness 连续 4/4 返回生产构建，原图和封面返回 200，视频 Range 返回 206，验收账号成功连接正式 Socket.IO WebSocket。15:12:15 的 Nginx 快照记录交接后 3 条 2xx、0 条 5xx，数据库队列仍为 0。
+- 盘点并保留 `/home/admin/coderx-12a-ab0d2b5.GOiodXlb`、12A R2 测试桶 `coderx-12a-r2-test`（12A 结束时为零对象）、12B 独立测试文章 `182` 与媒体 `572`、`573`、账号 `14`、`15`。旧 release、共享媒体、JWT、配置及依赖均已保留。[恢复与回滚操作](../../../deploy/README.md#12c-恢复与回滚)
+
 ## 2026-11-25 本机开发数据库
 
 Docker Desktop 的现用容器为 `pg`。移除已停止的升级前容器 `pg-before-upgrade-20261027-174349` 前后，Hono 的 `/health/ready` 和 `GET /tag?limit=1` 均返回 200，标签查询业务码为 0，应用数据库适配器成功提交只读事务。新旧容器挂载不同的数据卷。旧容器的三个卷已保留，其中旧 PostgreSQL 数据卷为 `5294c7d87cbddedfd61a5eb80c19738ed55381a4c16011ebd9e518678244c0df`。

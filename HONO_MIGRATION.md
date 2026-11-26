@@ -1,10 +1,10 @@
 # Hono 迁移收尾交接
 
-Task 0–11 与 12A 已完成。正式 HTTP 于 2026-11-25 15:56 切到 Hono。11 月 26 日完成 12B 生产验收，覆盖 Google 和 GitHub 登录、媒体发布与播放、新旧 HTTP 兼容及双账号实时通知。12C 待生产维护窗口。[各阶段验收记录](docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md)
+Task 0–11、12A、12B 和 12C 均已完成。正式 HTTP 于 2026-11-25 15:56 切到 Hono。11 月 26 日通过生产业务验收，旧 Koa 于 15:11:15 退出，清理由独立 Worker 接手。[各阶段验收记录](docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md)
 
-11 月 26 日复核公网 `/health/live`、源站 `/health/ready` 和 release 的 `BUILD_SHA`，均为 `ab0d2b55d665e614d4c1a57340ea65e48f42cd3e`。Hono HTTP 关闭定时清理，旧 Koa 仍是唯一的清理调度执行方。Socket.IO 和采集独立在线。[AWS 进程与回滚手册](deploy/README.md#生产运行状态2026-11-25)
+公网 `/health/live`、源站 `/health/ready` 和 release 的 `BUILD_SHA` 均为 `ab0d2b55d665e614d4c1a57340ea65e48f42cd3e`。Hono HTTP 的定时清理关闭，唯一清理调度执行方为 `coderx-hono-cleanup.service`。Socket.IO 和采集独立在线。[AWS 进程与回滚手册](deploy/README.md#生产运行状态2026-11-26)
 
-## 下一会话的三项收尾
+## 三项收尾结果
 
 ### 1. 正式业务验收（12B）
 
@@ -27,9 +27,8 @@ Task 0–11 与 12A 已完成。正式 HTTP 于 2026-11-25 15:56 切到 Hono。1
 
 ### 3. 清理任务交接与旧 HTTP 退役（12C）
 
-- [x] 已记录旧 Koa 的恢复命令并核对回滚材料。[12C 回滚准备](deploy/README.md#12c-回滚准备)
-- [ ] 在维护窗口内复核旧请求、上传、AI 流、FFmpeg 和清理作业均已排空，再停旧 Koa 及其调度。
-- [ ] 从 Hono release 用 `CLEANUP_WORKER_ENABLED=true` 启用一个独立清理 Worker（入口 `dist/tasks/cleanup.worker.js`）。Hono HTTP 保持 `BACKGROUND_JOBS_ENABLED=false`。核对实际调度、重启恢复配置、Socket 和采集状态。
-- [ ] 留下清理 Worker 的恢复方法，保留共享媒体、配置、旧 release 及其依赖。确认稳定后盘点本次隔离测试资源。[切流与回滚记录](docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#2026-11-25-12b-正式切流与首轮观察)
+- [x] 在维护窗口内复核旧 HTTP、上传与 AI 流连接、FFmpeg 及清理作业已排空，停止旧 Koa，确认 8000 关闭并从 PM2 主、备开机恢复清单移除。
+- [x] 从正式 Hono release 启用 `coderx-hono-cleanup.service`，验证启动扫描、正常退出和再次启动。清理每天北京时间 02:00 调度，HTTP 保持 `BACKGROUND_JOBS_ENABLED=false`。Socket.IO 和采集进程持续在线。
+- [x] 保留旧 release、共享媒体、配置、依赖及回滚备份，记录恢复命令并盘点 12A 和 12B 测试资源。[12C 恢复与回滚](deploy/README.md#12c-恢复与回滚)
 
-每完成一项，在本页更新状态，并把日期、验证结果及仍需维护者参与的操作写入[验收记录](docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#生产验收与剩余事项)。
+具体时间、验证结果和测试资源见[验收记录](docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#生产验收与剩余事项)。
