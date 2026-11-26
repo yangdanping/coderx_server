@@ -20,14 +20,28 @@ sudo -n env PM2_HOME=/opt/coderx-hono/pm2 /opt/coderx-hono/runtime/bin/node /usr
 
 独立清理 Worker 使用 `coderx-hono-cleanup.service` 管理，入口为正式 Hono release 的 `dist/tasks/cleanup.worker.js`。配置显式引用 `/root/coderx_server/.env.production`、共享媒体根目录 `/root/coderx_server/public` 和日志目录 `/var/log/coderx-hono-cleanup`，并设置 `CLEANUP_WORKER_ENABLED=true`。启用后，检查服务状态和下一次调度时间。清理按北京时间每天 02:00 调度，启动时先处理持久化的本地媒体清理队列。
 
-若 12C 后需恢复旧 Koa，先停用独立 Worker，等待其退出并检查 `ExecMainStatus`，再从原目录仅恢复旧 HTTP 进程及其调度。确认回环请求通过且旧 Koa 是唯一清理执行方后，如需回切正式 HTTP，再执行 Nginx 回滚。
+若 12C 后需恢复旧 Koa，先停用独立 Worker，确认其干净退出，再从原目录仅恢复旧 HTTP 进程及其调度。两次 `pm2 save` 将已恢复的进程定义同时写入正常清单及备用清单。
 
 ```sh
-sudo -n systemctl disable --now coderx-hono-cleanup.service
-sudo -n systemctl show coderx-hono-cleanup.service -p ActiveState -p MainPID -p ExecMainStatus
-sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 start /root/coderx_server/ecosystem.config.js --only coderx_koa_server
-curl -fsS --max-time 5 http://127.0.0.1:8000/tag?limit=1
-sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 save
+(
+  set -eu
+  worker=coderx-hono-cleanup.service
+  sudo -n systemctl disable --now "$worker"
+  test "$(sudo -n systemctl show "$worker" -p ActiveState --value)" = inactive
+  test "$(sudo -n systemctl show "$worker" -p MainPID --value)" = 0
+  test "$(sudo -n systemctl show "$worker" -p Result --value)" = success
+  test "$(sudo -n systemctl show "$worker" -p ExecMainStatus --value)" = 0
+  sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 start /root/coderx_server/ecosystem.config.js --only coderx_koa_server
+  response=$(curl -fsS --retry 5 --retry-connrefused --retry-delay 1 --max-time 5 'http://127.0.0.1:8000/tag?limit=1')
+  printf '%s' "$response" | /opt/coderx-hono/runtime/bin/node -e 'if (JSON.parse(require("node:fs").readFileSync(0)).code !== 0) process.exit(1)'
+  sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 save
+  sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 save
+)
+```
+
+核对旧 Koa 已恢复唯一清理调度。需要回切正式 HTTP 时，再执行 Nginx 回滚。
+
+```sh
 sudo -n /bin/bash /opt/coderx-hono/cutover.WXaBUMbZ/watch.sh rollback
 ```
 
