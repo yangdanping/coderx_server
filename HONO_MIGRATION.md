@@ -32,3 +32,7 @@ Task 0–11、12A、12B 和 12C 均已完成。正式 HTTP 于 2026-11-25 15:56 
 - [x] 保留旧 release、共享媒体、配置、依赖及回滚备份，记录恢复命令并盘点 12A 和 12B 测试资源。[12C 恢复与回滚](deploy/README.md#12c-恢复与回滚)
 
 具体时间、验证结果和测试资源见[验收记录](docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#生产验收与剩余事项)。
+
+## 旧部署清理与 Socket.IO 迁出
+
+11 月 26 日移除仓库中的旧目录部署命令，更新 PM2 示例、环境配置和文档。旧 Socket 的依赖链未引入 Koa、其专用中间件或旧 HTTP 入口。生产 Socket 已改由正式 TypeScript release 的独立 systemd 单元启动，沿用 8001、Redis 和共享 JWT 公钥。采集仍从旧 release 独立运行，共享媒体、环境文件、密钥及回滚材料继续保留。[Socket.IO 发布与回滚](deploy/README.md#socketio-发布与回滚)
