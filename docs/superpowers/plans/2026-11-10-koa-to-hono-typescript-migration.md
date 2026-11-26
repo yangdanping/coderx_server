@@ -48,7 +48,8 @@ AWS 隔离目录为 `/home/admin/coderx-12a-ab0d2b5.GOiodXlb`，当次结束时�
 - 公网 `/ai/chat` 用合成提示返回 HTTP 200 和 `text/event-stream`，首包约 1.77 秒，约 10.56 秒收到文本及 `[DONE]`。
 - OAuth 状态接口显示 Google 和 GitHub 均启用，两种授权入口均返回 200，生成的 `redirect_uri` 均指向各自的正式 API 回调路径。
 - 14:55:42，正式 API 收到 Google 回调并返回 302，维护者确认回到正式站后显示预期账号。Google 登录验收通过。
-- GitHub 授权页面返回 `Invalid Redirect URI`。源站分别向 Hono `18080` 和 Koa `8000` 请求授权链接，两边生成相同的 Client ID 及 `https://api.ydp321.asia/oauth/github/callback`。依 Client ID 定位 GitHub 的 `coderx` OAuth App，确认登记的回调域名首字母录入错误。约 15:03，维护者修正登记值，GitHub 设置页显示保存成功且回调地址与生产 API 一致。等待正式站 GitHub 登录复测。
+- GitHub 授权页面返回 `Invalid Redirect URI`。源站分别向 Hono `18080` 和 Koa `8000` 请求授权链接，两边生成相同的 Client ID 及 `https://api.ydp321.asia/oauth/github/callback`。依 Client ID 定位 GitHub 的 `coderx` OAuth App，确认登记的回调域名首字母录入错误。约 15:03，维护者修正登记值，GitHub 设置页显示保存成功且回调地址与生产 API 一致。
+- 15:06:39，正式 API 收到新的 GitHub 授权请求并返回 200。15:06:48 收到 GitHub 回调并返回 302，维护者确认回到正式站后登录成功。GitHub 登录验收通过，12B 完成。
 
 ### 2026-11-26 后端归档
 
@@ -64,6 +65,14 @@ AWS 隔离目录为 `/home/admin/coderx-12a-ab0d2b5.GOiodXlb`，当次结束时�
 - 临时 systemd 单元在 AWS 通过 `systemd-analyze verify`。同一 release 的 cron 组件用空回调计算下一次调度为 27 日 02:00。生产服务的安装与启动等待维护窗口。
 - 当前 Nginx 的两条业务入口均走 Hono。切流后的旧 Koa 应用访问日志仅有本轮回环读请求，抽查时旧端口没有在途连接，也未见 FFmpeg 或 FFprobe。8000 从维护者机器仍可直连，停机前需再次检查连接和日志。
 - 12A AWS 临时目录仍在，约 648 MiB，进程检查未见该目录下的测试服务。12B 测试文章 `182`、媒体 `572` 和 `573` 以及两个专用账号暂留用于复核。
+
+### 2026-11-26 12C 清理交接与旧 HTTP 退役
+
+- 维护者批准立即执行。维护窗口内复核两条 Nginx 业务入口均走 Hono。连续三次抽查旧端口无业务连接，旧请求日志无新增；未见 FFmpeg 或 FFprobe，在处理视频和持久化清理队列均为 0。旧清理任务当日 02:00 的最后一次运行已结束。
+- 15:11:15，旧 Koa 在 root PM2 下收到 `SIGINT` 后以状态 0 退出，旧 PID 退出且 8000 停止监听。PM2 主、备开机恢复清单均只含独立 Socket 和采集进程。交接前的清单、启动配置和单元文件保存在 root 专用目录 `/opt/coderx-hono/cleanup-handoff.QZHG0qxl`。Nginx 切流配置及原回滚配置的校验值复核通过。
+- 15:11:17，`coderx-hono-cleanup.service` 从正式 release 启动并读取本地媒体清理队列，收到 `SIGTERM` 后正常退出。15:11:19，再次启动并重新执行启动扫描。复核时服务为 `active`、`enabled`，`Restart=always`，自动重启计数 0，Hono HTTP 的 `BACKGROUND_JOBS_ENABLED=false`。生产清理按北京时间每天 02:00 调度，首次定时触发的计划时间为 27 日 02:00。
+- 交接后 Hono HTTP、Socket 和采集 PID 及重启计数与交接前一致。两条源站 Nginx HTTP 路径和 Socket 握手通过，公网 liveness 连续 4/4 返回生产构建，原图和封面返回 200，视频 Range 返回 206，验收账号成功连接正式 Socket.IO WebSocket。15:12:15 的 Nginx 快照记录交接后 3 条 2xx、0 条 5xx，数据库队列仍为 0。
+- 盘点并保留 `/home/admin/coderx-12a-ab0d2b5.GOiodXlb`、12A R2 测试桶 `coderx-12a-r2-test`（12A 结束时为零对象）、12B 独立测试文章 `182` 与媒体 `572`、`573`、账号 `14`、`15`。旧 release、共享媒体、JWT、配置及依赖均已保留。[恢复与回滚操作](../../../deploy/README.md#12c-恢复与回滚)
 
 ## 2026-11-25 本机开发数据库
 

@@ -1,10 +1,10 @@
 # Hono HTTP 发布与回滚手册
 
-## 生产运行状态（2026-11-25）
+## 生产运行状态（2026-11-26）
 
 AWS 上的 `coderx_hono_candidate` 使用独立 release 的 `dist/main.js`，在 `127.0.0.1:18080` 承接两个 Nginx 入口的正式 HTTP。独立 PM2 的 `PM2_HOME` 为 `/opt/coderx-hono/pm2`，由已启用开机启动的 `coderx-hono-candidate.service` 管理。公网 `/health/live` 返回版本号，源站回环 `/health/ready` 检查数据库就绪。
 
-root 默认 PM2 里的旧 Koa 在 `/root/coderx_server` 运行（端口 8000），仍负责清理并可接回 HTTP。正式媒体、环境文件和 JWT 密钥都引用这个目录中的路径，退休旧进程时需要保留。Socket.IO（端口 8001）与采集各自独立运行。旧 Koa 退役前须核对新旧媒体可读、排空在途工作，交接后仅启用一个独立清理 Worker。若交接后需要回滚，先停并排空新清理 Worker，恢复旧 Koa 及其调度并验证旧端口，再恢复旧 HTTP 上游。[正式切流及回滚记录](../docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#2026-11-25-12b-正式切流与首轮观察)
+旧 Koa 已停止，8000 已关闭。root PM2 的主、备开机清单保存 Socket.IO（8001）和采集。独立的 `coderx-hono-cleanup.service` 执行定时清理。旧 Koa release、正式媒体、环境文件、JWT 密钥和依赖仍在 `/root/coderx_server`，供当前服务及回滚使用。[12C 操作记录](../docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#2026-11-26-12c-清理交接与旧-http-退役)
 
 维护者可在 AWS 上用以下只读命令核对正在服务的版本与进程。检查 Hono 的 PM2 列表前，先确认 systemd 服务处于 active 状态。
 
@@ -12,11 +12,13 @@ root 默认 PM2 里的旧 Koa 在 `/root/coderx_server` 运行（端口 8000）�
 systemctl is-active coderx-hono-candidate.service
 curl -fsS http://127.0.0.1:18080/health/ready
 sudo -n env PM2_HOME=/opt/coderx-hono/pm2 /opt/coderx-hono/runtime/bin/node /usr/local/bin/pm2 ls
+systemctl is-active coderx-hono-cleanup.service
+systemctl is-enabled coderx-hono-cleanup.service
 ```
 
-### 12C 回滚准备
+### 12C 恢复与回滚
 
-旧 Koa 用原目录的 `/root/coderx_server/ecosystem.config.js` 恢复。维护窗口内先保存 root PM2 的恢复清单。旧 Koa 停止后检查旧 PID 和 8000 监听均退出，再从 PM2 的当前定义及主、备开机恢复清单移除旧 Koa。核对 Socket 与采集仍在清单中。Hono HTTP 的 `BACKGROUND_JOBS_ENABLED` 保持 `false`。
+旧 Koa 用原目录的 `/root/coderx_server/ecosystem.config.js` 恢复。12C 备份目录 `/opt/coderx-hono/cleanup-handoff.QZHG0qxl` 保存交接前的 PM2 主、备清单、旧 Koa 启动配置、Worker 单元和现场记录。Hono HTTP 的 `BACKGROUND_JOBS_ENABLED` 保持 `false`。
 
 独立清理 Worker 使用 `coderx-hono-cleanup.service` 管理，入口为正式 Hono release 的 `dist/tasks/cleanup.worker.js`。配置显式引用 `/root/coderx_server/.env.production`、共享媒体根目录 `/root/coderx_server/public` 和日志目录 `/var/log/coderx-hono-cleanup`，并设置 `CLEANUP_WORKER_ENABLED=true`。启用后，检查服务状态和下一次调度时间。清理按北京时间每天 02:00 调度，启动时先处理持久化的本地媒体清理队列。
 
@@ -33,7 +35,7 @@ sudo -n env PM2_HOME=/opt/coderx-hono/pm2 /opt/coderx-hono/runtime/bin/node /usr
   test "$(sudo -n systemctl show "$worker" -p ExecMainStatus --value)" = 0
   sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 start /root/coderx_server/ecosystem.config.js --only coderx_koa_server
   response=$(curl -fsS --retry 5 --retry-connrefused --retry-delay 1 --max-time 5 'http://127.0.0.1:8000/tag?limit=1')
-  printf '%s' "$response" | /opt/coderx-hono/runtime/bin/node -e 'if (JSON.parse(require("node:fs").readFileSync(0)).code !== 0) process.exit(1)'
+  printf '%s' "$response" | sudo -n /opt/coderx-hono/runtime/bin/node -e 'if (JSON.parse(require("node:fs").readFileSync(0)).code !== 0) process.exit(1)'
   sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 save
   sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 save
 )
