@@ -46,7 +46,9 @@ AWS 隔离目录为 `/home/admin/coderx-12a-ab0d2b5.GOiodXlb`，当次结束时�
 - 自 25 日 15:56:46 切流至 26 日 14:29:46，现存 API Nginx 访问日志记录 24 条 1xx、644 条 2xx、44 条 4xx、0 条 5xx。Hono 应用日志从切流至 26 日 14:30:49 有 618 条处理耗时样本，整体最近秩 P95 为 263 毫秒，GET 为 506 毫秒（459 条），POST 为 2691 毫秒（20 条）。应用计时截止到响应对象生成。另取 15 条客户端计时的业务验收请求，均为 HTTP 200，中位数 774 毫秒，P95 为 3471 毫秒，最慢为视频关联与归档。
 - 源站负载快照为 0.00，`vmstat` 两个实时采样 CPU 空闲 100%，可用内存约 675 MiB，Hono HTTP 主进程 RSS 约 250 MiB。数据库连接上限 100，空闲时的只读快照仅见采样会话 1 条，未见其他活跃查询。媒体状态查询未见待处理或正在处理的视频。
 - 公网 `/ai/chat` 用合成提示返回 HTTP 200 和 `text/event-stream`，首包约 1.77 秒，约 10.56 秒收到文本及 `[DONE]`。
-- OAuth 状态接口显示 Google 和 GitHub 均启用，两种授权入口均返回 200，授权链接指向各自供应商，`redirect_uri` 与正式 API 的回调路径匹配。两种正式登录等待维护者在正式站完成回调并核对身份。
+- OAuth 状态接口显示 Google 和 GitHub 均启用，两种授权入口均返回 200，生成的 `redirect_uri` 均指向各自的正式 API 回调路径。
+- 14:55:42，正式 API 收到 Google 回调并返回 302，维护者确认回到正式站后显示预期账号。Google 登录验收通过。
+- GitHub 授权页面返回 `Invalid Redirect URI`。源站分别向 Hono `18080` 和 Koa `8000` 请求授权链接，两边生成相同的 Client ID 及 `https://api.ydp321.asia/oauth/github/callback`。依 Client ID 定位 GitHub 的 `coderx` OAuth App，确认登记的回调域名首字母录入错误。约 15:03，维护者修正登记值，GitHub 设置页显示保存成功且回调地址与生产 API 一致。等待正式站 GitHub 登录复测。
 
 ### 2026-11-26 后端归档
 
