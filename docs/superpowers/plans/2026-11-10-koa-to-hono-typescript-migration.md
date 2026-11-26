@@ -48,7 +48,8 @@ AWS 隔离目录为 `/home/admin/coderx-12a-ab0d2b5.GOiodXlb`，当次结束时�
 - 公网 `/ai/chat` 用合成提示返回 HTTP 200 和 `text/event-stream`，首包约 1.77 秒，约 10.56 秒收到文本及 `[DONE]`。
 - OAuth 状态接口显示 Google 和 GitHub 均启用，两种授权入口均返回 200，生成的 `redirect_uri` 均指向各自的正式 API 回调路径。
 - 14:55:42，正式 API 收到 Google 回调并返回 302，维护者确认回到正式站后显示预期账号。Google 登录验收通过。
-- GitHub 授权页面返回 `Invalid Redirect URI`。源站分别向 Hono `18080` 和 Koa `8000` 请求授权链接，两边生成相同的 Client ID 及 `https://api.ydp321.asia/oauth/github/callback`。依 Client ID 定位 GitHub 的 `coderx` OAuth App，确认登记的回调域名首字母录入错误。约 15:03，维护者修正登记值，GitHub 设置页显示保存成功且回调地址与生产 API 一致。等待正式站 GitHub 登录复测。
+- GitHub 授权页面返回 `Invalid Redirect URI`。源站分别向 Hono `18080` 和 Koa `8000` 请求授权链接，两边生成相同的 Client ID 及 `https://api.ydp321.asia/oauth/github/callback`。依 Client ID 定位 GitHub 的 `coderx` OAuth App，确认登记的回调域名首字母录入错误。约 15:03，维护者修正登记值，GitHub 设置页显示保存成功且回调地址与生产 API 一致。
+- 15:06:39，正式 API 收到新的 GitHub 授权请求并返回 200。15:06:48 收到 GitHub 回调并返回 302，维护者确认回到正式站后登录成功。GitHub 登录验收通过，12B 完成。
 
 ### 2026-11-26 后端归档
 
