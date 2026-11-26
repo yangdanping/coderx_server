@@ -46,11 +46,12 @@ AWS 隔离目录为 `/home/admin/coderx-12a-ab0d2b5.GOiodXlb`，当次结束时�
 - 自 25 日 15:56:46 切流至 26 日 14:29:46，现存 API Nginx 访问日志记录 24 条 1xx、644 条 2xx、44 条 4xx、0 条 5xx。Hono 应用日志从切流至 26 日 14:30:49 有 618 条处理耗时样本，整体最近秩 P95 为 263 毫秒，GET 为 506 毫秒（459 条），POST 为 2691 毫秒（20 条）。应用计时截止到响应对象生成。另取 15 条客户端计时的业务验收请求，均为 HTTP 200，中位数 774 毫秒，P95 为 3471 毫秒，最慢为视频关联与归档。
 - 源站负载快照为 0.00，`vmstat` 两个实时采样 CPU 空闲 100%，可用内存约 675 MiB，Hono HTTP 主进程 RSS 约 250 MiB。数据库连接上限 100，空闲时的只读快照仅见采样会话 1 条，未见其他活跃查询。媒体状态查询未见待处理或正在处理的视频。
 - 公网 `/ai/chat` 用合成提示返回 HTTP 200 和 `text/event-stream`，首包约 1.77 秒，约 10.56 秒收到文本及 `[DONE]`。
-- OAuth 状态接口显示 Google 和 GitHub 均启用。两种正式登录等待维护者在正式站完成回调并核对身份。
+- OAuth 状态接口显示 Google 和 GitHub 均启用，两种授权入口均返回 200，授权链接指向各自供应商，`redirect_uri` 与正式 API 的回调路径匹配。两种正式登录等待维护者在正式站完成回调并核对身份。
 
-### 2026-11-26 后端归档进度
+### 2026-11-26 后端归档
 
-- 本地 Node 26.13.1 下通过类型检查、构建和 888 项回归测试。迁移分支已推送，维护者已确认通过 [PR #4](https://github.com/yangdanping/coderx_server/pull/4) 创建合并提交。
+- 本地 Node 26.13.1 下通过类型检查、构建和 888 项回归测试。合并前复核了 HTTP、媒体、清理与回滚路径。14:36:10，按维护者确认的方式通过 [PR #4](https://github.com/yangdanping/coderx_server/pull/4) 创建合并提交 `66660c94405dfca63b3a1f6e0c6e0343f7ac2986`。
+- 重新抓取 `origin/main` 后，用 `git merge-base --is-ancestor` 核对上线提交 `ab0d2b55d665e614d4c1a57340ea65e48f42cd3e` 和验收文档提交 `90693a3`，两项均通过。对照迁移分支与远程 `main`，三份交接与运行文档内容一致。
 - 单独核对前端 `coderx.my` 对应的 Vercel production 部署 `dpl_GRoLBYNkYWrr5eTfDLQXM1xqnWP7`，状态 Ready，创建于 11 月 25 日 17:53:41。
 
 ### 2026-11-26 12C 只读准备
@@ -58,6 +59,9 @@ AWS 隔离目录为 `/home/admin/coderx-12a-ab0d2b5.GOiodXlb`，当次结束时�
 - Hono、旧 Koa、Socket.IO、采集均在线。Hono HTTP 的 `BACKGROUND_JOBS_ENABLED=false`。旧 Koa 的调度记录显示 26 日 02:00 的图片和视频清理检查均结束，PM2 中尚无独立清理 Worker，媒体清理队列为 0。
 - AWS 切流及回滚 Nginx 配置 SHA-256 与 25 日记录一致。旧 Koa release `1eb6d156392255094988fd51a12b1b4fd9f02276` 的工作目录、启动配置、依赖和回环读请求均已核对。
 - root PM2 开机恢复清单当前包含旧 Koa、Socket 和采集。12C 将先保存回滚材料，再从正常清单及备用清单移除旧 Koa，保留另外两个进程。独立 Worker 需显式使用现有共享媒体根目录和独立日志目录。
+- 临时 systemd 单元在 AWS 通过 `systemd-analyze verify`。同一 release 的 cron 组件用空回调计算下一次调度为 27 日 02:00。生产服务的安装与启动等待维护窗口。
+- 当前 Nginx 的两条业务入口均走 Hono。切流后的旧 Koa 应用访问日志仅有本轮回环读请求，抽查时旧端口没有在途连接，也未见 FFmpeg 或 FFprobe。8000 从维护者机器仍可直连，停机前需再次检查连接和日志。
+- 12A AWS 临时目录仍在，约 648 MiB，进程检查未见该目录下的测试服务。12B 测试文章 `182`、媒体 `572` 和 `573` 以及两个专用账号暂留用于复核。
 
 ## 2026-11-25 本机开发数据库
 

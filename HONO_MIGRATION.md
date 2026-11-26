@@ -17,11 +17,11 @@ Task 0–11 与 12A 已完成。正式 HTTP 于 2026-11-25 15:56 切到 Hono。1
 
 ### 2. 后端仓库归档
 
-11 月 26 日已推送 `codex/hono-typescript-migration`。维护者选定在 [PR #4](https://github.com/yangdanping/coderx_server/pull/4) 创建合并提交，保留上线 SHA。
+11 月 26 日已推送 `codex/hono-typescript-migration`。[PR #4](https://github.com/yangdanping/coderx_server/pull/4) 按维护者选定的方式创建了合并提交 `66660c94405dfca63b3a1f6e0c6e0343f7ac2986`。
 
 - [x] 将后端迁移分支推送到远程，类型检查、构建及 888 项本地回归通过。
-- [ ] 完成合并前复核，按维护者选定的方式合入 `main`。
-- [ ] 更新远程引用，验证远程主分支包含这次上线的版本和交接文档。保留提交历史的合并可用 `git merge-base --is-ancestor ab0d2b55d665e614d4c1a57340ea65e48f42cd3e origin/main` 核对。前端 Vercel 发布单独记录。
+- [x] 完成合并前复核，通过合并提交合入 `main`。
+- [x] 重新抓取 `origin/main`，验证上线版本 `ab0d2b5` 和验收文档提交 `90693a3` 均为其祖先提交。前端 Vercel 发布单独记录。
 
 ### 3. 清理任务交接与旧 HTTP 退役（12C）
 
