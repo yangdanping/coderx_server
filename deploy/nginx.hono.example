@@ -1,0 +1,99 @@
+# http-context example based on repository nignx.conf. Merge into the verified
+# vhosts and existing TLS/access policy. This file is also a local smoke fixture.
+# Replace example listener and upstream ports with verified values.
+map $http_upgrade $coderx_connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+upstream coderx_hono_http {
+    server 127.0.0.1:18000;
+}
+
+upstream coderx_socket {
+    server 127.0.0.1:18001;
+}
+
+# Historical API host serves paths at the root.
+server {
+    listen 127.0.0.1:18080;
+    server_name api.ydp321.asia;
+
+    location / {
+        # No URI in proxy_pass. Forward /oauth/..., /article/..., and /ai/... as received.
+        proxy_pass http://coderx_hono_http;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Preserve the historical aggregate upload limit. Application file/part limits also apply.
+        client_max_body_size 100m;
+        client_body_timeout 60s;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        gzip off;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 60s;
+        # Idle time between upstream reads, including AI streaming.
+        proxy_read_timeout 180s;
+        proxy_intercept_errors off;
+        proxy_next_upstream off;
+    }
+
+    location ^~ /socket.io/ {
+        proxy_pass http://coderx_socket;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $coderx_connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Exceed Socket.IO pingInterval (25s) + pingTimeout (60s).
+        proxy_read_timeout 120s;
+        proxy_buffering off;
+    }
+}
+
+# Merge these locations into the existing frontend/default vhost.
+# The live vhost supplies its existing server_name, TLS, SPA/static routes and access policy.
+server {
+    listen 127.0.0.1:18080 default_server;
+    server_name _;
+
+    location ^~ /api/ {
+        # The trailing slash removes /api/ as in the existing frontend proxy.
+        proxy_pass http://coderx_hono_http/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        client_max_body_size 100m;
+        client_body_timeout 60s;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        gzip off;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 180s;
+        proxy_intercept_errors off;
+        proxy_next_upstream off;
+    }
+
+    location ^~ /socket.io/ {
+        proxy_pass http://coderx_socket;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $coderx_connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+        proxy_buffering off;
+    }
+}

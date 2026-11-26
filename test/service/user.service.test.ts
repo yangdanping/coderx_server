@@ -1,0 +1,441 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { inspect } from 'node:util';
+import { createUserService, legacyUserQueryResult } from '../../src/service/user.factory.js';
+
+function loadServiceWithConnection(connection, options = {}) {
+  return createUserService({
+    connection, baseURL: 'https://api.example',
+    notificationService: options.notificationService ?? {
+      async createFollowNotification() {
+        return { created: false, notification: null };
+      },
+    },
+    publishNotificationCreated: options.publishNotificationCreated ?? (async () => {
+      throw new Error('publishNotificationCreated should not be called');
+    }),
+  });
+}
+
+function createTransactionalMock(executeHandler) {
+  const calls = [];
+  const conn = {
+    async beginTransaction() {
+      calls.push({ type: 'beginTransaction' });
+    },
+    async execute(statement, params) {
+      calls.push({ type: 'execute', statement, params });
+      return executeHandler(statement, params, calls);
+    },
+    async commit() {
+      calls.push({ type: 'commit' });
+    },
+    async rollback() {
+      calls.push({ type: 'rollback' });
+    },
+    release() {
+      calls.push({ type: 'release' });
+    },
+  };
+  return { conn, calls };
+}
+
+test('getUserByName: pg executes query against quoted user table', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    dialect: 'pg',
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      return [[{ id: 1, name: 'alice' }], []];
+    },
+  });
+
+  const user = await service.getUserByName('alice');
+
+  assert.deepEqual(user, { id: 1, name: 'alice' });
+  assert.match(calls[0].statement, /FROM\s+"user"\s+WHERE\s+name\s*=\s*\?/i);
+  assert.doesNotMatch(calls[0].statement, /FROM\s+user\s+WHERE\s+name\s*=\s*\?/i);
+  assert.deepEqual(calls[0].params, ['alice']);
+});
+
+test('getCommentById: pg uses limit-first params and pg-safe author SQL', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    dialect: 'pg',
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      return [[{ id: 2, title: 'hello', content: 'world', likes: 0 }], []];
+    },
+  });
+
+  const comments = await service.getCommentById(9, '20', '10');
+
+  assert.deepEqual(comments, [{ id: 2, title: 'hello', content: 'world', likes: 0 }]);
+  assert.match(calls[0].statement, /jsonb_build_object\s*\(\s*'id',\s*u\.id/i);
+  assert.match(calls[0].statement, /LEFT JOIN\s+"user"\s+u\s+ON\s+u\.id\s*=\s*c\.user_id/i);
+  assert.match(calls[0].statement, /LIMIT\s+\?\s+OFFSET\s+\?/i);
+  assert.deepEqual(calls[0].params, [9, '10', '20']);
+});
+
+test('getHotUsers: normalizes legacy avatar hosts to the current public API origin', async () => {
+  const service = loadServiceWithConnection({
+    dialect: 'pg',
+    async execute() {
+      return [[
+        { id: 2, name: 'legacy-user', avatarUrl: 'http://localhost:8000/user/2/avatar' },
+        { id: 3, name: 'external-user', avatarUrl: 'https://avatars.example/u/3.png' },
+      ], []];
+    },
+  });
+
+  const users = await service.getHotUsers();
+
+  assert.deepEqual(users, [
+    { id: 2, name: 'legacy-user', avatarUrl: 'https://api.example/user/2/avatar' },
+    { id: 3, name: 'external-user', avatarUrl: 'https://avatars.example/u/3.png' },
+  ]);
+});
+
+test('getArticleByCollectId: pg reads excerpt instead of legacy content for collected articles', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    dialect: 'pg',
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      return [[{ id: 3, title: 'hello', excerpt: 'preview' }], []];
+    },
+  });
+
+  const articles = await service.getArticleByCollectId(9, 5, '20', '10');
+
+  assert.deepEqual(articles, [{ id: 3, title: 'hello', excerpt: 'preview' }]);
+  assert.match(calls[0].statement, /a\.excerpt\s+AS\s+"excerpt"/i);
+  assert.doesNotMatch(calls[0].statement, /\ba\.content\b/i);
+  assert.match(calls[0].statement, /LIMIT\s+\?\s+OFFSET\s+\?/i);
+  assert.deepEqual(calls[0].params, [9, 5, '10', '20']);
+});
+
+test('toggleLike: invalid table name throws BusinessError instead of ReferenceError', async () => {
+  const service = loadServiceWithConnection({
+    dialect: 'pg',
+    async execute() {
+      throw new Error('execute should not be called for invalid table name');
+    },
+  });
+
+  await assert.rejects(
+    () => service.toggleLike('invalid_table', 1, 2),
+    (error) => {
+      assert.equal(error.name, 'BusinessError');
+      assert.equal(error.message, '非法的表名');
+      assert.equal(error.httpStatus, 400);
+      return true;
+    }
+  );
+});
+
+test('addUser: persists a normalized optional nickname in the profile transaction', async () => {
+  const calls = [];
+  const connectionMock = {
+    dialect: 'pg',
+    async getConnection() {
+      return {
+        async beginTransaction() {
+          calls.push({ type: 'beginTransaction' });
+        },
+        async execute(statement, params) {
+          calls.push({ type: 'execute', statement, params });
+          if (calls.filter((call) => call.type === 'execute').length === 1) {
+            return [{ insertId: /RETURNING\s+id/i.test(statement) ? 11 : 0, affectedRows: 1 }, []];
+          }
+          return [{ affectedRows: 1 }, []];
+        },
+        async commit() {
+          calls.push({ type: 'commit' });
+        },
+        async rollback() {
+          calls.push({ type: 'rollback' });
+        },
+        release() {
+          calls.push({ type: 'release' });
+        },
+      };
+    },
+  };
+
+  const service = loadServiceWithConnection(connectionMock);
+  const result = await service.addUser({ name: 'alice', password: 'secret', nickname: '  小杨  ' }); // pragma: allowlist secret
+
+  assert.equal(result.insertId, 11);
+  const firstExecute = calls.find((call) => call.type === 'execute');
+  assert.match(firstExecute.statement, /INSERT INTO\s+"user"\s*\(name,\s*password\)\s*VALUES\s*\(\?,\s*\?\)/i);
+  assert.match(firstExecute.statement, /RETURNING\s+id/i);
+  assert.deepEqual(firstExecute.params, ['alice', 'secret']);
+  const secondExecute = calls.filter((call) => call.type === 'execute')[1];
+  assert.match(secondExecute.statement, /INSERT INTO\s+profile\s*\(user_id,\s*nickname\)\s*VALUES\s*\(\?,\s*\?\)/i);
+  assert.deepEqual(secondExecute.params, [11, '小杨']);
+});
+
+test('addUser: stores null when nickname is omitted', async () => {
+  const calls = [];
+  const connectionMock = {
+    async getConnection() {
+      return {
+        async beginTransaction() {},
+        async execute(statement, params) {
+          calls.push({ statement, params });
+          if (calls.length === 1) return [{ insertId: 12, affectedRows: 1 }, []];
+          return [{ affectedRows: 1 }, []];
+        },
+        async commit() {},
+        async rollback() {},
+        release() {},
+      };
+    },
+  };
+  const service = loadServiceWithConnection(connectionMock);
+
+  await service.addUser({ name: 'alice', password: 'secret' }); // pragma: allowlist secret
+
+  assert.deepEqual(calls[1].params, [12, null]);
+});
+
+test('updateProfileById: maps allowed API keys to columns and normalizes nickname', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      return [{ affectedRows: 1 }, []];
+    },
+  });
+
+  await service.updateProfileById(7, {
+    nickname: '  小杨  ',
+    avatarUrl: '/user/7/avatar',
+    career: '前端',
+  });
+
+  assert.match(calls[0].statement, /UPDATE\s+profile\s+SET\s+nickname\s*=\s*\?,\s*avatar_url\s*=\s*\?,\s*career\s*=\s*\?\s+WHERE\s+user_id\s*=\s*\?/i);
+  assert.deepEqual(calls[0].params, ['小杨', '/user/7/avatar', '前端', 7]);
+});
+
+test('updateProfileById: clearing nickname stores null', async () => {
+  const calls = [];
+  const service = loadServiceWithConnection({
+    async execute(statement, params) {
+      calls.push({ statement, params });
+      return [{ affectedRows: 1 }, []];
+    },
+  });
+
+  await service.updateProfileById(7, { nickname: '   ' });
+
+  assert.deepEqual(calls[0].params, [null, 7]);
+});
+
+test('updateProfileById: rejects unsupported fields before executing SQL', async () => {
+  let executeCount = 0;
+  const service = loadServiceWithConnection({
+    async execute() {
+      executeCount += 1;
+      return [{ affectedRows: 1 }, []];
+    },
+  });
+
+  await assert.rejects(
+    () => service.updateProfileById(7, { user_id: 99 }),
+    (error) => {
+      assert.equal(error.name, 'BusinessError');
+      assert.equal(error.httpStatus, 400);
+      assert.equal(error.message, '个人资料字段不受支持');
+      return true;
+    },
+  );
+  assert.equal(executeCount, 0);
+});
+
+test('toggleFollow: unfollow commits silently without creating or publishing notifications', async () => {
+  const notificationCalls = [];
+  const publishCalls = [];
+  const { conn, calls } = createTransactionalMock((statement, params) => {
+    assert.match(statement, /DELETE FROM user_follow/i);
+    assert.deepEqual(params, [10, 20]);
+    return [{ affectedRows: 1 }, []];
+  });
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      notificationService: {
+        async createFollowNotification(...args) {
+          notificationCalls.push(args);
+          return { created: true, notification: { id: 1 } };
+        },
+      },
+      async publishNotificationCreated(notification) {
+        publishCalls.push(notification);
+      },
+    },
+  );
+
+  const result = await service.toggleFollow(10, 20);
+
+  assert.deepEqual(result, {
+    isFollowed: false,
+    action: 'unfollowed',
+    notificationCreated: false,
+    notification: null,
+  });
+  assert.deepEqual(notificationCalls, []);
+  assert.deepEqual(publishCalls, []);
+  assert.deepEqual(calls.filter((call) => call.type !== 'execute'), [
+    { type: 'beginTransaction' },
+    { type: 'commit' },
+    { type: 'release' },
+  ]);
+});
+
+test('toggleFollow: new follow creates notification in the transaction and publishes after commit', async () => {
+  const notification = { id: 501, recipientId: 10, actorId: 20, type: 'follow' };
+  const notificationCalls = [];
+  const publishCalls = [];
+  const { conn, calls } = createTransactionalMock((statement, params) => {
+    if (/DELETE FROM user_follow/i.test(statement)) {
+      assert.deepEqual(params, [10, 20]);
+      return [{ affectedRows: 0 }, []];
+    }
+
+    if (/INSERT INTO user_follow/i.test(statement)) {
+      assert.deepEqual(params, [10, 20]);
+      return [{ affectedRows: 1 }, []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      notificationService: {
+        async createFollowNotification(payload, options) {
+          notificationCalls.push({ payload, options });
+          return { created: true, notification };
+        },
+      },
+      async publishNotificationCreated(payload) {
+        publishCalls.push(payload);
+      },
+    },
+  );
+
+  const result = await service.toggleFollow(10, 20);
+
+  assert.deepEqual(result, {
+    isFollowed: true,
+    action: 'followed',
+    notificationCreated: true,
+    notification,
+  });
+  assert.deepEqual(notificationCalls.map((call) => call.payload), [{ recipientId: 10, actorId: 20 }]);
+  assert.equal(notificationCalls[0].options.conn, conn);
+  assert.deepEqual(publishCalls, [notification]);
+  assert.equal(calls.findIndex((call) => call.type === 'commit') < calls.findIndex((call) => call.type === 'release'), true);
+});
+
+test('toggleFollow: publish failure does not roll back committed follow and notification', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {});
+  const notification = { id: 502, recipientId: 10, actorId: 20, type: 'follow' };
+  const { conn, calls } = createTransactionalMock((statement) => {
+    if (/DELETE FROM user_follow/i.test(statement)) {
+      return [{ affectedRows: 0 }, []];
+    }
+
+    if (/INSERT INTO user_follow/i.test(statement)) {
+      return [{ affectedRows: 1 }, []];
+    }
+
+    throw new Error(`Unexpected SQL: ${statement}`);
+  });
+  const service = loadServiceWithConnection(
+    {
+      async getConnection() {
+        return conn;
+      },
+    },
+    {
+      notificationService: {
+        async createFollowNotification() {
+          return { created: true, notification };
+        },
+      },
+      async publishNotificationCreated() {
+        throw new Error('redis unavailable');
+      },
+    },
+  );
+
+  const result = await service.toggleFollow(10, 20);
+
+  assert.deepEqual(result, {
+    isFollowed: true,
+    action: 'followed',
+    notificationCreated: true,
+    notification,
+  });
+  assert.equal(calls.some((call) => call.type === 'commit'), true);
+  assert.equal(calls.some((call) => call.type === 'rollback'), false);
+  assert.equal(warn.mock.callCount(), 1);
+  assert.match(warn.mock.calls[0].arguments[0], /用户关注通知实时推送失败/);
+  assert.equal(warn.mock.calls[0].arguments[1], 'redis unavailable');
+});
+
+test('legacy user query and report methods log database failures and resolve to undefined', async (t) => {
+  const log = t.mock.method(console, 'log', () => {});
+  const failure = new Error('fixture database unavailable');
+  const statements = [];
+  const service = loadServiceWithConnection({
+    async execute(statement) {
+      statements.push(statement);
+      throw failure;
+    },
+  });
+
+  for (const operation of [
+    () => service.getLikedById('7'),
+    () => service.getFollowInfo('7'),
+    () => service.getArticleByCollectId('7', '3', '0', '10'),
+    () => service.userReport(7, 'fixture option', null, 21),
+    () => service.getHotUsers(),
+  ]) {
+    assert.equal(await legacyUserQueryResult(operation()), undefined);
+  }
+  assert.equal(statements.length, 5);
+  assert.deepEqual(log.mock.calls.map(call => call.arguments), [
+    [failure], [failure], [failure], [statements[3]], [failure], [failure],
+  ]);
+});
+
+test('addUser: does not log database errors containing the registration password hash', async (t) => {
+  const messages = [];
+  t.mock.method(console, 'error', (...args) => messages.push(inspect(args, { depth: null })));
+  const hash = 'registration-hash-error-sentinel'; // pragma: allowlist secret
+  const failure = Object.assign(new Error('registration insert failed'), { detail: `Failing row contains ${hash}` });
+  const service = loadServiceWithConnection({
+    async getConnection() {
+      return {
+        async beginTransaction() {},
+        async execute() { throw failure; },
+        async rollback() {},
+        release() {},
+      };
+    },
+  });
+  await assert.rejects(service.addUser({ name: 'alice', password: hash }), (error) => error === failure);
+  assert.ok(!messages.join('\n').includes(hash), 'registration logger received password hash from database error details');
+});

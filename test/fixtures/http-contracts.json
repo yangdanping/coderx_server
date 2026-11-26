@@ -1,0 +1,157 @@
+{
+  "baseline": {
+    "source": [
+      "src/main.js",
+      "src/app/koaApp.js",
+      "src/utils/index.js",
+      "src/app/Result.js",
+      "src/app/errorHandler.js",
+      "src/middleware/error.middleware.js"
+    ],
+    "supportingDocs": [
+      "README.md",
+      "HONO_MIGRATION.md",
+      "FLOW_PUBLICATION.md",
+      "CONTENT_INGEST.md"
+    ],
+    "routeScope": "Utils.useRoutes mounted HTTP router stacks (comment v2). Commented-out routes and independent Socket.IO/ingest/cron processes are excluded.",
+    "middlewareOrder": [
+      "errorMiddleware",
+      "CORS",
+      "loggerMiddleware",
+      "koa-bodyparser",
+      "router.routes() then router.allowedMethods() for each mounted router"
+    ],
+    "resultNotation": "Unless explicitly stated, response describes data in HTTP 200 {code:0,data}; 200/-1 is Result.fail. Numeric pairs mean HTTP status/business code. Generic system errors use 500/500 (production message 服务器内部错误). Undefined fields are omitted by JSON serialization.",
+    "input": "Body descriptions list controller/guard fields; non-multipart body fields are normally JSON (koa-bodyparser also accepts form-encoded bodies for parsed methods). Query values are strings, with duplicate keys becoming arrays. See actual guards/services for coercion rather than treating this inventory as a strict schema.",
+    "methodHandling": "String paths accept a trailing slash. GET also registers HEAD (no body). Router OPTIONS emits Allow; CORS preflight short circuits with 204. Unsupported method on a matching path can emit plain 405 with Allow. Unknown paths are plain 404. Malformed JSON is caught by global error middleware and emits 500/500 even before JWT.",
+    "guards": {
+      "verifyAuth": "RS256 Authorization header; legacy strips the first exact Bearer prefix, so bare JWT works. Missing, invalid or expired JWT: 401/401.",
+      "verifyStatus": "Reads current account status after JWT; truthy status returns 200/-1 with 您已被封禁.",
+      "verifyPermission": "Uses first route param (table derived by removing Id) and JWT user id; denied or permission lookup failure is 403/403.",
+      "mediaMutationMaintenance": "MEDIA_MUTATIONS_PAUSED === \"true\" returns 503/503 before auth/body upload on flagged routes; bodyparser already ran. R2 write pause is a separate storage setting.",
+      "chatRateLimit": "First anonymous/public AI chat middleware (function name may be inline); process-local per-IP bucket, 12/minute, 429/429.",
+      "completionRateLimit": "After JWT; process-local per-user bucket (IP fallback), 30/minute, 429/429."
+    },
+    "mediaAndAI": "Limits in src/constants/upload.js and src/constants/ai.js. HTTP AI chat streams AI SDK UIMessage SSE and uses optional model allowlist; health and completion are JSON. Ingest has its own worker, model configuration, and schedule. Public asset URLs and R2/local promotion stay service-owned."
+  },
+  "routers": {
+    "src/router/ai.router.js": [
+      {"methods":["HEAD","GET"],"path":"/ai/health","controller":"src/controller/ai.controller.js","params":[],"query":[],"body":null,"chain":["health"],"response":"200 {models,status,message,capability,accessPolicy,timestamp}; unhealthy is usually 200/offline, thrown probe is 503/offline"},
+      {"methods":["POST"],"path":"/ai/chat","controller":"src/controller/ai.controller.js","params":[],"query":[],"body":"messages,model?,context?,selectionContexts?","chain":["(inline)","chat"],"chainMeaning":["chatRateLimit","chat"],"response":"200 AI SDK UIMessage SSE; 400 INVALID_AI_CHAT_PAYLOAD; 503 AI_SERVICE_ERROR or provider code; 429/429","details":"SSE text/event-stream with x-vercel-ai-ui-message-stream: v1 and [DONE]; 12 requests/IP/minute, before validation."},
+      {"methods":["POST"],"path":"/ai/completion","controller":"src/controller/ai.controller.js","params":[],"query":[],"body":"beforeText,afterText?,model?,maxSuggestions?","chain":["verifyAuth","(inline)","completion"],"chainMeaning":["verifyAuth","completionRateLimit","completion"],"response":"200 {success,suggestions,timestamp}; 400 INVALID_AI_COMPLETION_PAYLOAD; 503 COMPLETION_ERROR or provider code; 429/429","details":"30 requests/user/minute after JWT and before validation; truncate to 500 before/200 after characters."}
+    ],
+    "src/router/article.router.js": [
+      {"methods":["HEAD","GET"],"path":"/article","controller":"src/controller/article.controller.js","params":[],"query":["pageNum","pageSize","offset","limit","tagId","userId","pageOrder","idList","keywords"],"body":null,"chain":["getList"],"response":"{result,total}; invalid JSON in idList can throw 500/500","details":"idList is JSON text; order date/hot, default date; masks banned articles."},
+      {"methods":["HEAD","GET"],"path":"/article/recommend","controller":"src/controller/article.controller.js","params":[],"query":["pageNum","pageSize","offset","limit"],"body":null,"chain":["getRecommendList"],"response":"recommended article list"},
+      {"methods":["HEAD","GET"],"path":"/article/search","controller":"src/controller/article.controller.js","params":[],"query":["keywords"],"body":null,"chain":["search"],"response":"matching articles"},
+      {"methods":["HEAD","GET"],"path":"/article/random/toc","controller":"src/controller/article.controller.js","params":[],"query":[],"body":null,"chain":["getRandomTocArticle"],"response":"one article; 404/404 if no eligible article"},
+      {"methods":["HEAD","GET"],"path":"/article/images/:filename","controller":"src/controller/article.controller.js","params":["filename"],"query":["type?"],"body":null,"chain":["getFileInfo"],"response":"200 binary image; missing metadata gives plain 404","details":"type=small selects -small before extension; stored MIME type."},
+      {"methods":["HEAD","GET"],"path":"/article/video/:filename","controller":"src/controller/article.controller.js","params":["filename"],"query":[],"body":null,"chain":["getVideoInfo"],"response":"200 full bytes; 206 partial; 404/-1 missing; 416/-1 bad range; 500/-1 caught errors","details":"Accepts Range: bytes=N-M or bytes=N- only, valid inclusive bounds; 206 Content-Range, Accept-Ranges and Content-Length; 416 bytes */size; rejects paths/symlinks."},
+      {"methods":["HEAD","GET"],"path":"/article/:articleId","controller":"src/controller/article.controller.js","params":["articleId"],"query":[],"body":null,"chain":["getDetail"],"response":"article detail including images/videos; 404/404 if absent","details":"Truthy status masks title/body and media."},
+      {"methods":["HEAD","GET"],"path":"/article/:articleId/like","controller":"src/controller/article.controller.js","params":["articleId"],"query":[],"body":null,"chain":["getArticleLikedById"],"response":"article like count result"},
+      {"methods":["POST"],"path":"/article","controller":"src/controller/article.controller.js","params":[],"query":[],"body":"title,contentJson?,draftId?","chain":["mediaMutationMaintenance","verifyAuth","verifyStatus","addArticle"],"response":"created article result; 200/-1 controller validation; 400/400 invalid content; 404/404 draft absent","details":"contentJson object or valid owned draft."},
+      {"methods":["POST"],"path":"/article/:articleId/like","controller":"src/controller/article.controller.js","params":["articleId"],"query":[],"body":null,"chain":["verifyAuth","verifyStatus","likeArticle"],"response":"{liked,likes}"},
+      {"methods":["POST"],"path":"/article/:articleId/tag","controller":"src/controller/article.controller.js","params":["articleId"],"query":[],"body":"tags","chain":["verifyAuth","verifyPermission","verifyTagExists","changeTag"],"response":"tag operation result; success code is string 标签保存成功 for nonempty list, otherwise code 0 with 标签已清空","details":"VerifyTagExists resolves/creates tags after permission check."},
+      {"methods":["PUT"],"path":"/article/:articleId/view","controller":"src/controller/article.controller.js","params":["articleId"],"query":[],"body":null,"chain":["viewArticle"],"response":"view increment result"},
+      {"methods":["PUT"],"path":"/article/:articleId","controller":"src/controller/article.controller.js","params":["articleId"],"query":[],"body":"title,contentJson?,draftId?","chain":["mediaMutationMaintenance","verifyAuth","verifyPermission","update"],"response":"update result; 200/-1 controller validation; 400/400 invalid content; 404/404 missing article/draft","details":"contentJson object or valid owned draft."},
+      {"methods":["DELETE"],"path":"/article/:articleId","controller":"src/controller/article.controller.js","params":["articleId"],"query":[],"body":null,"chain":["mediaMutationMaintenance","verifyAuth","verifyPermission","delete"],"response":"delete result; 400/400 invalid IDs, 403/403 no ownership, 409/409 processing video"}
+    ],
+    "src/router/avatar.router.js": [
+      {"methods":["POST"],"path":"/avatar","controller":"src/controller/avatar.controller.js","params":[],"query":[],"body":"multipart avatar (one disk file)","chain":["verifyAuth","(inline)","saveAvatarInfo"],"chainMeaning":["verifyAuth","avatarHandler","saveAvatarInfo"],"response":"insert result plus avatarUrl; unhandled upload/transaction failure 500/500","details":"URL points to /user/:userId/avatar; no explicit avatar MIME/size filter on this route."},
+      {"methods":["DELETE"],"path":"/avatar/:userId","controller":"src/controller/avatar.controller.js","params":["userId"],"query":[],"body":null,"chain":["verifyAuth","deleteAvatar"],"response":"deletion string, including 无头像可删除 when absent","details":"JWT only in router; target userId comes from path."}
+    ],
+    "src/router/collect.router.js": [
+      {"methods":["POST"],"path":"/collect","controller":"src/controller/collect.controller.js","params":[],"query":[],"body":"name","chain":["verifyAuth","verifycollectExists","addCollect"],"response":"collection insert result; duplicate name 409/409","details":"verifycollectExists runs after JWT."},
+      {"methods":["POST"],"path":"/collect/:collectId","controller":"src/controller/collect.controller.js","params":["collectId"],"query":[],"body":"articleId","chain":["verifyAuth","verifyPermission","collectArticle"],"response":"toggle collection membership result"},
+      {"methods":["HEAD","GET"],"path":"/collect/:userId","controller":"src/controller/collect.controller.js","params":["userId"],"query":["pageNum","pageSize","offset","limit"],"body":null,"chain":["getList"],"response":"collection list"},
+      {"methods":["PATCH"],"path":"/collect/:collectId","controller":"src/controller/collect.controller.js","params":["collectId"],"query":[],"body":"name","chain":["verifyAuth","verifyPermission","updateCollect"],"response":"update result"},
+      {"methods":["DELETE"],"path":"/collect/:collectId","controller":"src/controller/collect.controller.js","params":["collectId"],"query":[],"body":null,"chain":["verifyAuth","verifyPermission","removeCollect"],"response":"delete result"},
+      {"methods":["DELETE"],"path":"/collect/:collectId/articles","controller":"src/controller/collect.controller.js","params":["collectId"],"query":["idList"],"body":null,"chain":["verifyAuth","verifyPermission","removeCollectArticle"],"response":"remaining article IDs; 200/-1 invalid collection ID or idList","details":"idList is JSON text with positive safe integer array."}
+    ],
+    "src/router/comment.router.js": [
+      {"methods":["HEAD","GET"],"path":"/comment","controller":"src/controller/comment.controller.js","params":[],"query":["articleId","userId","cursor","sort","pageNum","pageSize","offset","limit"],"body":null,"chain":["getCommentList"],"response":"comment page (+ totalCount for article); 200/-1 missing articleId or read failure","details":"userId selects standard pagination; otherwise article cursor; sort latest/oldest/hot."},
+      {"methods":["HEAD","GET"],"path":"/comment/count","controller":"src/controller/comment.controller.js","params":[],"query":["articleId"],"body":null,"chain":["getTotalCount"],"response":"{totalCount}; 200/-1 missing articleId or read failure"},
+      {"methods":["HEAD","GET"],"path":"/comment/:commentId/replies","controller":"src/controller/comment.controller.js","params":["commentId"],"query":["cursor","pageNum","pageSize","offset","limit"],"body":null,"chain":["getReplies"],"response":"reply page; 200/-1 read failure"},
+      {"methods":["HEAD","GET"],"path":"/comment/:commentId","controller":"src/controller/comment.controller.js","params":["commentId"],"query":[],"body":null,"chain":["getCommentById"],"response":"comment; 200/-1 missing/read failure"},
+      {"methods":["POST"],"path":"/comment","controller":"src/controller/comment.controller.js","params":[],"query":[],"body":"articleId,content","chain":["verifyAuth","verifyStatus","addComment"],"response":"{comment,totalCount}; 200/-1 missing fields or create failure"},
+      {"methods":["POST"],"path":"/comment/:commentId/reply","controller":"src/controller/comment.controller.js","params":["commentId"],"query":[],"body":"articleId,content,replyId?","chain":["verifyAuth","verifyStatus","addReply"],"response":"{reply,totalCount}; 200/-1 missing fields or create failure"},
+      {"methods":["POST"],"path":"/comment/:commentId/like","controller":"src/controller/comment.controller.js","params":["commentId"],"query":[],"body":null,"chain":["verifyAuth","likeComment"],"response":"{liked,likes}; 200/-1 toggle/read failure"},
+      {"methods":["PUT"],"path":"/comment/:commentId","controller":"src/controller/comment.controller.js","params":["commentId"],"query":[],"body":"content","chain":["verifyAuth","verifyPermission","updateComment"],"response":"updated comment; 200/-1 missing content or update failure"},
+      {"methods":["DELETE"],"path":"/comment/:commentId","controller":"src/controller/comment.controller.js","params":["commentId"],"query":[],"body":null,"chain":["verifyAuth","verifyPermission","deleteComment"],"response":"{deletedComment,totalCount}; 200/-1 missing/delete failure"}
+    ],
+    "src/router/draft.router.js": [
+      {"methods":["PUT"],"path":"/draft","controller":"src/controller/draft.controller.js","params":[],"query":[],"body":"title?,content,meta?,version?,articleId?","chain":["verifyAuth","saveDraft"],"response":"saved draft; 200/-1 controller validation; 400/400 invalid files; 404/404 missing article/ownership; 409/409 stale version/file conflict","details":"content/meta objects; version default 0, accepts canonical integer string; articleId optional/null or positive safe integer/string."},
+      {"methods":["HEAD","GET"],"path":"/draft","controller":"src/controller/draft.controller.js","params":[],"query":[],"body":null,"chain":["verifyAuth","getDraft"],"response":"current new article draft or null"},
+      {"methods":["HEAD","GET"],"path":"/draft/:articleId","controller":"src/controller/draft.controller.js","params":["articleId"],"query":[],"body":null,"chain":["verifyAuth","getDraftByArticleId"],"response":"article draft or null; 200/-1 invalid ID; 404/404 article unavailable"},
+      {"methods":["DELETE"],"path":"/draft/:draftId","controller":"src/controller/draft.controller.js","params":["draftId"],"query":[],"body":null,"chain":["verifyAuth","deleteDraft"],"response":"{id}; 200/-1 invalid ID; 404/404 missing draft"}
+    ],
+    "src/router/flow.router.js": [
+      {"methods":["POST"],"path":"/flow","controller":"src/controller/flow.controller.js","params":[],"query":[],"body":"clientRequestId,content,mediaIds,draft","chain":["mediaMutationMaintenance","verifyAuth","verifyStatus","createFlow"],"response":"hydrated Flow; 200/-1 controller validation; 400/400 service validation; 409/409 stale draft/media conflict","details":"UUID; Tiptap doc; max nine unique positive safe integer mediaIds; explicit null or {id,version}; same clientRequestId retries return prior Flow."},
+      {"methods":["HEAD","GET"],"path":"/flow","controller":"src/controller/flow.controller.js","params":[],"query":["pageNum","pageSize"],"body":null,"chain":["getFlowFeed"],"response":"{items,total,page,pageSize}; 200/-1 invalid pagination; 400/400 unsafe offset","details":"Defaults 1/10; max pageSize 100; positive canonical integers."},
+      {"methods":["HEAD","GET"],"path":"/^\\/flow\\/([1-9]\\d*)$/","controller":"src/controller/flow.controller.js","params":["flowId"],"query":[],"body":null,"chain":["(inline)"],"chainMeaning":["assignFlowIdCapture then getFlowDetail"],"response":"hydrated Flow {id,author,body,bodyHtml,media,likes,comments,liked,createdAt}; 200/-1 unsafe integer; 404/404 missing","details":"Raw RegExp captures flowId; no trailing slash/leading zero; other paths plain 404 unless another router owns them."}
+    ],
+    "src/router/flowDraft.router.js": [
+      {"methods":["PUT"],"path":"/flow/draft","controller":"src/controller/flowDraft.controller.js","params":[],"query":[],"body":"content,meta?,version?","chain":["verifyAuth","saveFlowDraft"],"response":"saved draft; 200/-1 controller validation; 400/400 invalid files; 409/409 stale version/file conflict","details":"content/meta objects; version default 0, accepts canonical integer string."},
+      {"methods":["HEAD","GET"],"path":"/flow/draft","controller":"src/controller/flowDraft.controller.js","params":[],"query":[],"body":null,"chain":["verifyAuth","getFlowDraft"],"response":"draft with images or null; 409/409 if images cannot be restored"},
+      {"methods":["DELETE"],"path":"/flow/draft/:draftId","controller":"src/controller/flowDraft.controller.js","params":["draftId"],"query":[],"body":null,"chain":["verifyAuth","deleteFlowDraft"],"response":"{id}; 200/-1 invalid ID; 404/404 missing draft"}
+    ],
+    "src/router/history.router.js": [
+      {"methods":["POST"],"path":"/history","controller":"src/controller/history.controller.js","params":[],"query":[],"body":"articleId","chain":["verifyAuth","addHistory"],"response":"history write result"},
+      {"methods":["HEAD","GET"],"path":"/history","controller":"src/controller/history.controller.js","params":[],"query":["offset","limit"],"body":null,"chain":["verifyAuth","getUserHistory"],"response":"{result,total,pageNum,pageSize}; masks banned article preview"},
+      {"methods":["DELETE"],"path":"/history/:articleId","controller":"src/controller/history.controller.js","params":["articleId"],"query":[],"body":null,"chain":["verifyAuth","deleteHistory"],"response":"delete result"},
+      {"methods":["DELETE"],"path":"/history","controller":"src/controller/history.controller.js","params":[],"query":[],"body":null,"chain":["verifyAuth","clearUserHistory"],"response":"clear result"},
+      {"methods":["HEAD","GET"],"path":"/history/:articleId/check","controller":"src/controller/history.controller.js","params":["articleId"],"query":[],"body":null,"chain":["verifyAuth","hasViewed"],"response":"{hasViewed}"}
+    ],
+    "src/router/image.router.js": [
+      {"methods":["POST"],"path":"/img","controller":"src/controller/image.controller.js","params":[],"query":[],"body":"multipart img (array of disk files)","chain":["mediaMutationMaintenance","verifyAuth","(inline)","imgResize","saveImgInfo"],"chainMeaning":["mediaMutationMaintenance","verifyAuth","imgHandler","imgResize","saveImgInfo"],"response":"[{result,url}]; 200/-1 no saved images; 400/400 invalid MIME, size or count","details":"20 files max, each 20 MiB, image/* MIME, first file gets -small thumbnail; URL /article/images/:filename."},
+      {"methods":["POST"],"path":"/img/:articleId","controller":"src/controller/image.controller.js","params":["articleId"],"query":[],"body":"uploaded [{id,isCover?}]","chain":["mediaMutationMaintenance","verifyAuth","updateFile"],"response":"association result; 200/-1 invalid shape; 400/400 invalid IDs/cover; 403/403 ownership; 409/409 conflict","details":"Empty array accepted; IDs positive safe integers; cover only if isCover === true."},
+      {"methods":["DELETE"],"path":"/img","controller":"src/controller/image.controller.js","params":[],"query":[],"body":"uploaded [{id}]","chain":["mediaMutationMaintenance","verifyAuth","deleteFile"],"response":"deletion count string; 200/-1 invalid shape; 403/403 not deletable","details":"Owned unattached images only."}
+    ],
+    "src/router/media.router.js": [
+      {"methods":["POST"],"path":"/media/images","controller":"src/controller/media.controller.js","params":[],"query":[],"body":"multipart image (one in-memory file)","chain":["mediaMutationMaintenance","verifyAuth","mediaImageUpload","uploadImage"],"chainMeaning":["mediaMutationMaintenance","verifyAuth","mediaImageUpload","uploadImage"],"response":"{id,url,thumbnailUrl,mimeType,sizeBytes,width,height}; 400/400 missing/invalid/oversized image","details":"JPEG/PNG/WebP; 10 MiB; service inspects format and caps at 40M pixels."},
+      {"methods":["DELETE"],"path":"/media/images/:mediaId","controller":"src/controller/media.controller.js","params":["mediaId"],"query":[],"body":null,"chain":["mediaMutationMaintenance","verifyAuth","deleteImage"],"response":"{deleted}; 400/400 invalid ID; 403/403 not deletable","details":"Service enforces owner and pending state."}
+    ],
+    "src/router/notification.router.js": [
+      {"methods":["HEAD","GET"],"path":"/notification","controller":"src/controller/notification.controller.js","params":[],"query":["pageNum","pageSize","offset","limit"],"body":null,"chain":["verifyAuth","list"],"response":"notification list for authenticated user"},
+      {"methods":["HEAD","GET"],"path":"/notification/unread-count","controller":"src/controller/notification.controller.js","params":[],"query":[],"body":null,"chain":["verifyAuth","unreadCount"],"response":"{count}"},
+      {"methods":["PATCH"],"path":"/notification/read-all","controller":"src/controller/notification.controller.js","params":[],"query":[],"body":null,"chain":["verifyAuth","markAllRead"],"response":"mark-all result scoped to authenticated user"},
+      {"methods":["PATCH"],"path":"/notification/:notificationId/read","controller":"src/controller/notification.controller.js","params":["notificationId"],"query":[],"body":null,"chain":["verifyAuth","markRead"],"response":"mark-read result scoped to authenticated user"}
+    ],
+    "src/router/oauth.router.js": [
+      {"methods":["HEAD","GET"],"path":"/oauth/status","controller":"src/controller/oauth.controller.js","params":[],"query":[],"body":null,"chain":["getStatus"],"response":"{google,github,googleClientId}"},
+      {"methods":["HEAD","GET"],"path":"/oauth/google","controller":"src/controller/oauth.controller.js","params":[],"query":[],"body":null,"chain":["getGoogleAuthUrl"],"response":"{authUrl}; 200/-1 provider unconfigured"},
+      {"methods":["HEAD","GET"],"path":"/oauth/google/callback","controller":"src/controller/oauth.controller.js","params":[],"query":["code"],"body":null,"chain":["googleCallback"],"response":"302 Location: frontend /oauth/callback with token,userId,userName or error","details":"Missing code redirects error=missing_code; RS256 JWT expires in seven days."},
+      {"methods":["POST"],"path":"/oauth/google/idtoken","controller":"src/controller/oauth.controller.js","params":[],"query":[],"body":"credential or idToken","chain":["googleIdTokenLogin"],"response":"{id,name,token}; 200/-1 unconfigured, missing credential, or provider error"},
+      {"methods":["HEAD","GET"],"path":"/oauth/github","controller":"src/controller/oauth.controller.js","params":[],"query":[],"body":null,"chain":["getGitHubAuthUrl"],"response":"{authUrl}; 200/-1 provider unconfigured"},
+      {"methods":["HEAD","GET"],"path":"/oauth/github/callback","controller":"src/controller/oauth.controller.js","params":[],"query":["code"],"body":null,"chain":["githubCallback"],"response":"302 Location: frontend /oauth/callback with token,userId,userName or error","details":"Missing code redirects error=missing_code; RS256 JWT expires in seven days."}
+    ],
+    "src/router/tag.router.js": [
+      {"methods":["POST"],"path":"/tag","controller":"src/controller/tag.controller.js","params":[],"query":[],"body":"name","chain":["verifyAuth","addTag"],"response":"tag insert result"},
+      {"methods":["HEAD","GET"],"path":"/tag/order","controller":"src/controller/tag.controller.js","params":[],"query":[],"body":null,"chain":["verifyAuth","getUserOrder"],"response":"saved tag order"},
+      {"methods":["PUT"],"path":"/tag/order","controller":"src/controller/tag.controller.js","params":[],"query":[],"body":"tagIds","chain":["verifyAuth","replaceUserOrder"],"response":"replacement order; 400/400 invalid array, invalid/duplicate/missing IDs"},
+      {"methods":["HEAD","GET"],"path":"/tag","controller":"src/controller/tag.controller.js","params":[],"query":["offset","limit"],"body":null,"chain":["getList"],"response":"tag list; defaults are string 0 and 99","details":"Duplicate query keys reach controller as arrays."}
+    ],
+    "src/router/user.router.js": [
+      {"methods":["HEAD","GET"],"path":"/user/checkAuth","controller":"src/router/user.router.js","params":[],"query":[],"body":null,"chain":["verifyAuth","(inline)"],"chainMeaning":["verifyAuth","Result.success() inline"],"response":"{code:0} only, data is undefined"},
+      {"methods":["POST"],"path":"/user/register","controller":"src/controller/user.controller.js","params":[],"query":[],"body":"name,password,nickname?","chain":["verifyUserRegister","encryptUserPwd","addUser"],"response":"registration result; 400/400 invalid credentials/nickname; 409/409 duplicate name","details":"verifyUserRegister before encryptUserPwd; bcrypt password hash."},
+      {"methods":["POST"],"path":"/user/login","controller":"src/controller/user.controller.js","params":[],"query":[],"body":"name,password","chain":["verifyUserLogin","userLogin"],"response":"{id,name,token}; 400/400 missing/wrong credentials; 404/404 missing user; 200/-1 no token","details":"verifyUserLogin compares bcrypt; RS256 JWT expires in seven days."},
+      {"methods":["HEAD","GET"],"path":"/user/:userId/collect","controller":"src/controller/user.controller.js","params":["userId"],"query":["collectId","pageNum","pageSize","offset","limit"],"body":null,"chain":["getArticleByCollectId"],"response":"articles in collection"},
+      {"methods":["HEAD","GET"],"path":"/user/:userId/comment","controller":"src/controller/user.controller.js","params":["userId"],"query":["pageNum","pageSize","offset","limit"],"body":null,"chain":["getComment"],"response":"user comment list with text content"},
+      {"methods":["HEAD","GET"],"path":"/user/:userId/profile","controller":"src/controller/user.controller.js","params":["userId"],"query":[],"body":null,"chain":["getProfile"],"response":"user profile"},
+      {"methods":["PUT"],"path":"/user/profile","controller":"src/controller/user.controller.js","params":[],"query":[],"body":"profile object","chain":["verifyAuth","updateProfile"],"response":"profile update result; 400/400 unsupported fields or invalid nickname"},
+      {"methods":["HEAD","GET"],"path":"/user/:userId/like","controller":"src/controller/user.controller.js","params":["userId"],"query":[],"body":null,"chain":["getLiked"],"response":"{articleLiked,commentLiked}; empty arrays for non-finite userId"},
+      {"methods":["HEAD","GET"],"path":"/user/:userId/avatar","controller":"src/controller/user.controller.js","params":["userId"],"query":[],"body":null,"chain":["getAvatar"],"response":"200 binary avatar using stored MIME; missing metadata leaves plain 404"},
+      {"methods":["HEAD","GET"],"path":"/user/:userId/follow","controller":"src/controller/user.controller.js","params":["userId"],"query":[],"body":null,"chain":["getFollow"],"response":"follow information"},
+      {"methods":["HEAD","GET"],"path":"/user/hot","controller":"src/controller/user.controller.js","params":[],"query":[],"body":null,"chain":["getHotUsers"],"response":"hot users"},
+      {"methods":["POST"],"path":"/user/:userId/follow","controller":"src/controller/user.controller.js","params":["userId"],"query":[],"body":null,"chain":["verifyAuth","userFollow"],"response":"follow toggle result; legacy self-follow branch references an unbound BusinessError and maps to 500/500"},
+      {"methods":["POST"],"path":"/user/:userId/report","controller":"src/controller/user.controller.js","params":["userId"],"query":[],"body":"reportOptions,articleId?,commentId?","chain":["verifyAuth","userReport"],"response":"report write result","details":"Uses commentId if truthy; joins reportOptions with spaces."}
+    ],
+    "src/router/video.router.js": [
+      {"methods":["POST"],"path":"/video","controller":"src/controller/video.controller.js","params":[],"query":[],"body":"multipart video (one disk file)","chain":["mediaMutationMaintenance","verifyAuth","(inline)","saveVideoInfo"],"chainMeaning":["mediaMutationMaintenance","verifyAuth","videoHandler","saveVideoInfo"],"response":"{id,url,poster:null,filename,transcodeStatus:\"processing\"}; 400/400 missing/oversized/non-video file","details":"20 MiB; video/* MIME; async FFmpeg/ffprobe processing, poll GET /video/:videoId."},
+      {"methods":["POST"],"path":"/video/:articleId","controller":"src/controller/video.controller.js","params":["articleId"],"query":[],"body":"videoIds","chain":["mediaMutationMaintenance","verifyAuth","updateVideoArticle"],"response":"association result; 200/-1 invalid/count; 400/400 invalid IDs; 403/403 ownership","details":"Array, max two, empty accepted."},
+      {"methods":["DELETE"],"path":"/video","controller":"src/controller/video.controller.js","params":[],"query":[],"body":"videoIds","chain":["mediaMutationMaintenance","verifyAuth","deleteVideo"],"response":"deletion count string; 200/-1 invalid; 400/400 invalid IDs; 403/403 ownership; 409/409 processing","details":"Nonempty array."},
+      {"methods":["HEAD","GET"],"path":"/video/:videoId","controller":"src/controller/video.controller.js","params":["videoId"],"query":[],"body":null,"chain":["getVideoInfo"],"response":"video metadata plus url and poster; 200/-1 missing video","details":"Resolved media URL or local /article/video/:filename fallback; no poster yields null."}
+    ]
+  }
+}

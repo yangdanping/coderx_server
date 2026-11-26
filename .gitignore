@@ -43,6 +43,15 @@ secrets.json
 # Documentation
 *docs*/
 
+# Keep the approved Hono migration plan without exposing local docs.
+!/docs/
+/docs/*
+!/docs/superpowers/
+/docs/superpowers/*
+!/docs/superpowers/plans/
+/docs/superpowers/plans/*
+!/docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md
+
 *.conf
 
 # 忽略静态资源文件夹,避免上传到仓库

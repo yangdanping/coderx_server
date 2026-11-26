@@ -1,6 +1,6 @@
 # AI 内容采集与回填
 
-内容采集流水线从公开 RSS/Atom 来源建立候选，经过评分、去重和人工审核后发布。默认采用保留原文的 `backfill-raw`，不调用模型；旧的审批/模型增强流程单列在后文。抓取、审批与发布都通过独立 CLI/Worker 运行，不依赖 Koa 登录态。
+内容采集流水线从公开 RSS/Atom 来源建立候选，经过评分、去重和人工审核后发布。默认采用保留原文的 `backfill-raw`，不调用模型；旧的审批/模型增强流程单列在后文。抓取、审批与发布都通过独立 CLI/Worker 运行，独立于 HTTP 会话。
 
 ## 安全边界
 
@@ -129,10 +129,12 @@ pnpm ingest purge-placeholders --apply
 
 ## 生产环境的手动命令
 
-`pnpm ingest` 脚本固定使用 `NODE_ENV=development`，即使外部设置 `NODE_ENV=production` 也会覆盖。生产手动操作应明确运行 CLI，使它读取 `.env.production`：
+采集 CLI 与 Worker 使用编译产物。执行这些命令前先运行 `pnpm build`。
+
+`pnpm ingest` 脚本固定使用 `NODE_ENV=development`，即使外部设置 `NODE_ENV=production` 也会覆盖。生产手动操作使用已构建的 CLI，并显式选择生产环境。
 
 ```bash
-NODE_ENV=production node src/ingest/cli.js list --status pending,published --limit 60 --json
+NODE_ENV=production node dist/ingest/cli.js list --status pending,published --limit 60 --json
 ```
 
 所有示例中的 ID 都是占位示例；对实际目标库审批、发布、回填或清理前需核对候选与作者。

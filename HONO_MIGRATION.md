@@ -1,46 +1,32 @@
-# Hono migration evaluation — deferred
+# Hono 迁移收尾交接
 
-> Last reviewed: 2026-10-25 (original decision: 2026-08-11)
->
-> Status: not scheduled; do not implement without a new user decision
->
-> Learning prototype: maintainer-local `learn_hono`, outside this repository and not required to run CoderX.
+Task 0–11 与 12A 已完成。正式 HTTP 于 2026-11-25 15:56 切到 Hono。11 月 26 日已验证媒体发布与播放、新旧 HTTP 兼容和双账号实时通知。12B 待维护者完成两种 OAuth 登录，12C 待生产维护窗口。[各阶段验收记录](docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md)
 
-## Current decision
+11 月 26 日复核公网 `/health/live`、源站 `/health/ready` 和 release 的 `BUILD_SHA`，均为 `ab0d2b55d665e614d4c1a57340ea65e48f42cd3e`。Hono HTTP 关闭定时清理，旧 Koa 仍是唯一的清理调度执行方。Socket.IO 和采集独立在线。[AWS 进程与回滚手册](deploy/README.md#生产运行状态2026-11-25)
 
-CoderX Server continues to use Koa 3 and CommonJS. No Hono bootstrap, dependency installation, parallel HTTP process, route cutover, Nginx change, or production migration is part of the current repository maintenance work.
+## 下一会话的三项收尾
 
-Hono remains only a possible future direction. The user will decide whether and when to start a separate migration project. Until that decision is explicit, new work follows the current Koa architecture and existing deployment model.
+### 1. 正式业务验收（12B）
 
-## What the prototype proves
+用维护者同意的测试账号和内容执行。保留现有私人草稿，另建测试内容。
 
-The learning project demonstrates a possible Node.js baseline with:
+- [ ] Google 和 GitHub 分别完成登录，回到正式站后确认账号身份。
+- [x] 用独立测试账号发布文章 `182` 和合成媒体。R2 原图、视频封面及视频可读，Chrome 播放短片至 `0:02`。Hono 和 Koa 返回相同的正文、媒体 URL 和本地媒体字节，视频 Range 均为 206。
+- [x] 测试账号 `15` 点赞账号 `14` 的测试文章，接收方收到一次匹配的 `notification:new`。
+- [x] 记录版本、API 访问日志的 5xx、验收样本的 P95，以及数据库连接、CPU、内存、媒体处理和真实 AI 流的观察结果。
 
-- Hono and `@hono/node-server`
-- ESM and strict TypeScript
-- Zod and `@hono/zod-validator`
-- route composition with `app.route()`
+### 2. 后端仓库归档
 
-This is research evidence, not authorization to change `coderx_server`.
+11 月 26 日已推送 `codex/hono-typescript-migration`。维护者选定在 [PR #4](https://github.com/yangdanping/coderx_server/pull/4) 创建合并提交，保留上线 SHA。
 
-## Boundaries that remain stable now
+- [x] 将后端迁移分支推送到远程，类型检查、构建及 888 项本地回归通过。
+- [ ] 完成合并前复核，按维护者选定的方式合入 `main`。
+- [ ] 更新远程引用，验证远程主分支包含这次上线的版本和交接文档。保留提交历史的合并可用 `git merge-base --is-ancestor ab0d2b55d665e614d4c1a57340ea65e48f42cd3e origin/main` 核对。前端 Vercel 发布单独记录。
 
-- HTTP API: Koa 3
-- Database: PostgreSQL and the existing SQL/transaction adapter
-- Media processing: Sharp, Jimp, FFmpeg, and local pending files
-- Published media: existing Cloudflare R2/CDN `r2_on_publish` path
-- Realtime and jobs: Socket.IO, PM2, node-cron, and current worker processes
+### 3. 清理任务交接与旧 HTTP 退役（12C）
 
-Flow image upload therefore uses Koa and the production-proven R2 path. It does not wait for, bootstrap, or partially introduce Hono.
+- [ ] 业务验收通过后，记录旧 Koa 的恢复命令并核对回滚材料。确认旧请求、上传、AI 流、FFmpeg 和清理作业已排空，再在维护窗口停旧 Koa 及其调度。
+- [ ] 从 Hono release 用 `CLEANUP_WORKER_ENABLED=true` 启用一个独立清理 Worker（入口 `dist/tasks/cleanup.worker.js`）。Hono HTTP 保持 `BACKGROUND_JOBS_ENABLED=false`。核对实际调度、重启恢复配置、Socket 和采集状态。
+- [ ] 留下清理 Worker 的恢复方法，保留共享媒体、配置、旧 release 及其依赖。确认稳定后盘点本次隔离测试资源。[切流与回滚记录](docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#2026-11-25-12b-正式切流与首轮观察)
 
-## If migration is approved later
-
-A future migration must start as a separate task with its own design approval. At minimum it must decide:
-
-1. Node/EC2 versus another runtime.
-2. Incremental route cutover versus a replacement release.
-3. TypeScript/ESM boundaries around the current CommonJS services.
-4. Compatibility requirements for responses, JWT, multipart, PostgreSQL transactions, media cleanup, and R2 fallback.
-5. PM2, Nginx, tests, observation, and rollback strategy.
-
-No item in this document should be treated as an active implementation step.
+每完成一项，在本页更新状态，并把日期、验证结果及仍需维护者参与的操作写入[验收记录](docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#生产验收与剩余事项)。

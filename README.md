@@ -17,7 +17,7 @@ CoderX Server 是 CoderX 内容社区的后端服务，提供用户认证、文�
 
 ## 技术栈
 
-Node.js、Koa 3、PostgreSQL、Socket.IO、Redis、Tiptap JSON、S3/R2 和 Ollama/OpenAI 兼容模型。
+Node.js、Hono、TypeScript 7（ESM）、PostgreSQL、Socket.IO、Redis、Tiptap JSON、S3/R2 和 Ollama/OpenAI 兼容模型。
 
 ## 快速开始
 
@@ -28,7 +28,7 @@ Node.js、Koa 3、PostgreSQL、Socket.IO、Redis、Tiptap JSON、S3/R2 和 Ollam
 - PostgreSQL 15+
 - FFmpeg（视频元数据和封面处理需要 `ffmpeg`、`ffprobe` 在服务进程的 PATH 中）
 - Ollama（可选，仅 AI 功能需要）
-- Redis（可选，仅 Redis presence 或多实例 Socket.IO 广播需要）
+- Redis（Socket.IO 通知订阅需要。也可用于在线状态和多实例广播）
 
 ### 1. 安装依赖
 
@@ -59,7 +59,7 @@ test -e .env.development || cp .env.example .env.development
 
 ```bash
 if [ ! -e src/app/keys/private.key ] && [ ! -e src/app/keys/public.key ]; then
-  node src/app/keys/generate-keys.js
+  pnpm exec tsx src/app/keys/generate-keys.ts
 fi
 ```
 
@@ -85,11 +85,15 @@ curl http://127.0.0.1:8001/health
 
 预期返回 `{"status":"ok","service":"socket-server"}`。
 
+### 独立媒体清理 Worker
+
+`pnpm dev:cleanup` 运行源码入口，`pnpm start:cleanup` 运行编译后的入口。Worker 默认关闭，仅在其进程配置中显式设置 `CLEANUP_WORKER_ENABLED=true` 后启动。生产环境的调度归属和交接步骤见[迁移收尾交接](./HONO_MIGRATION.md)。
+
 ## 核心环境变量
 
 | 变量                           | 默认/示例                  | 说明                                   |
 | ------------------------------ | -------------------------- | -------------------------------------- |
-| `APP_PORT`                     | `8000`                     | Koa HTTP API 端口                      |
+| `APP_PORT`                     | `8000`                     | Hono HTTP API 端口                      |
 | `PUBLIC_API_ORIGIN`            | `http://127.0.0.1:8000`    | 返回给客户端的公开 API 地址            |
 | `FRONTEND_URL`                 | `http://127.0.0.1:5173`    | OAuth 回跳和 CORS 使用的前端地址       |
 | `DATABASE_URL`                 | 留空                       | PostgreSQL 连接串；也可改用 `PG*` 变量 |
@@ -119,7 +123,7 @@ curl -f http://127.0.0.1:8000/ai/health
 | ----------------------- | ---------------------------------------- |
 | `pnpm dev`              | 开发模式启动 HTTP API                    |
 | `pnpm dev:socket`       | 开发模式启动 Socket.IO                   |
-| `pnpm test`             | 运行服务、任务和控制器测试               |
+| `pnpm test`             | 清理构建并运行服务、任务、控制器和 HTTP 测试 |
 | `pnpm test:media-db`    | 运行需要 PostgreSQL 的媒体集成测试       |
 | `pnpm test:video-media` | 使用真实 FFmpeg 验证短视频和普通视频封面 |
 | `pnpm ingest <command>` | 运行内容采集 CLI                         |
@@ -127,6 +131,10 @@ curl -f http://127.0.0.1:8000/ai/health
 | `pnpm start`            | 生产模式启动 HTTP API                    |
 | `pnpm start:socket`     | 生产模式启动 Socket.IO                   |
 | `pnpm start:ingest`     | 生产模式启动内容采集 Worker              |
+
+生产启动脚本和 CLI 从 `dist` 运行，先执行 `pnpm build`。其中 `pnpm dev` 和 `pnpm dev:socket` 直接运行源码。
+
+`pnpm type-check` 检查所有业务源码、HTTP 和控制器测试，以及原有的 TypeScript 任务与集成测试。原 JavaScript 测试迁移为 ESM 后，继续通过运行测试核对动态替身和结果。
 
 `pnpm test:video-media` 需要本机已安装 FFmpeg，使用临时文件验证 0.2 秒和 3 秒视频能生成封面，结束后自动清理；不会向数据库写入。
 
@@ -145,34 +153,28 @@ coderx_server/
 │   ├── errors/          # 业务错误类型
 │   ├── ingest/          # 内容采集 CLI、Worker 和流水线
 │   ├── middleware/      # 鉴权、错误处理、日志和上传中间件
-│   ├── router/          # Koa 路由定义
+│   ├── router/          # Hono 路由定义
 │   ├── service/         # 核心业务与数据库操作
 │   ├── socket/          # 在线状态、通知和 Redis Adapter
 │   ├── storage/         # 本地与 R2 媒体存储
 │   ├── tasks/           # 清理及媒体迁移任务
-│   ├── main.js          # HTTP API 入口
-│   └── socket_server.js # Socket.IO 入口
+│   ├── main.ts          # HTTP API 源码入口
+│   └── socket_server.ts # Socket.IO 入口
 ├── test/                # 单元、服务和 PostgreSQL 集成测试
-└── ecosystem.config.js  # PM2 多进程配置
+└── ecosystem.config.cjs  # PM2 多进程配置
 ```
 
 HTTP 请求由 `router` 进入 `controller`，再交给 `service` 完成业务和数据库操作。Socket.IO 独立运行，单实例默认使用内存 presence；多实例部署时可启用 Redis presence 和 Adapter。
 
 ## 生产运行
 
-`ecosystem.config.js` 会启动 HTTP、Socket.IO 和单实例内容采集 Worker：
+`ecosystem.config.cjs` 记录 HTTP、Socket.IO 和单实例内容采集 Worker 的 PM2 进程布局。部署前先构建，独立发布目录使用 `dist`、运行时依赖与明确的环境文件、媒体目录和 JWT 密钥路径。
 
-```bash
-pm2 start ecosystem.config.js
-```
-
-该文件当前使用 `/root/coderx_server` 作为部署目录；部署到其他路径前需调整其中的 `cwd` 和 `env_file`。已运行的实例更新代码后使用 `pm2 restart ecosystem.config.js --update-env`，并核对 `pm2 status`、API 和 Socket 健康。
-
-2026-10-21 的整理已将代码推送到 `main` 并删除旧工作分支；当次生产只读核对仍为 `1eb6d15`，本轮新增修复尚未部署。下一次部署前，确认生产工作区干净，保留该环境的配置、密钥和媒体，执行 `git fetch origin --prune` 后显式切换到 `main`，使用 `git merge --ff-only origin/main`；出现分叉或本地改动应先处理，不能强制覆盖。核对部署目标后用 `CI=true pnpm install --frozen-lockfile` 安装，再重启现有 PM2 服务并记录实际提交。
-
-现有 `just deploy` 依赖当前分支的 `git pull`，不负责从已删除的工作分支切换到 `main`；`just deploy-first-time` 会重建 JWT 密钥，不能用于已有环境。后端也没有 `build`、`build-only`、`type-check` 或 `lint` npm script，相关遗留 just 配方不是有效检查入口；当前命令以本文和 `package.json` 为准。
+2026-11-25 起，AWS 上的 `coderx_hono_candidate` 承接正式业务 HTTP。它由独立 PM2 实例管理，旧版 Socket.IO 和采集进程继续运行。Hono 的发布材料包括 `deploy/ecosystem.hono.config.cjs`、`deploy/nginx.hono.example` 和 `just deploy-hono`。[生产运行与回滚手册](./deploy/README.md)
 
 数据库按[迁移说明](./migrations/README.md)逐项核对；本轮同步未新增业务 DDL，不要重放已应用脚本。
+
+Koa → Hono 的阶段进度与剩余三项工作见[迁移收尾交接](./HONO_MIGRATION.md)。
 
 ## 常见问题
 
@@ -196,7 +198,6 @@ pm2 start ecosystem.config.js
 - [数据库迁移](./migrations/README.md)
 - [JWT 密钥管理](./src/app/keys/README.md)
 - [AI 内容采集与回填](./CONTENT_INGEST.md)
-- [Hono 迁移评估（当前不实施）](./HONO_MIGRATION.md)
 
 ## License
 
