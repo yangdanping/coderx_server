@@ -14,6 +14,39 @@ curl -fsS http://127.0.0.1:18080/health/ready
 sudo -n env PM2_HOME=/opt/coderx-hono/pm2 /opt/coderx-hono/runtime/bin/node /usr/local/bin/pm2 ls
 ```
 
+### 12C 回滚准备
+
+旧 Koa 用原目录的 `/root/coderx_server/ecosystem.config.js` 恢复。维护窗口内先保存 root PM2 的恢复清单。旧 Koa 停止后检查旧 PID 和 8000 监听均退出，再从 PM2 的当前定义及主、备开机恢复清单移除旧 Koa。核对 Socket 与采集仍在清单中。Hono HTTP 的 `BACKGROUND_JOBS_ENABLED` 保持 `false`。
+
+独立清理 Worker 使用 `coderx-hono-cleanup.service` 管理，入口为正式 Hono release 的 `dist/tasks/cleanup.worker.js`。配置显式引用 `/root/coderx_server/.env.production`、共享媒体根目录 `/root/coderx_server/public` 和日志目录 `/var/log/coderx-hono-cleanup`，并设置 `CLEANUP_WORKER_ENABLED=true`。启用后，检查服务状态和下一次调度时间。清理按北京时间每天 02:00 调度，启动时先处理持久化的本地媒体清理队列。
+
+若 12C 后需恢复旧 Koa，先停用独立 Worker，确认其干净退出，再从原目录仅恢复旧 HTTP 进程及其调度。两次 `pm2 save` 将已恢复的进程定义同时写入正常清单及备用清单。
+
+```sh
+(
+  set -eu
+  worker=coderx-hono-cleanup.service
+  sudo -n systemctl disable --now "$worker"
+  test "$(sudo -n systemctl show "$worker" -p ActiveState --value)" = inactive
+  test "$(sudo -n systemctl show "$worker" -p MainPID --value)" = 0
+  test "$(sudo -n systemctl show "$worker" -p Result --value)" = success
+  test "$(sudo -n systemctl show "$worker" -p ExecMainStatus --value)" = 0
+  sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 start /root/coderx_server/ecosystem.config.js --only coderx_koa_server
+  response=$(curl -fsS --retry 5 --retry-connrefused --retry-delay 1 --max-time 5 'http://127.0.0.1:8000/tag?limit=1')
+  printf '%s' "$response" | /opt/coderx-hono/runtime/bin/node -e 'if (JSON.parse(require("node:fs").readFileSync(0)).code !== 0) process.exit(1)'
+  sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 save
+  sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 save
+)
+```
+
+核对旧 Koa 已恢复唯一清理调度。需要回切正式 HTTP 时，再执行 Nginx 回滚。
+
+```sh
+sudo -n /bin/bash /opt/coderx-hono/cutover.WXaBUMbZ/watch.sh rollback
+```
+
+若只恢复独立 Worker，先确认旧 Koa 已停止且不在开机恢复清单，随后运行 `sudo -n systemctl enable --now coderx-hono-cleanup.service`。以清单中的生产状态为准。[迁移收尾交接](../HONO_MIGRATION.md)
+
 ## 制作和展开制品
 
 发布记录给出经审查的完整 Git SHA。在构建机选择目标 Node 版本和操作系统/架构，按 `.nvmrc` 与 `package.json` 核对 Node 和 pnpm。以下命令从 Git 提取指定提交到新目录，适用于包含本发布材料的已提交版本。
