@@ -168,13 +168,13 @@ HTTP 请求由 `router` 进入 `controller`，再交给 `service` 完成业务�
 
 ## 生产运行
 
-`ecosystem.config.cjs` 记录 HTTP、Socket.IO 和单实例内容采集 Worker 的 PM2 进程布局。部署前先构建，独立发布目录使用 `dist`、运行时依赖与明确的环境文件、媒体目录和 JWT 密钥路径。
+`ecosystem.config.cjs` 是普通 checkout 的 PM2 启动示例。AWS 生产按发布手册管理各进程，独立 release 使用 `dist`、运行时依赖与明确的环境文件、媒体目录和 JWT 密钥路径。
 
-2026-11-25 起，AWS 上的 `coderx_hono_candidate` 承接正式业务 HTTP。它由独立 PM2 实例管理，旧版 Socket.IO 和采集进程继续运行。Hono 的发布材料包括 `deploy/ecosystem.hono.config.cjs`、`deploy/nginx.hono.example` 和 `just deploy-hono`。[生产运行与回滚手册](./deploy/README.md)
+AWS 上的 `coderx_hono_candidate` 承接正式业务 HTTP，独立 Worker 执行定时清理。Socket.IO 和采集各自运行，当前进程、部署入口与恢复步骤见[生产运行与回滚手册](./deploy/README.md)。
 
 数据库按[迁移说明](./migrations/README.md)逐项核对；本轮同步未新增业务 DDL，不要重放已应用脚本。
 
-Koa → Hono 的阶段进度与剩余三项工作见[迁移收尾交接](./HONO_MIGRATION.md)。
+Koa → Hono 的验收和归档结果见[迁移收尾交接](./HONO_MIGRATION.md)。
 
 ## 常见问题
 

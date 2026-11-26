@@ -4,7 +4,7 @@
 
 AWS 上的 `coderx_hono_candidate` 使用独立 release 的 `dist/main.js`，在 `127.0.0.1:18080` 承接两个 Nginx 入口的正式 HTTP。独立 PM2 的 `PM2_HOME` 为 `/opt/coderx-hono/pm2`，由已启用开机启动的 `coderx-hono-candidate.service` 管理。公网 `/health/live` 返回版本号，源站回环 `/health/ready` 检查数据库就绪。
 
-旧 Koa 已停止，8000 已关闭。root PM2 的主、备开机清单保存 Socket.IO（8001）和采集。独立的 `coderx-hono-cleanup.service` 执行定时清理。旧 Koa release、正式媒体、环境文件、JWT 密钥和依赖仍在 `/root/coderx_server`，供当前服务及回滚使用。[12C 操作记录](../docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#2026-11-26-12c-清理交接与旧-http-退役)
+旧 Koa 已停止，8000 已关闭。Socket.IO 从正式 TypeScript release 在 8001 独立运行。root PM2 的主、备开机清单仅保存采集进程。独立的 `coderx-hono-cleanup.service` 执行定时清理。旧 release、正式媒体、环境文件、JWT 密钥和依赖仍在 `/root/coderx_server`，供采集、共享配置和回滚使用。[12C 操作记录](../docs/superpowers/plans/2026-11-10-koa-to-hono-typescript-migration.md#2026-11-26-12c-清理交接与旧-http-退役)
 
 维护者可在 AWS 上用以下只读命令核对正在服务的版本与进程。检查 Hono 的 PM2 列表前，先确认 systemd 服务处于 active 状态。
 
@@ -94,7 +94,45 @@ tar -xzf "$archive" -C "$CODERX_HONO_RELEASE_DIR"
 )
 ```
 
-保留上一 release、其运行时依赖和配置引用。旧 Koa 需要用其原 release 启动。避开旧目录中的 `checkout`、依赖安装和 `just deploy` / `just deploy-full` / `just deploy-first-time`，这些配方针对旧发布流程。
+保留上一 release、其运行时依赖和配置引用。旧 Koa 从原 release 恢复。生产更新使用独立 release，以免覆盖仍被采集和回滚使用的 `/root/coderx_server`。
+
+## Socket.IO 发布与回滚
+
+`deploy/coderx-socket@.service` 直接运行指定 release 的 `dist/socket_server.js`。实例名使用完整 Git SHA。单元用现有环境文件中的 Redis 实例、前缀、presence 和 adapter 设置，并显式引用共享 JWT 公钥。Nginx 的两个 `/socket.io/` 入口继续指向 8001。
+
+首切前验证目标 release 包含 `BUILD_SHA` 和 Socket 入口，确认 Redis、JWT、环境文件、当前监听和旧 PM2 恢复配置。使用隔离数据库、Redis 与临时 JWT 做轮询、WebSocket、鉴权、定向通知和启停演练。用 `sudo -n install -m 0644 deploy/coderx-socket@.service /etc/systemd/system/coderx-socket@.service` 安装已通过 `systemd-analyze verify` 的单元，再执行 `sudo -n systemctl daemon-reload`。这一阶段只安装单元。
+
+在生产窗口复核现有连接并保存 root PM2 主、备清单。8001 更换进程时，已有实时连接会重新建立。停止旧 Socket，确认端口释放后，执行 `sudo -n systemctl start "$socket_unit"`。直连 `/health` 通过后，执行 `sudo -n nginx -t` 和 `sudo -n systemctl reload nginx.service`，平滑重载当前配置，清除切换间隙的上游失败状态。[Nginx 重载说明](https://nginx.org/en/docs/control.html)
+
+验证两条代理入口、正式站认证连接和双账号通知。从 root PM2 主、备清单移除旧 Socket，确认采集仍在线，再执行 `sudo -n systemctl enable "$socket_unit"`。11 月 26 日的旧 PM2 清单、Socket 单元及交接日志位于 `/opt/coderx-hono/socket-handoff.uSoelJXy`。
+
+```sh
+release_sha=ab0d2b55d665e614d4c1a57340ea65e48f42cd3e
+socket_unit="coderx-socket@$release_sha.service"
+systemctl is-active "$socket_unit"
+systemctl is-enabled "$socket_unit"
+curl -fsS --max-time 5 http://127.0.0.1:8001/health
+```
+
+若需恢复旧 Socket，停用新单元并确认 8001 已释放。只从旧 release 恢复 Socket，再执行源站探测并更新 PM2 主、备恢复清单。
+
+```sh
+(
+  set -eu
+  release_sha=ab0d2b55d665e614d4c1a57340ea65e48f42cd3e
+  socket_unit="coderx-socket@$release_sha.service"
+  sudo -n systemctl disable --now "$socket_unit"
+  test "$(systemctl show "$socket_unit" -p MainPID --value)" = 0
+  test -z "$(ss -Hln 'sport = :8001')"
+  sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 start /root/coderx_server/ecosystem.config.js --only coderx_socket_server
+  curl -fsS --retry 5 --retry-connrefused --retry-delay 1 --max-time 5 http://127.0.0.1:8001/health
+  sudo -n nginx -t
+  sudo -n systemctl reload nginx.service
+  curl -fsS --retry 3 --retry-delay 1 --max-time 5 -H 'Host: api.ydp321.asia' 'http://127.0.0.1/socket.io/?EIO=4&transport=polling'
+  sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 save
+  sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 save
+)
+```
 
 ## 取值与隔离
 

@@ -74,6 +74,14 @@ AWS 隔离目录为 `/home/admin/coderx-12a-ab0d2b5.GOiodXlb`，当次结束时�
 - 交接后 Hono HTTP、Socket 和采集 PID 及重启计数与交接前一致。两条源站 Nginx HTTP 路径和 Socket 握手通过，公网 liveness 连续 4/4 返回生产构建，原图和封面返回 200，视频 Range 返回 206，验收账号成功连接正式 Socket.IO WebSocket。15:12:15 的 Nginx 快照记录交接后 3 条 2xx、0 条 5xx，数据库队列仍为 0。
 - 盘点并保留 `/home/admin/coderx-12a-ab0d2b5.GOiodXlb`、12A R2 测试桶 `coderx-12a-r2-test`（12A 结束时为零对象）、12B 独立测试文章 `182` 与媒体 `572`、`573`、账号 `14`、`15`。旧 release、共享媒体、JWT、配置及依赖均已保留。[恢复与回滚操作](../../../deploy/README.md#12c-恢复与回滚)
 
+### 2026-11-26 Socket.IO 独立发布
+
+- 核对旧 release `1eb6d15` 的 Socket 静态依赖链，共 29 个项目文件。入口使用 Node HTTP 与 Socket.IO，依赖链未引入 Koa、Koa 中间件或旧 HTTP 初始化。新 release 沿用已有的 `dist/socket_server.js`。
+- 本地独立 PostgreSQL、Redis 和临时 RSA 环境通过轮询、WebSocket、JWT 拒绝与接受、Redis 在线状态、定向通知和带连接的 SIGTERM 排空及再次启动。类型检查、构建和 888 项回归通过。生产单元通过 `systemd-analyze verify`。
+- 16:25 首次切换时，新 Socket 直连健康通过，Nginx 暂时将 `localhost:8001` 的 IPv4 和 IPv6 地址都标为失败，Socket 路径记录 10 条 5xx。立即恢复旧进程，专用测试连接在 15.7 秒后重新连上。隔离 Nginx 复现同样的失败，确认平滑重载可清除失败状态。首轮切换与恢复期间，现存 Nginx 日志中的其他 HTTP 请求为 113 条 2xx、0 条 5xx。[Nginx 上游失败检测](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server)
+- 16:30:08 再次停旧 Socket。16:30:09 新进程就绪，原样平滑重载 Nginx 后两条代理路径均通过。公网 WebSocket 和轮询分别由两个测试账号鉴权，两人均出现在在线列表。账号 `15` 点赞文章 `182`，账号 `14` 收到一次实时通知 `9`，发送方没有收到该事件。重试后的首轮日志快照记录 22 条 Socket 1xx/2xx、7 条其他 HTTP 2xx、0 条 5xx。
+- 16:31:16 验证独立单元 `active`、`enabled`、`Restart=always`，未发生自动重启。新 Socket 使用正式构建 `ab0d2b5` 的运行目录和共享 JWT 公钥，8001 与原代理配置沿用，8000 继续关闭。root PM2 主、备清单仅含采集，采集 PID 和重启次数未变。旧配置与恢复清单保存在 `/opt/coderx-hono/socket-handoff.uSoelJXy`。 [Socket.IO 发布与回滚](../../../deploy/README.md#socketio-发布与回滚)
+
 ## 2026-11-25 本机开发数据库
 
 Docker Desktop 的现用容器为 `pg`。移除已停止的升级前容器 `pg-before-upgrade-20261027-174349` 前后，Hono 的 `/health/ready` 和 `GET /tag?limit=1` 均返回 200，标签查询业务码为 0，应用数据库适配器成功提交只读事务。新旧容器挂载不同的数据卷。旧容器的三个卷已保留，其中旧 PostgreSQL 数据卷为 `5294c7d87cbddedfd61a5eb80c19738ed55381a4c16011ebd9e518678244c0df`。

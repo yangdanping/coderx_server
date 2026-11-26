@@ -1,0 +1,24 @@
+[Unit]
+Description=CoderX Socket.IO (%i)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=exec
+WorkingDirectory=/opt/coderx-hono/releases/%i
+Environment=NODE_ENV=production
+Environment=APP_ENV_FILE=/root/coderx_server/.env.production
+Environment=JWT_PUBLIC_KEY_PATH=/root/coderx_server/src/app/keys/public.key
+Environment=SOCKET_PORT=8001
+Environment=CONFIG_QUIET=true
+Environment=LOG_ROOT=/var/log/coderx-socket
+LogsDirectory=coderx-socket
+LogsDirectoryMode=0700
+UMask=0077
+ExecStart=/opt/coderx-hono/runtime/bin/node --enable-source-maps dist/socket_server.js
+Restart=always
+RestartSec=2s
+TimeoutStopSec=15s
+
+[Install]
+WantedBy=multi-user.target
