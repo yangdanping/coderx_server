@@ -35,7 +35,7 @@ systemctl is-enabled coderx-hono-cleanup.service
   test "$(sudo -n systemctl show "$worker" -p ExecMainStatus --value)" = 0
   sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 start /root/coderx_server/ecosystem.config.js --only coderx_koa_server
   response=$(curl -fsS --retry 5 --retry-connrefused --retry-delay 1 --max-time 5 'http://127.0.0.1:8000/tag?limit=1')
-  printf '%s' "$response" | /opt/coderx-hono/runtime/bin/node -e 'if (JSON.parse(require("node:fs").readFileSync(0)).code !== 0) process.exit(1)'
+  printf '%s' "$response" | sudo -n /opt/coderx-hono/runtime/bin/node -e 'if (JSON.parse(require("node:fs").readFileSync(0)).code !== 0) process.exit(1)'
   sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 save
   sudo -n env PM2_HOME=/root/.pm2 /usr/local/bin/pm2 save
 )
