@@ -1,3 +1,3 @@
 # Dependency type patch
 
-`happy-dom@20.14.5.patch` corrects the generated `BrowserWindow` declaration to use `typeof ReadableStream`, matching the package's source. The published expanded declaration references a Node 26 type absent from the Node 22 type definitions. This patch changes no runtime code; remove it when the upstream declaration is compatible with Node 22 types.
+`happy-dom@21.0.4.patch` corrects the generated `BrowserWindow` declaration to use `typeof ReadableStream`, matching the package's source. The published declaration references `node:stream/web`'s `UnderlyingDefaultSource`, which is absent from the project's Node 22 type definitions. When upgrading Happy DOM, verify the new declaration against Node 22 and reapply the patch if it is still needed.
